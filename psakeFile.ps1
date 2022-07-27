@@ -274,7 +274,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
                 $null = $PortableScriptContent.Add($ThisModuleDefinition.Trim())
 
                 # Remove the Requires statement for this module
-                $PortableScriptContent[0] = $PortableScriptContent[0] -replace "$([regex]::Escape("#Requires -Module $ThisModuleName"))\n", ''
+                $PortableScriptContent[0] = $PortableScriptContent[0] -replace [regex]::Escape("#Requires -Module $ThisModuleName"), ''
             }
         }
 
