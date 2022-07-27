@@ -228,6 +228,8 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
     $MainScript |
     Copy-Item -Destination $script:BuildOutputFolder
 
+    $script:ReleasedScript = Get-ChildItem -LiteralPath $script:BuildOutputFolder -Include *.ps1
+
     if ($PortableVersionGuid) {
         # Create a new output directory
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
@@ -272,7 +274,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
                 $null = $PortableScriptContent.Add($ThisModuleDefinition.Trim())
 
                 # Remove the Requires statement for this module
-                $PortableScriptContent[0] = $PortableScriptContent[0] -replace [regex]::Escape("#Requires -Module $ThisModuleName"), ''
+                $PortableScriptContent[0] = $PortableScriptContent[0] -replace "$([regex]::Escape("#Requires -Module $ThisModuleName"))\n", ''
             }
         }
 
@@ -292,7 +294,8 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         $null = $PortableScriptContent.Add($Matches.Groups[2].Value)
 
         $Result = $PortableScriptContent -join "`r`n`r`n"
-        $Result | Out-File -LiteralPath "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1"
+        $script:PortableScriptFilePath = "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1"
+        $Result | Out-File -LiteralPath $PortableScriptFilePath
 
         # Assign the correct GUID to the portable version of the script (it should be unique, not shared with the other script)
         Update-ScriptFileInfo -Path "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1" -Guid $PortableVersionGuid
@@ -460,7 +463,7 @@ task Publish -depends SourceControl {
     Assert -conditionToCheck ($PublishPSRepositoryApiKey -or $PublishPSRepositoryCredential) -failureMessage "API key or credential not defined to authenticate with [$PublishPSRepository)] with."
 
     $publishParams = @{
-        Path       = $script:BuildOutputFolder
+        Path       = $script:ReleasedScript.FullName
         Repository = $PublishPSRepository
         Verbose    = $VerbosePreference
     }
@@ -475,7 +478,7 @@ task Publish -depends SourceControl {
         # Publish to PSGallery
         Write-Host ($publishParams | Out-String)
         Publish-Script @publishParams
-        $publishParams['Path'] = $script:BuildOutputFolderForPortableVersion
+        $publishParams['Path'] = $script:PortableScriptFilePath
         Write-Host ($publishParams | Out-String)
         Publish-Script @publishParams
     }

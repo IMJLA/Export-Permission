@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.87] - 2022-07-27 - Initial publication to PSGallery, take 2
+
 ## [0.0.86] - 2022-07-27 - Initial publication to PSGallery
 
 ## [0.0.85] - 2022-07-27 - Prep for publishing to psgallery

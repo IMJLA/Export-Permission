@@ -1,7 +1,7 @@
 ---
 Download Help Link: N/A
 external help file: -help.xml
-Help Version: 0.0.85
+Help Version: 0.0.86
 Locale: en-US
 Module Guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 Module Name: Export-Permission.ps1
