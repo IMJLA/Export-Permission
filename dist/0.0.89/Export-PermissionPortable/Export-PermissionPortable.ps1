@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.88
+.VERSION 0.0.89
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -30,6 +30,7 @@
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -2509,7 +2510,9 @@ function GetDirectories {
     )
     Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGetDirectories`t[System.IO.Directory]::GetDirectories('$TargetPath',$SearchPattern,[System.IO.SearchOption]::$SearchOption)"
     try {
-        [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, $SearchOption)
+        # SearchPattern is encased in double quotes because this returns an error in PS 5.1:
+        # [System.IO.Directory]::GetDirectories('C:\Test',*,[System.IO.SearchOption]::AllDirectories)
+        [System.IO.Directory]::GetDirectories($TargetPath, "$SearchPattern", $SearchOption)
     } catch {
         Write-Warning "$(Get-Date -Format s)`t$(hostname)`tGetDirectories`t$($_.Exception.Message)"
     }

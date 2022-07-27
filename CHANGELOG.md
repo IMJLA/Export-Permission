@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.89] - 2022-07-27 - Integrate new version of PsNtfs for portable version
+
 ## [0.0.88] - 2022-07-27 - Removed bug that was introduced trying to eliminate blank lines from portable script
 
 ## [0.0.87] - 2022-07-27 - Initial publication to PSGallery, take 2
