@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.93
+.VERSION 0.0.94
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -30,12 +30,6 @@
 .PRIVATEDATA
 
 #> 
-
-
-
-
-
-
 
 
 
@@ -1101,41 +1095,6 @@ function Find-AdsiProvider {
         $AdsiProvider
     }
 }
-function Find-ServerNameInPath {
-    <#
-        .SYNOPSIS
-        Parse a literal path to find its server
-        .DESCRIPTION
-        Currently only supports local file paths or UNC paths
-        .INPUTS
-        None. Pipeline input is not accepted.
-        .OUTPUTS
-        [System.String] representing the name of the server that was extracted from the path
-        .EXAMPLE
-        Find-ServerNameInPath -LiteralPath 'C:\Test'
-
-        Return the hostname of the local computer because a local filepath was used
-        .EXAMPLE
-        Find-ServerNameInPath -LiteralPath '\\server123\Test\'
-
-        Return server123 because a UNC path for a folder shared on server123 was used
-    #>
-    [OutputType([System.String])]
-    param (
-        [string]$LiteralPath
-    )
-    if ($LiteralPath -match '[A-Za-z]\:\\' -or $null -eq $LiteralPath -or '' -eq $LiteralPath) {
-        # For local file paths, the "server" is the local computer.  Assume the same for null paths.
-        hostname
-    } else {
-        # Otherwise it must be a UNC path, so the server is the first non-empty string between backwhacks (\)
-        $ThisServer = $LiteralPath -split '\\' |
-        Where-Object -FilterScript { $_ -ne '' } |
-        Select-Object -First 1
-
-        $ThisServer -replace '\?', (hostname)
-    }
-}
 function Get-AdsiGroup {
     <#
         .SYNOPSIS
@@ -2006,16 +1965,16 @@ function Resolve-Ace {
         Only works in Windows PowerShell
         Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
         This method is removed in modern versions of .Net Core
-        
+
         .EXAMPLE
         [System.String]$FolderPath = 'C:\Test'
         [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
         $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
         $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
-        
+
         The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
         It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
-        
+
         .NOTES
         Dependencies:
             Get-DirectoryEntry
@@ -2068,9 +2027,6 @@ function Resolve-Ace {
                 IdentityReferenceSID      = $ResolvedIdentityReference.SIDString
                 IdentityReferenceName     = $ResolvedIdentityReference.UnresolvedIdentityReference
                 IdentityReferenceResolved = $FullyResolved
-                #Path                        = $LiteralPath
-                #PathProvider                = $PsProvider
-                #PathAreAccessRulesProtected = $ThisACE.SourceAccessList.AreAccessRulesProtected
             }
             ForEach ($ThisProperty in $ACEPropertyNames) {
                 $ObjectProperties[$ThisProperty] = $ThisACE.$ThisProperty
@@ -2668,6 +2624,41 @@ function Expand-Acl {
 
     }
 
+}
+function Find-ServerNameInPath {
+    <#
+        .SYNOPSIS
+        Parse a literal path to find its server
+        .DESCRIPTION
+        Currently only supports local file paths or UNC paths
+        .INPUTS
+        None. Pipeline input is not accepted.
+        .OUTPUTS
+        [System.String] representing the name of the server that was extracted from the path
+        .EXAMPLE
+        Find-ServerNameInPath -LiteralPath 'C:\Test'
+
+        Return the hostname of the local computer because a local filepath was used
+        .EXAMPLE
+        Find-ServerNameInPath -LiteralPath '\\server123\Test\'
+
+        Return server123 because a UNC path for a folder shared on server123 was used
+    #>
+    [OutputType([System.String])]
+    param (
+        [string]$LiteralPath
+    )
+    if ($LiteralPath -match '[A-Za-z]\:\\' -or $null -eq $LiteralPath -or '' -eq $LiteralPath) {
+        # For local file paths, the "server" is the local computer.  Assume the same for null paths.
+        hostname
+    } else {
+        # Otherwise it must be a UNC path, so the server is the first non-empty string between backwhacks (\)
+        $ThisServer = $LiteralPath -split '\\' |
+        Where-Object -FilterScript { $_ -ne '' } |
+        Select-Object -First 1
+
+        $ThisServer -replace '\?', (hostname)
+    }
 }
 function Format-FolderPermission {
 
@@ -5409,6 +5400,26 @@ Select-Object -Property @{
 Export-Csv -NoTypeInformation -LiteralPath $NtfsAccessControlEntriesCsv
 
 Write-Information $NtfsAccessControlEntriesCsv
+
+
+# This will address an issue where threads that start near the same time will all find the cache empty, then attempt the costly operations to populate it
+# The issue causes repetitive queries to the same directory servers
+# Identify unique directory servers to populate into the AdsiServerCache
+$UniqueServerNames = $Permissions.SourceAccessList.Path |
+Sort-Object -Unique |
+ForEach-Object { Find-ServerNameInPath -LiteralPath $_ } |
+Sort-Object -Unique
+
+# Populate the AdsiServerCache
+$GetAdsiServer = @{
+    Command        = 'Get-AdsiServer'
+    InputObject    = $UniqueServerNames
+    InputParameter = 'AdsiServer'
+    AddParam       = @{
+        KnownServers = $AdsiServerCache
+    }
+}
+$null = Split-Thread @GetAdsiServer
 
 # Resolve the Identity References directly from the NTFS ACEs to their associated SIDs/Names
 $ResolveAce = @{

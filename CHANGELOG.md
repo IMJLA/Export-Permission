@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.94] - 2022-07-31 - Added feature to eliminate redundant calls to Get-AdsiServer for multiple threads that start at the same time and check the cache before it is populated
+
 ## [0.0.93] - 2022-07-30 - Build with updated PsRunspace module
 
 ## [0.0.92] - 2022-07-30 - Build with updated PsNtfs module

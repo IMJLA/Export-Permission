@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.93
+.VERSION 0.0.94
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -39,12 +39,6 @@
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
-
-
-
 
 
 <#
@@ -251,6 +245,26 @@ Select-Object -Property @{
 Export-Csv -NoTypeInformation -LiteralPath $NtfsAccessControlEntriesCsv
 
 Write-Information $NtfsAccessControlEntriesCsv
+
+
+# This will address an issue where threads that start near the same time will all find the cache empty, then attempt the costly operations to populate it
+# The issue causes repetitive queries to the same directory servers
+# Identify unique directory servers to populate into the AdsiServerCache
+$UniqueServerNames = $Permissions.SourceAccessList.Path |
+Sort-Object -Unique |
+ForEach-Object { Find-ServerNameInPath -LiteralPath $_ } |
+Sort-Object -Unique
+
+# Populate the AdsiServerCache
+$GetAdsiServer = @{
+    Command        = 'Get-AdsiServer'
+    InputObject    = $UniqueServerNames
+    InputParameter = 'AdsiServer'
+    AddParam       = @{
+        KnownServers = $AdsiServerCache
+    }
+}
+$null = Split-Thread @GetAdsiServer
 
 # Resolve the Identity References directly from the NTFS ACEs to their associated SIDs/Names
 $ResolveAce = @{
