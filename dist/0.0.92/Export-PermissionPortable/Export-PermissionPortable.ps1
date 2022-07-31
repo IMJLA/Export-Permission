@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.91
+.VERSION 0.0.92
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -30,6 +30,7 @@
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -2852,12 +2853,16 @@ function Get-FolderAce {
 
     )
 
+    $TodaysHostname = HOSTNAME.exe
+
+    Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetAccessRules(`$$IncludeExplicitRules, `$$IncludeInherited, [$AccountType])"
     $DirectorySecurity = & { [System.Security.AccessControl.DirectorySecurity]::new(
             $LiteralPath,
             $Sections
         ) } 2>$null
 
     if (-not $DirectorySecurity) {
+        Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t# Found no ACL for '$LiteralPath'"
         return
     }
 
@@ -2867,8 +2872,11 @@ function Get-FolderAce {
         $AclProperties[$ThisProperty] = $DirectorySecurity.$ThisProperty
     }
     $AclProperties['Path'] = $LiteralPath
+
+    Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetAccessRules(`$$IncludeExplicitRules, `$$IncludeInherited, [$AccountType])"
     $AccessRules = $DirectorySecurity.GetAccessRules($IncludeExplicitRules, $IncludeInherited, $AccountType)
     if (-not $AccessRules) {
+        Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t# Found no matching access rules"
         return
     }
     $ACEPropertyNames = (Get-Member -InputObject $AccessRules[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
@@ -3023,7 +3031,7 @@ function New-NtfsAclIssueReport {
 
     # ACEs for users (recommend replacing with group-based access on any folder that is not a home folder)
     $UserACEs = $UserPermissions.Group |
-    Where-Object { $_.ObjectType -contains 'User' } |
+    Where-Object -FilterScript { $_.ObjectType -contains 'User' } |
     ForEach-Object { $_.NtfsAccessControlEntries } |
     ForEach-Object { "$($_.IdentityReference) on '$($_.Path)'" } |
     Sort-Object -Unique
