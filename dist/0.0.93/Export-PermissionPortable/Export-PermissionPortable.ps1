@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.92
+.VERSION 0.0.93
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -30,6 +30,7 @@
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -3683,25 +3684,6 @@ function Open-Thread {
         <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t# Received $(($CommandInfo | Measure-Object).Count) PsCommandInfos from Split-Thread for '$Command'"
 
         if ($CommandInfo) {
-            <#
-            #TODO: This works but it inefficiently waits for each to finish before beginning the next.
-            #      Could rework to break out of this function after only BeginInboke for each thread, and use Wait-Thread with Dispose set to false
-            #      That would still be inefficient, instead I have opted to manually build the definitions into a string that represents a single script
-            #      This script string will be passed to AddScript()
-            <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$Handle = `$PowershellInterface.BeginInvoke() # to preload command definitions for '$ObjectString'"
-            $Handle = $PowershellInterface.BeginInvoke()
-            while ($Handle.IsCompleted -eq $false) {
-                Start-Sleep -Milliseconds 200
-            }
-            <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$PowerShellInterface.Streams.ClearStreams() # after preloading command definitions for '$($ObjectString)'"
-            $null = $PowerShellInterface.Streams.ClearStreams()
-
-            <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$PowerShellInterface.EndInvoke(`$Handle) # after preloading command definitions for '$($ObjectString)'"
-            $null = $PowerShellInterface.EndInvoke($Handle)
-
-            <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$PowershellInterface.Commands.Clear() # after preloading command definitions for '$ObjectString'"
-            $null = $PowershellInterface.Commands.Clear()
-            #>
 
             # Begin to build the command that the script will run with all its parameters
             $CommandStringForScriptDefinition = [System.Text.StringBuilder]::new($Command)
