@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.90
+.VERSION 0.0.91
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -39,6 +39,7 @@
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -282,11 +283,13 @@ $ExpandIdentityReference = @{
     InputObject          = $GroupedIdentities
     InputParameter       = 'AccessControlEntry'
     AddParam             = @{
-        NoGroupMembers         = $NoGroupMembers
         DirectoryEntryCache    = $DirectoryEntryCache
         IdentityReferenceCache = $IdentityReferenceCache
     }
     ObjectStringProperty = 'Name'
+}
+if ($NoGroupMembers) {
+    $ExpandIdentityReference['AddSwitch'] = 'NoGroupMembers'
 }
 $SecurityPrincipals = Split-Thread @ExpandIdentityReference
 

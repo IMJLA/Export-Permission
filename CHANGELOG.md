@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.91] - 2022-07-30 - Bug fixes in Export-Permission and the PsRunspace module
+
 ## [0.0.90] - 2022-07-27 - Updated PsNtfs module
 
 ## [0.0.89] - 2022-07-27 - Integrate new version of PsNtfs for portable version

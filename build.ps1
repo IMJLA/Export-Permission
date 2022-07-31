@@ -6,9 +6,6 @@ param(
 
     [switch]$NoPublish,
 
-    # Bootstrap dependencies
-    [switch]$Bootstrap,
-
     # List available build tasks
     [parameter(ParameterSetName = 'Help')]
     [switch]$Help,
