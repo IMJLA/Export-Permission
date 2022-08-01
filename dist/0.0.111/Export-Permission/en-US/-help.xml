@@ -421,7 +421,6 @@
         <maml:para>TODO: Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.</maml:para>
         <maml:para>TODO: Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.</maml:para>
         <maml:para>TODO: Feature - Support ACLs from Registry or AD objects</maml:para>
-        <maml:para>TODO: Feature - psake task to update Release Notes in the script metadata to the github commit message</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>

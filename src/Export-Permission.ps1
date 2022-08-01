@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.110
+.VERSION 0.0.111
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated Permission module and some parameter help
+Removed Feature from TODO list because it is implemented (commit msg as releasenotes in scriptfileinfo)
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Updated Permission module and some parameter help
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -99,8 +100,6 @@ Updated Permission module and some parameter help
     TODO: Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
 
     TODO: Feature - Support ACLs from Registry or AD objects
-
-    TODO: Feature - psake task to update Release Notes in the script metadata to the github commit message
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 

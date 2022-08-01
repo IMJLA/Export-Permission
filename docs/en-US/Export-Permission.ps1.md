@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.109
+help version: 0.0.110
 locale: en-US
 Module Name:
 online version:
@@ -401,8 +401,6 @@ TODO: Feature - This script does NOT account for file share permissions.
 Only NTFS permissions are considered.
 
 TODO: Feature - Support ACLs from Registry or AD objects
-
-TODO: Feature - psake task to update Release Notes in the script metadata to the github commit message
 
 ## RELATED LINKS
 
