@@ -452,7 +452,10 @@
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'</dev:code>
         <dev:remarks>
-          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Exclude the built-in Administrator account from the HTML report The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped. The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Exclude the built-in Administrator account from the HTML report</maml:para>
+          <maml:para>The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.</maml:para>
+          <maml:para>The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>

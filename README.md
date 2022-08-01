@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.105
+help version: 0.0.106
 locale: en-US
 Module Name:
 online version:
@@ -59,8 +59,11 @@ Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrato
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
 Exclude the built-in Administrator account from the HTML report
+
 The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
+
 The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\\\Administrator'
 
 ### EXAMPLE 3

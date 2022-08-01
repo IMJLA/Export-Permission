@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.106
+.VERSION 0.0.107
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-More blank lines in metadata
+Trying blank lines in example help
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ More blank lines in metadata
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -102,8 +103,11 @@ More blank lines in metadata
     Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
     Exclude the built-in Administrator account from the HTML report
+
     The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
+
     The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups

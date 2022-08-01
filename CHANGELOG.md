@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.107] - 2022-08-01 - Trying blank lines in example help
+
 ## [0.0.106] - 2022-07-31 - More blank lines in metadata
 
 ## [0.0.105] - 2022-07-31 - Added blank lines to multiline param descriptions in comment-based help to workaround bug in New-MarkdownHelp
