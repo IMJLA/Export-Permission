@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.106
+help version: 0.0.107
 locale: en-US
 Module Name:
 online version:
@@ -72,6 +72,7 @@ Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
 Exclude empty groups from the HTML report (leaving accounts only)
 
 ### EXAMPLE 4
@@ -80,6 +81,7 @@ Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
 Remove the CONTOSO domain prefix from associated accounts and groups
 
 ### EXAMPLE 5
@@ -88,6 +90,7 @@ Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
 Redirect logs and output files to C:\Logs instead of the default location in AppData
 
 ### EXAMPLE 6
@@ -103,6 +106,7 @@ Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test
+
 Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 
 ### EXAMPLE 8
@@ -111,6 +115,7 @@ Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
 Change the title of the HTML report to 'New Custom Report Title'
 
 ## PARAMETERS

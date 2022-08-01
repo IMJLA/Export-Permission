@@ -462,21 +462,24 @@
         <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups</dev:code>
         <dev:remarks>
-          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Exclude empty groups from the HTML report (leaving accounts only)</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Exclude empty groups from the HTML report (leaving accounts only)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'</dev:code>
         <dev:remarks>
-          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Remove the CONTOSO domain prefix from associated accounts and groups</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Remove the CONTOSO domain prefix from associated accounts and groups</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs</dev:code>
         <dev:remarks>
-          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Redirect logs and output files to C:\Logs instead of the default location in AppData</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Redirect logs and output files to C:\Logs instead of the default location in AppData</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
@@ -490,14 +493,16 @@
         <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2</dev:code>
         <dev:remarks>
-          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
+          <maml:para>Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'</dev:code>
         <dev:remarks>
-          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Change the title of the HTML report to 'New Custom Report Title'</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Change the title of the HTML report to 'New Custom Report Title'</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.107
+.VERSION 0.0.108
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Trying blank lines in example help
+Added remaining blank lines where needed in metadata
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Trying blank lines in example help
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -113,16 +114,19 @@ Trying blank lines in example help
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
     Exclude empty groups from the HTML report (leaving accounts only)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
     Remove the CONTOSO domain prefix from associated accounts and groups
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
     Redirect logs and output files to C:\Logs instead of the default location in AppData
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
@@ -132,11 +136,13 @@ Trying blank lines in example help
     Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
 
     Generate reports on the NTFS permissions for the folder C:\Test
+
     Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
     Change the title of the HTML report to 'New Custom Report Title'
 #>
 param (
