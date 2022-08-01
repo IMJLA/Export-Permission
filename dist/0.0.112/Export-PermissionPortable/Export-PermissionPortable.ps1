@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.111
+.VERSION 0.0.112
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Removed Feature from TODO list because it is implemented (commit msg as releasenotes in scriptfileinfo)
+Updated comment-based help
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -158,7 +159,7 @@ param (
 
     # Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
     [string]$TargetPath = 'C:\Test',
-    #[string]$TargetPath = '\\ad.contoso.com\coh\Test2\FolderWithoutTarget\FolderWithTarget\',
+    #[string]$TargetPath = '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubolderWithoutTarget\DfsSubfolderWithTarget\',
 
     # Regular expressions matching names of Users or Groups to exclude from the HTML report
     [string[]]$ExcludeAccount,

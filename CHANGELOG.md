@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.112] - 2022-08-01 - Updated comment-based help
+
 ## [0.0.111] - 2022-08-01 - Removed Feature from TODO list because it is implemented (commit msg as releasenotes in scriptfileinfo)
 
 ## [0.0.110] - 2022-08-01 - Updated Permission module and some parameter help

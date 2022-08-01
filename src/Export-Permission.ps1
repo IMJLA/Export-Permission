@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.111
+.VERSION 0.0.112
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Removed Feature from TODO list because it is implemented (commit msg as releasenotes in scriptfileinfo)
+Updated comment-based help
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Removed Feature from TODO list because it is implemented (commit msg as releasen
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -153,7 +154,7 @@ param (
 
     # Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
     [string]$TargetPath = 'C:\Test',
-    #[string]$TargetPath = '\\ad.contoso.com\coh\Test2\FolderWithoutTarget\FolderWithTarget\',
+    #[string]$TargetPath = '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubolderWithoutTarget\DfsSubfolderWithTarget\',
 
     # Regular expressions matching names of Users or Groups to exclude from the HTML report
     [string[]]$ExcludeAccount,
