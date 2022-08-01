@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.95
+.VERSION 0.0.96
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -30,6 +30,7 @@
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -399,7 +400,7 @@ function ConvertFrom-DirectoryEntry {
 
             $ThisObject = @{}
             ForEach ($ThisObjProperty in $ObjectNoteProperties) {
-                $ThisObject = ConvertFrom-SecurityPrincipalProperty -SecurityPrincipal $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
+                $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
             }
 
             [PSCustomObject]$ThisObject
