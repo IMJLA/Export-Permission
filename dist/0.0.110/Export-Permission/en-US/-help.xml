@@ -26,7 +26,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
           <maml:name>TargetPath</maml:name>
           <maml:description>
-            <maml:para>Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)</maml:para>
+            <maml:para>Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -64,7 +64,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
           <maml:name>ExcludeAccount</maml:name>
           <maml:description>
-            <maml:para>Regular expressions that will identify Users or Groups you do not want included in the Html report</maml:para>
+            <maml:para>Regular expressions matching names of Users or Groups to exclude from the HTML report</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
@@ -208,7 +208,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
         <maml:name>ExcludeAccount</maml:name>
         <maml:description>
-          <maml:para>Regular expressions that will identify Users or Groups you do not want included in the Html report</maml:para>
+          <maml:para>Regular expressions matching names of Users or Groups to exclude from the HTML report</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
@@ -366,7 +366,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
         <maml:name>TargetPath</maml:name>
         <maml:description>
-          <maml:para>Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)</maml:para>
+          <maml:para>Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>

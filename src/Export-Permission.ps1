@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.109
+.VERSION 0.0.110
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Parameter cleanup. Breaking changes.
+Updated Permission module and some parameter help
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Parameter cleanup. Breaking changes.
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -151,11 +152,11 @@ Parameter cleanup. Breaking changes.
 #>
 param (
 
-    # Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)
+    # Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
     [string]$TargetPath = 'C:\Test',
     #[string]$TargetPath = '\\ad.contoso.com\coh\Test2\FolderWithoutTarget\FolderWithTarget\',
 
-    # Regular expressions that will identify Users or Groups you do not want included in the Html report
+    # Regular expressions matching names of Users or Groups to exclude from the HTML report
     [string[]]$ExcludeAccount,
     <#[string[]]$ExcludeAccount = @(
         'BUILTIN\\Administrators',

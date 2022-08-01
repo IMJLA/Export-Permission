@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.109
+.VERSION 0.0.110
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Parameter cleanup. Breaking changes.
+Updated Permission module and some parameter help
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -156,11 +157,11 @@ Parameter cleanup. Breaking changes.
 #>
 param (
 
-    # Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)
+    # Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
     [string]$TargetPath = 'C:\Test',
     #[string]$TargetPath = '\\ad.contoso.com\coh\Test2\FolderWithoutTarget\FolderWithTarget\',
 
-    # Regular expressions that will identify Users or Groups you do not want included in the Html report
+    # Regular expressions matching names of Users or Groups to exclude from the HTML report
     [string[]]$ExcludeAccount,
     <#[string[]]$ExcludeAccount = @(
         'BUILTIN\\Administrators',
@@ -5303,9 +5304,10 @@ function Get-FolderAccessList {
 function Get-FolderPermissionsBlock {
     param (
         $FolderPermissions,
-        $AccountsToSkip,
+        # Regular expressions that will identify Users or Groups you do not want included in the Html report
+        [string[]]$ExcludeAccount,
         $ExcludeEmptyGroups,
-        $DomainToIgnore
+        $IgnoreDomain
     )
 
     ForEach ($ThisFolder in $FolderPermissions) {
@@ -5334,7 +5336,7 @@ function Get-FolderPermissionsBlock {
         # Skip the accounts we need to skip
         Where-Object -FilterScript {
             ![bool]$(
-                ForEach ($RegEx in $AccountsToSkip) {
+                ForEach ($RegEx in $ExcludeAccount) {
                     if ($_.Name -match $RegEx) {
                         $true
                     }
@@ -5355,7 +5357,7 @@ function Get-FolderPermissionsBlock {
         @{Label = 'Access'; Expression = { ($_.Group | Sort-Object -Property IdentityReference -Unique).Access -join ' ; ' } },
         @{Label = 'Due to Membership In'; Expression = {
                 $GroupString = ($_.Group.IdentityReference | Sort-Object -Unique) -join ' ; '
-                ForEach ($IgnoreThisDomain in $DomainToIgnore) {
+                ForEach ($IgnoreThisDomain in $IgnoreDomain) {
                     $GroupString = $GroupString -replace $IgnoreThisDomain, ''
                 }
                 $GroupString

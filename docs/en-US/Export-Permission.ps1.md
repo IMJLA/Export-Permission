@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.108
+help version: 0.0.109
 locale: en-US
 Module Name:
 online version:
@@ -119,7 +119,7 @@ Change the title of the HTML report to 'New Custom Report Title'
 ## PARAMETERS
 
 ### -ExcludeAccount
-Regular expressions that will identify Users or Groups you do not want included in the Html report
+Regular expressions matching names of Users or Groups to exclude from the HTML report
 
 ```yaml
 Type: System.String[]
@@ -328,7 +328,7 @@ Accept wildcard characters: False
 ```
 
 ### -TargetPath
-Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)
+Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
 
 ```yaml
 Type: System.String
