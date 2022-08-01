@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.97
+.VERSION 0.0.103
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -10,26 +10,29 @@
 
 .COPYRIGHT (c) Jeremy La Camera. All rights reserved.
 
-.TAGS
+.TAGS adsi ntfs acl
 
-.LICENSEURI https://github.com/IMJLA/ExportPermission/blob/main/LICENSE
+.LICENSEURI https://github.com/IMJLA/Export-Permission/blob/main/LICENSE
 
-.PROJECTURI https://github.com/IMJLA/ExportPermission
+.PROJECTURI https://github.com/IMJLA/Export-Permission
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
+.EXTERNALMODULEDEPENDENCIES 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-
+metadata updates
 
 .PRIVATEDATA
 
 #> 
+
+
+
 
 
 
@@ -74,6 +77,15 @@
                 The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
     TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
                 If it is a fake user, its name will correctly appear without the domain prefix (User123)
+    TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
+                When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
+                New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
+                Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
+                Need to fix it myself because that makes no sense
+                recommended workaround is to include markdown syntax in PowerShell comment-based help
+                That will not work because:
+                    Tables or code blocks are not what is being attempted here; just paragraphs.
+                    Markdown syntax would be a blank line between the paragraphs but that is not valid for PowerShell comment-based help.
     TODO: Feature - List any excluded accounts at the end
     TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
     TODO: Feature - Parameter to specify properties to include in report
@@ -82,42 +94,42 @@
     TODO: Feature - Support ACLs from Registry or AD objects
     TODO: Feature - psake task to update Release Notes in the script metadata to the github commit message
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test
+    Export-Permission.ps1 -TargetPath C:\Test
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'
+    Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
     Exclude the built-in Administrator account from the HTML report
     The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
     The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
+    Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
     Exclude empty groups from the HTML report (leaving accounts only)
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
+    Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
     Remove the CONTOSO domain prefix from associated accounts and groups
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
+    Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
     Redirect logs and output files to C:\Logs instead of the default location in AppData
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
+    Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
 
     Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
+    Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
 
     Generate reports on the NTFS permissions for the folder C:\Test
     Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 .EXAMPLE
-    .\Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
+    Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
     Change the title of the HTML report to 'New Custom Report Title'
@@ -139,8 +151,11 @@ param (
     # Exclude empty groups from the HTML report
     [switch]$ExcludeEmptyGroups,
 
-    # Domains to ignore (they will be removed from the username)
-    # Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+    <#
+    Domains to ignore (they will be removed from the username)
+
+    Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+    #>
     [string[]]$DomainToIgnore, # = @('CONTOSO1\\','CONTOSO2\\'),
 
     # Path to save the logs and reports generated by this script
@@ -5504,8 +5519,8 @@ Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 Write-Information $CsvFilePath
 
 # Identify unique directory servers to populate into the AdsiServerCache
-# This will address an issue where threads that start near the same time will all find the cache empty, then attempt the costly operations to populate it
-# The prevents repetitive queries to the same directory servers
+# This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
+# This prevents repetitive queries to the same directory servers
 $UniqueServerNames = $Permissions.SourceAccessList.Path |
 Sort-Object -Unique |
 ForEach-Object { Find-ServerNameInPath -LiteralPath $_ } |

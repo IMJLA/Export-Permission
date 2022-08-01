@@ -1,12 +1,11 @@
 ---
-Download Help Link: N/A
 external help file: -help.xml
-Help Version: 0.0.96
-Locale: en-US
-Module Guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
-Module Name: Export-Permission.ps1
+help version: 0.0.102
+locale: en-US
+Module Name:
 online version:
 schema: 2.0.0
+script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 ---
 
 # Export-Permission.ps1
@@ -40,14 +39,14 @@ Outputs an XML-formatted list of common misconfigurations for use win Paessler P
 
 ### EXAMPLE 1
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test
+Export-Permission.ps1 -TargetPath C:\Test
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
 ### EXAMPLE 2
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'
+Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -57,7 +56,7 @@ The RegEx escape character is \ so that is why the regular expression needed for
 
 ### EXAMPLE 3
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
+Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -65,7 +64,7 @@ Exclude empty groups from the HTML report (leaving accounts only)
 
 ### EXAMPLE 4
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
+Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -73,7 +72,7 @@ Remove the CONTOSO domain prefix from associated accounts and groups
 
 ### EXAMPLE 5
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
+Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -81,14 +80,14 @@ Redirect logs and output files to C:\Logs instead of the default location in App
 
 ### EXAMPLE 6
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
+Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 
 ### EXAMPLE 7
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
+Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test
@@ -96,7 +95,7 @@ Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 
 ### EXAMPLE 8
 ```
-.\Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
+Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -127,6 +126,7 @@ Accept wildcard characters: False
 
 ### -DomainToIgnore
 Domains to ignore (they will be removed from the username)
+
 Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
 
 ```yaml
@@ -368,6 +368,15 @@ TODO: Bug - Doesn't work for AD users' default group/primary group (which is typ
             The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
 TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
             If it is a fake user, its name will correctly appear without the domain prefix (User123)
+TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
+            When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
+            New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
+            Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
+            Need to fix it myself because that makes no sense
+            recommended workaround is to include markdown syntax in PowerShell comment-based help
+            That will not work because:
+                Tables or code blocks are not what is being attempted here; just paragraphs.
+                Markdown syntax would be a blank line between the paragraphs but that is not valid for PowerShell comment-based help.
 TODO: Feature - List any excluded accounts at the end
 TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
 TODO: Feature - Parameter to specify properties to include in report

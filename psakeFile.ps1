@@ -169,16 +169,16 @@ task DetermineNewVersionNumber -Depends Lint {
         "$($ScriptFileInfo.Name)Portable"
     )
 
-} -description 'Increment the version then update PSScriptInfo and module manifests accordingly'
+} -description 'Increment the version'
 
 task UpdateScriptVersion -Depends DetermineNewVersionNumber {
-    Update-ScriptFileInfo -Path $MainScript.FullName -Version $script:NewVersion
+    Update-ScriptFileInfo -Path $MainScript.FullName -Version $script:NewVersion -ReleaseNotes $CommitMessage
 
     # Supposedly will be resolved in 3.0.15 but right now there is a bug in Update-ScriptFileInfo that adds blank lines after the PSScriptInfo block
     # This RegEx was going to be used to help remove those lines but for now I am just awaiting the new version
     # https://github.com/PowerShell/PowerShellGet/issues/347
     # $RegEx = '#>[\s\S]*<#\n\.SYNOPSIS'
-}
+} -description 'Update PSScriptInfo with the new version'
 
 task RotateBuilds -depends UpdateScriptVersion {
     $BuildVersionsToRetain = 1
@@ -294,6 +294,12 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         $null = $PortableScriptContent.Add($Matches.Groups[2].Value)
 
         $Result = $PortableScriptContent -join "`r`n`r`n"
+
+        #Update-ScriptFileInfo does not allow us to remove RequiredModules or ExternalModuleDependencies so we'll do it ourselves
+        $Result = $Result -replace
+        '\.EXTERNALMODULEDEPENDENCIES.*', '.EXTERNALMODULEDEPENDENCIES' -replace
+        '\.REQUIREDMODULES.*', '.REQUIREDMODULES'
+
         $script:PortableScriptFilePath = "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1"
         $Result | Out-File -LiteralPath $PortableScriptFilePath
 
@@ -331,27 +337,30 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         ErrorAction           = 'SilentlyContinue'
         Force                 = $true
         Command               = ".\src\$($ScriptFileInfo.Name).ps1"
+        Metadata              = @{
+            'script guid'  = $ScriptFileInfo.Guid
+            locale         = $HelpDefaultLocale
+            'help version' = $ScriptFileInfo.Version
+            #'download help link' = 'N/A'
+        }
         # TODO: Using GitHub pages as a container for PowerShell Updatable Help https://gist.github.com/TheFreeman193/fde11aee6998ad4c40a314667c2a3005
         # OnlineVersionUrl = $GitHubPagesLinkForThisModule
         OutputFolder          = [IO.Path]::Combine($HelpRootDir, $HelpDefaultLocale)
         UseFullTypeName       = $true
         Verbose               = $VerbosePreference
-        Metadata              = @{
-            'Module Guid'        = $ScriptFileInfo.Guid
-            Locale               = $HelpDefaultLocale
-            'Help Version'       = $ScriptFileInfo.Version
-            'Download Help Link' = 'N/A'
-        }
     }
     $MarkdownHelp = New-MarkdownHelp @newMDParams
 
+    # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
     $Markdown = Get-Content -LiteralPath $MarkdownHelp.FullName -Raw
-    $NewMarkdown = $Markdown -replace 'Module Name:', "Module Name: $($MainScript.Name)"
-    $NewMarkdown | Set-COntent -LiteralPath $MarkdownHelp.FullName
+    $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
+    $NewMarkdown = $Markdown -replace 'Module Guid:', "script guid: $($MainScript.Name)"
+    $NewMarkdown | Set-Content -LiteralPath $MarkdownHelp.FullName
 
+    # Use the help for the script as the readme for the script
     $MarkdownHelp | Copy-Item -Destination .\README.md -Force
 
-} -description 'Generate markdown files from the module help'
+} -description 'Generate markdown files from the script help'
 
 $genHelpFilesPreReqs = {
     $result = $true

@@ -1,0 +1,466 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Export-Permission.ps1</command:name>
+      <command:verb>Export</command:verb>
+      <command:noun>Permission.ps1</command:noun>
+      <maml:description>
+        <maml:para>Create CSV, HTML, and XML reports of permissions</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Gets all permissions for the target folder Gets non-inherited permissions for subfolders (if specified) Exports the permissions to CSV Uses ADSI to get information about the accounts and groups listed in the permissions Exports information about the accounts and groups to CSV Uses ADSI to recursively retrieve the members of nested groups Creates an HTML report showing the resultant access of individual accounts Exports information about all accounts with NTFS access to CSV Creates an HTML report of all accounts with NTFS access Outputs an XML-formatted list of common misconfigurations for use win Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Export-Permission.ps1</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>TargetPath</maml:name>
+          <maml:description>
+            <maml:para>Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>C:\Test</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
+          <maml:name>PrtgSensorProtocol</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
+          <maml:name>PrtgSensorPort</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>0</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
+          <maml:name>PrtgSensorToken</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+          <maml:name>AccountsToSkip</maml:name>
+          <maml:description>
+            <maml:para>Regular expressions that will identify Users or Groups you do not want included in the Html report = @(        'BUILTIN\\Administrators',        'BUILTIN\\Administrator',        'CREATOR OWNER',        'NT AUTHORITY\\SYSTEM'    )</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
+          <maml:name>DomainToIgnore</maml:name>
+          <maml:description>
+            <maml:para>Domains to ignore (they will be removed from the username)</maml:para>
+            <maml:para>Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
+          <maml:name>LogDir</maml:name>
+          <maml:description>
+            <maml:para>Path to save the logs and reports generated by this script</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>"$env:AppData\Export-Permission\Logs"</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
+          <maml:name>ModulesDir</maml:name>
+          <maml:description>
+            <maml:para>Path containing the required modules for this script Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>$PSScriptRoot\Modules</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
+          <maml:name>LevelsOfSubfolders</maml:name>
+          <maml:description>
+            <maml:para>How many levels of subfolder to enumerate     Set to 0 to ignore all subfolders     Set to -1 (default) to recurse infinitely     Set to any whole number to enumerate that many levels</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>-1</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
+          <maml:name>Title</maml:name>
+          <maml:description>
+            <maml:para>Title at the top of the HTML report</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>Folder Permissions Report</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
+          <maml:name>GroupNamingConvention</maml:name>
+          <maml:description>
+            <maml:para>Valid group names that are allowed to appear in ACEs Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object In the scriptblock, use string comparisons on the Name property e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'} The naming format that will be used for the groups is CONTOSO\Group1 where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Management.Automation.ScriptBlock</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>{ $true }</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+          <maml:name>PrtgProbe</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ExcludeEmptyGroups</maml:name>
+          <maml:description>
+            <maml:para>Exclude empty groups from the HTML report</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoGroupMembers</maml:name>
+          <maml:description>
+            <maml:para>Get group members</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>OpenReportAtEnd</maml:name>
+          <maml:description>
+            <maml:para>Open the HTML report at the end using Invoke-Item (useful only interactively)</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+        <maml:name>AccountsToSkip</maml:name>
+        <maml:description>
+          <maml:para>Regular expressions that will identify Users or Groups you do not want included in the Html report = @(        'BUILTIN\\Administrators',        'BUILTIN\\Administrator',        'CREATOR OWNER',        'NT AUTHORITY\\SYSTEM'    )</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
+        <maml:name>DomainToIgnore</maml:name>
+        <maml:description>
+          <maml:para>Domains to ignore (they will be removed from the username)</maml:para>
+          <maml:para>Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ExcludeEmptyGroups</maml:name>
+        <maml:description>
+          <maml:para>Exclude empty groups from the HTML report</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
+        <maml:name>GroupNamingConvention</maml:name>
+        <maml:description>
+          <maml:para>Valid group names that are allowed to appear in ACEs Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object In the scriptblock, use string comparisons on the Name property e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'} The naming format that will be used for the groups is CONTOSO\Group1 where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.ScriptBlock</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>{ $true }</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
+        <maml:name>LevelsOfSubfolders</maml:name>
+        <maml:description>
+          <maml:para>How many levels of subfolder to enumerate     Set to 0 to ignore all subfolders     Set to -1 (default) to recurse infinitely     Set to any whole number to enumerate that many levels</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>-1</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
+        <maml:name>LogDir</maml:name>
+        <maml:description>
+          <maml:para>Path to save the logs and reports generated by this script</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>"$env:AppData\Export-Permission\Logs"</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
+        <maml:name>ModulesDir</maml:name>
+        <maml:description>
+          <maml:para>Path containing the required modules for this script Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>$PSScriptRoot\Modules</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoGroupMembers</maml:name>
+        <maml:description>
+          <maml:para>Get group members</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>OpenReportAtEnd</maml:name>
+        <maml:description>
+          <maml:para>Open the HTML report at the end using Invoke-Item (useful only interactively)</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+        <maml:name>PrtgProbe</maml:name>
+        <maml:description>
+          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
+        <maml:name>PrtgSensorPort</maml:name>
+        <maml:description>
+          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>0</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
+        <maml:name>PrtgSensorProtocol</maml:name>
+        <maml:description>
+          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
+        <maml:name>PrtgSensorToken</maml:name>
+        <maml:description>
+          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>TargetPath</maml:name>
+        <maml:description>
+          <maml:para>Path to the folder whose permissions to report (only tested with local paths, UNC may work, unknown)</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>C:\Test</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
+        <maml:name>Title</maml:name>
+        <maml:description>
+          <maml:para>Title at the top of the HTML report</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>Folder Permissions Report</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None. Pipeline input is not accepted.</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>[System.String] XML PRTG sensor output</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>TODO: Bug - Logic Flaw for Owner.             Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.             This misses folders with only inherited access rules but a different owner. TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).             The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute. TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).             If it is a fake user, its name will correctly appear without the domain prefix (User123) TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).             When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.             New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.             Declared as wontfix https://github.com/PowerShell/platyPS/issues/314             Need to fix it myself because that makes no sense             recommended workaround is to include markdown syntax in PowerShell comment-based help             That will not work because:                 Tables or code blocks are not what is being attempted here; just paragraphs.                 Markdown syntax would be a blank line between the paragraphs but that is not valid for PowerShell comment-based help. TODO: Feature - List any excluded accounts at the end TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside) TODO: Feature - Parameter to specify properties to include in report TODO: Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered. TODO: Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered. TODO: Feature - Support ACLs from Registry or AD objects TODO: Feature - psake task to update Release Notes in the script metadata to the github commit message</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Exclude the built-in Administrator account from the HTML report The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped. The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Exclude empty groups from the HTML report (leaving accounts only)</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Remove the CONTOSO domain prefix from associated accounts and groups</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Redirect logs and output files to C:\Logs instead of the default location in AppData</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders Change the title of the HTML report to 'New Custom Report Title'</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+</helpItems>
