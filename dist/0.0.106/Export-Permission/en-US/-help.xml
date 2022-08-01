@@ -10,7 +10,16 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Gets all permissions for the target folder Gets non-inherited permissions for subfolders (if specified) Exports the permissions to CSV Uses ADSI to get information about the accounts and groups listed in the permissions Exports information about the accounts and groups to CSV Uses ADSI to recursively retrieve the members of nested groups Creates an HTML report showing the resultant access of individual accounts Exports information about all accounts with NTFS access to CSV Creates an HTML report of all accounts with NTFS access Outputs an XML-formatted list of common misconfigurations for use win Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
+      <maml:para>Gets all permissions for the target folder</maml:para>
+      <maml:para>Gets non-inherited permissions for subfolders (if specified)</maml:para>
+      <maml:para>Exports the permissions to CSV</maml:para>
+      <maml:para>Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
+      <maml:para>Exports information about the accounts and groups to CSV</maml:para>
+      <maml:para>Uses ADSI to recursively retrieve the members of nested groups</maml:para>
+      <maml:para>Creates an HTML report showing the resultant access of individual accounts</maml:para>
+      <maml:para>Exports information about all accounts with NTFS access to CSV</maml:para>
+      <maml:para>Creates an HTML report of all accounts with NTFS access</maml:para>
+      <maml:para>Outputs an XML-formatted list of common misconfigurations for use win Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>

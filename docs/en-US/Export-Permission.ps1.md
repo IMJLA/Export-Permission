@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.104
+help version: 0.0.105
 locale: en-US
 Module Name:
 online version:
@@ -25,14 +25,23 @@ Export-Permission.ps1 [[-TargetPath] <String>] [[-AccountsToSkip] <String[]>] [-
 
 ## DESCRIPTION
 Gets all permissions for the target folder
+
 Gets non-inherited permissions for subfolders (if specified)
+
 Exports the permissions to CSV
+
 Uses ADSI to get information about the accounts and groups listed in the permissions
+
 Exports information about the accounts and groups to CSV
+
 Uses ADSI to recursively retrieve the members of nested groups
+
 Creates an HTML report showing the resultant access of individual accounts
+
 Exports information about all accounts with NTFS access to CSV
+
 Creates an HTML report of all accounts with NTFS access
+
 Outputs an XML-formatted list of common misconfigurations for use win Paessler PRTG Network Monitor as a custom XML sensor
 
 ## EXAMPLES

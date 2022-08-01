@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.105
+.VERSION 0.0.106
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Added blank lines to multiline param descriptions in comment-based help to workaround bug in New-MarkdownHelp
+More blank lines in metadata
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -52,14 +53,23 @@ Added blank lines to multiline param descriptions in comment-based help to worka
 
 .DESCRIPTION
     Gets all permissions for the target folder
+
     Gets non-inherited permissions for subfolders (if specified)
+
     Exports the permissions to CSV
+
     Uses ADSI to get information about the accounts and groups listed in the permissions
+
     Exports information about the accounts and groups to CSV
+
     Uses ADSI to recursively retrieve the members of nested groups
+
     Creates an HTML report showing the resultant access of individual accounts
+
     Exports information about all accounts with NTFS access to CSV
+
     Creates an HTML report of all accounts with NTFS access
+
     Outputs an XML-formatted list of common misconfigurations for use win Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
     None. Pipeline input is not accepted.
