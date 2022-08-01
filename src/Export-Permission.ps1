@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.108
+.VERSION 0.0.109
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Added remaining blank lines where needed in metadata
+Parameter cleanup. Breaking changes.
 
 .PRIVATEDATA
 
@@ -41,10 +41,6 @@ Added remaining blank lines where needed in metadata
 #Requires -Module Permission
 
 
-
-
-
-
 <#
 .SYNOPSIS
     Create CSV, HTML, and XML reports of permissions
@@ -53,61 +49,69 @@ Added remaining blank lines where needed in metadata
 
     Gets non-inherited permissions for subfolders (if specified)
 
-    Exports the permissions to CSV
+    Exports the permissions to a .csv file
 
     Uses ADSI to get information about the accounts and groups listed in the permissions
 
-    Exports information about the accounts and groups to CSV
+    Exports information about the accounts and groups to a .csv file
 
     Uses ADSI to recursively retrieve the members of nested groups
 
-    Creates an HTML report showing the resultant access of individual accounts
+    Exports information about all accounts with access to a .csv file
 
-    Exports information about all accounts with NTFS access to CSV
+    Exports information about all accounts with access to a report generated as a .html file
 
-    Creates an HTML report of all accounts with NTFS access
-
-    Outputs an XML-formatted list of common misconfigurations for use win Paessler PRTG Network Monitor as a custom XML sensor
+    Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
     None. Pipeline input is not accepted.
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
+    TODO: Investigate - Looks like I am filtering out ignored domains in 2 separate places?  redundant?
+
     TODO: Bug - Logic Flaw for Owner.
                 Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
                 This misses folders with only inherited access rules but a different owner.
+
     TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
                 The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
+
     TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
                 If it is a fake user, its name will correctly appear without the domain prefix (User123)
+
     TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
                 When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
                 New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
                 Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
                 Need to fix it myself because that makes no sense
-                recommended workaround is to include markdown syntax in PowerShell comment-based help
-                That will not work because:
-                    Tables or code blocks are not what is being attempted here; just paragraphs.
-                    Markdown syntax would be a blank line between the paragraphs but that is not valid for PowerShell comment-based help.
+                workaround is to include markdown syntax in PowerShell comment-based help
+                That is why there are so many extra blank lines in the commented metadata in this script
+
     TODO: Feature - List any excluded accounts at the end
+
     TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
+
     TODO: Feature - Parameter to specify properties to include in report
+
     TODO: Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
+
     TODO: Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
+
     TODO: Feature - Support ACLs from Registry or AD objects
+
     TODO: Feature - psake task to update Release Notes in the script metadata to the github commit message
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -AccountsToSkip 'BUILTIN\\Administrator'
+    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Exclude the built-in Administrator account from the HTML report
 
-    The AccountsToSkip parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
+    The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
 
     The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'
 .EXAMPLE
@@ -117,7 +121,7 @@ Added remaining blank lines where needed in metadata
 
     Exclude empty groups from the HTML report (leaving accounts only)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -DomainToIgnore 'CONTOSO'
+    Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
@@ -152,12 +156,13 @@ param (
     #[string]$TargetPath = '\\ad.contoso.com\coh\Test2\FolderWithoutTarget\FolderWithTarget\',
 
     # Regular expressions that will identify Users or Groups you do not want included in the Html report
-    [string[]]$AccountsToSkip<# = @(
+    [string[]]$ExcludeAccount,
+    <#[string[]]$ExcludeAccount = @(
         'BUILTIN\\Administrators',
         'BUILTIN\\Administrator',
         'CREATOR OWNER',
         'NT AUTHORITY\\SYSTEM'
-    )#>,
+    )#>
 
     # Exclude empty groups from the HTML report
     [switch]$ExcludeEmptyGroups,
@@ -167,19 +172,12 @@ param (
 
     Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
     #>
-    [string[]]$DomainToIgnore, # = @('CONTOSO1\\','CONTOSO2\\'),
+    [string[]]$IgnoreDomain, # = @('CONTOSO1\\','CONTOSO2\\'),
 
     # Path to save the logs and reports generated by this script
     [string]$LogDir = "$env:AppData\Export-Permission\Logs",
 
-    <#
-    Path containing the required modules for this script
-
-    Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)
-    #>
-    [string]$ModulesDir = '$PSScriptRoot\Modules',
-
-    # Get group members
+    # Do not get group members (only report the groups themselves)
     [switch]$NoGroupMembers,
 
     <#
@@ -191,7 +189,7 @@ param (
 
         Set to any whole number to enumerate that many levels
     #>
-    [int]$LevelsOfSubfolders = -1,
+    [int]$SubfolderLevels = -1,
 
     # Title at the top of the HTML report
     [string]$Title = "Folder Permissions Report",
@@ -213,7 +211,7 @@ param (
     #>
     [scriptblock]$GroupNamingConvention = { $true },
 
-    # Open the HTML report at the end using Invoke-Item (useful only interactively)
+    # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
 
     <#
@@ -246,14 +244,6 @@ param (
 
 )
 
-#----------------[ Initialization ]----------------
-
-# $PSScriptRoot is usually null inside the param block so I can't use the double-quotes up there to expand it
-# doing it this way allows comment-based help to accurately reflect the default values of these parameters
-if ($ModulesDir -eq '$PSScriptRoot\Modules') {
-    $ModulesDir = "$PSScriptRoot\Modules"
-}
-
 #----------------[ Functions ]------------------
 
 # This is where the function definitions will be inserted in the portable version of this script
@@ -279,11 +269,11 @@ $FolderPermissions = $null
 
 #----------------[ Main Execution ]---------------
 
-$ReportDescription = Get-ReportDescription -LevelsOfSubfolders $LevelsOfSubfolders
-$FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $LevelsOfSubfolders
+$ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
+$FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
 Write-Verbose "$(Get-Date -Format s)`t$(hostname)`tExport-Permission`tTarget Folder: '$TargetPath'"
 $FolderTargets = Get-FolderTarget -FolderPath $TargetPath
-$Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $LevelsOfSubfolders
+$Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels
 
 # If $TargetPath was on a local disk such as C:\
 # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
@@ -292,7 +282,7 @@ $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfo
 # As a workaround here we will instead get the folder ACL for the original $TargetPath
 # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
 if ($null -eq $Permissions) {
-    $Permissions = Get-FolderAccessList -FolderTargets $TargetPath -LevelsOfSubfolders $LevelsOfSubfolders
+    $Permissions = Get-FolderAccessList -FolderTargets $TargetPath -LevelsOfSubfolders $SubfolderLevels
 }
 
 # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
@@ -408,7 +398,7 @@ Sort-Object -Property Name
 
 # Ensure accounts only appear once on the report if they exist in multiple domains
 $DedupedUserPermissions = $Accounts |
-Remove-DuplicatesAcrossIgnoredDomains -DomainToIgnore $DomainToIgnore
+Remove-DuplicatesAcrossIgnoredDomains -DomainToIgnore $IgnoreDomain
 
 # Group the user permissions back into folder permissions for the report
 $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
@@ -421,9 +411,9 @@ New-BootstrapTable
 
 $GetFolderPermissionsBlock = @{
     FolderPermissions  = $FolderPermissions
-    AccountsToSkip     = $AccountsToSkip
+    ExcludeAccount     = $ExcludeAccount
     ExcludeEmptyGroups = $ExcludeEmptyGroups
-    DomainToIgnore     = $DomainToIgnore
+    IgnoreDomain       = $IgnoreDomain
 }
 $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
 

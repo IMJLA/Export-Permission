@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.109] - 2022-08-01 - Parameter cleanup. Breaking changes.
+
 ## [0.0.108] - 2022-08-01 - Added remaining blank lines where needed in metadata
 
 ## [0.0.107] - 2022-08-01 - Trying blank lines in example help
