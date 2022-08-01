@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.103
+help version: 0.0.104
 locale: en-US
 Module Name:
 online version:
@@ -158,12 +158,18 @@ Accept wildcard characters: False
 
 ### -GroupNamingConvention
 Valid group names that are allowed to appear in ACEs
+
 Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
+
 In the scriptblock, use string comparisons on the Name property
+
 e.g.
 {$_.Name -like 'CONTOSO\Group1*' -or $_.Name -eq 'CONTOSO\Group23'}
+
 The naming format that will be used for the groups is CONTOSO\Group1
+
 where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group
+
 By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance
 
 ```yaml
@@ -180,8 +186,11 @@ Accept wildcard characters: False
 
 ### -LevelsOfSubfolders
 How many levels of subfolder to enumerate
+
     Set to 0 to ignore all subfolders
+
     Set to -1 (default) to recurse infinitely
+
     Set to any whole number to enumerate that many levels
 
 ```yaml
@@ -213,6 +222,7 @@ Accept wildcard characters: False
 
 ### -ModulesDir
 Path containing the required modules for this script
+
 Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)
 
 ```yaml
@@ -259,6 +269,7 @@ Accept wildcard characters: False
 
 ### -PrtgProbe
 If all four of the PRTG parameters are specified,
+
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
 
 ```yaml
@@ -275,6 +286,7 @@ Accept wildcard characters: False
 
 ### -PrtgSensorPort
 If all four of the PRTG parameters are specified,
+
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
 
 ```yaml
@@ -291,6 +303,7 @@ Accept wildcard characters: False
 
 ### -PrtgSensorProtocol
 If all four of the PRTG parameters are specified,
+
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
 
 ```yaml
@@ -307,6 +320,7 @@ Accept wildcard characters: False
 
 ### -PrtgSensorToken
 If all four of the PRTG parameters are specified,
+
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
 
 ```yaml

@@ -30,7 +30,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
           <maml:name>PrtgSensorProtocol</maml:name>
           <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -42,7 +43,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
           <maml:name>PrtgSensorPort</maml:name>
           <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
           <dev:type>
@@ -54,7 +56,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
           <maml:name>PrtgSensorToken</maml:name>
           <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -103,7 +106,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
           <maml:name>ModulesDir</maml:name>
           <maml:description>
-            <maml:para>Path containing the required modules for this script Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)</maml:para>
+            <maml:para>Path containing the required modules for this script</maml:para>
+            <maml:para>Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -115,7 +119,10 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
           <maml:name>LevelsOfSubfolders</maml:name>
           <maml:description>
-            <maml:para>How many levels of subfolder to enumerate     Set to 0 to ignore all subfolders     Set to -1 (default) to recurse infinitely     Set to any whole number to enumerate that many levels</maml:para>
+            <maml:para>How many levels of subfolder to enumerate</maml:para>
+            <maml:para>    Set to 0 to ignore all subfolders</maml:para>
+            <maml:para>    Set to -1 (default) to recurse infinitely</maml:para>
+            <maml:para>    Set to any whole number to enumerate that many levels</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
           <dev:type>
@@ -139,7 +146,13 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
           <maml:name>GroupNamingConvention</maml:name>
           <maml:description>
-            <maml:para>Valid group names that are allowed to appear in ACEs Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object In the scriptblock, use string comparisons on the Name property e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'} The naming format that will be used for the groups is CONTOSO\Group1 where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+            <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
+            <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
+            <maml:para>In the scriptblock, use string comparisons on the Name property</maml:para>
+            <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
+            <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
+            <maml:para>where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
+            <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
           <dev:type>
@@ -151,7 +164,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
           <maml:name>PrtgProbe</maml:name>
           <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -236,7 +250,13 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
         <maml:name>GroupNamingConvention</maml:name>
         <maml:description>
-          <maml:para>Valid group names that are allowed to appear in ACEs Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object In the scriptblock, use string comparisons on the Name property e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'} The naming format that will be used for the groups is CONTOSO\Group1 where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+          <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
+          <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
+          <maml:para>In the scriptblock, use string comparisons on the Name property</maml:para>
+          <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
+          <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
+          <maml:para>where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
+          <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
         <dev:type>
@@ -248,7 +268,10 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
         <maml:name>LevelsOfSubfolders</maml:name>
         <maml:description>
-          <maml:para>How many levels of subfolder to enumerate     Set to 0 to ignore all subfolders     Set to -1 (default) to recurse infinitely     Set to any whole number to enumerate that many levels</maml:para>
+          <maml:para>How many levels of subfolder to enumerate</maml:para>
+          <maml:para>    Set to 0 to ignore all subfolders</maml:para>
+          <maml:para>    Set to -1 (default) to recurse infinitely</maml:para>
+          <maml:para>    Set to any whole number to enumerate that many levels</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
         <dev:type>
@@ -272,7 +295,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>ModulesDir</maml:name>
         <maml:description>
-          <maml:para>Path containing the required modules for this script Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)</maml:para>
+          <maml:para>Path containing the required modules for this script</maml:para>
+          <maml:para>Each module must match proper PowerShell module folder structure (module folder name matches the name of the .psm1 file)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -308,7 +332,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
         <maml:name>PrtgProbe</maml:name>
         <maml:description>
-          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+          <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -320,7 +345,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
         <maml:name>PrtgSensorPort</maml:name>
         <maml:description>
-          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+          <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
         <dev:type>
@@ -332,7 +358,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>PrtgSensorProtocol</maml:name>
         <maml:description>
-          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+          <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -344,7 +371,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
         <maml:name>PrtgSensorToken</maml:name>
         <maml:description>
-          <maml:para>If all four of the PRTG parameters are specified, the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+          <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
