@@ -476,10 +476,8 @@ task Publish -depends SourceControl {
     }
     if ($NoPublish -eq $false) {
         # Publish to PSGallery
-        Write-Host ($publishParams | Out-String)
         Publish-Script @publishParams
         $publishParams['Path'] = $script:PortableScriptFilePath
-        Write-Host ($publishParams | Out-String)
         Publish-Script @publishParams
     }
 } -description 'Publish module to the defined PowerShell repository'
