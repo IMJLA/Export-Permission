@@ -1,7 +1,7 @@
 ---
 Download Help Link: N/A
 external help file: -help.xml
-Help Version: 0.0.93
+Help Version: 0.0.94
 Locale: en-US
 Module Guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 Module Name: Export-Permission.ps1
@@ -20,7 +20,7 @@ Create CSV, HTML, and XML reports of permissions
 Export-Permission.ps1 [[-TargetPath] <String>] [[-AccountsToSkip] <String[]>] [-ExcludeEmptyGroups]
  [[-DomainToIgnore] <String[]>] [[-LogDir] <String>] [[-ModulesDir] <String>] [-NoGroupMembers]
  [[-LevelsOfSubfolders] <Int32>] [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>]
- [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <Int32>]
+ [-OpenReportAtEnd] [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <Int32>]
  [[-PrtgSensorToken] <String>] [<CommonParameters>]
 ```
 
@@ -242,6 +242,21 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -OpenReportAtEnd
+Open the HTML report at the end using Invoke-Item (useful only interactively)
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -PrtgProbe
 If all four of the PRTG parameters are specified,
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
@@ -346,13 +361,13 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### [System.String] XML PRTG sensor output
 ## NOTES
-TODO: Bug - Logic Flaw for Owner. 
-Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner. 
-This misses folders with only inherited access rules but a different owner.
-TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users). 
-The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
-TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123). 
-If it is a fake user, its name will correctly appear without the domain prefix (User123)
+TODO: Bug - Logic Flaw for Owner.
+            Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
+            This misses folders with only inherited access rules but a different owner.
+TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
+            The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
+TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
+            If it is a fake user, its name will correctly appear without the domain prefix (User123)
 TODO: Feature - List any excluded accounts at the end
 TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
 TODO: Feature - Parameter to specify properties to include in report

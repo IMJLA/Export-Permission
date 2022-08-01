@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.94
+.VERSION 0.0.95
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -60,9 +60,13 @@
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
-    TODO: Bug - Logic Flaw for Owner.  Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.  This misses folders with only inherited access rules but a different owner.
-    TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).  The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
-    TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).  If it is a fake user, its name will correctly appear without the domain prefix (User123)
+    TODO: Bug - Logic Flaw for Owner.
+                Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
+                This misses folders with only inherited access rules but a different owner.
+    TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
+                The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
+    TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
+                If it is a fake user, its name will correctly appear without the domain prefix (User123)
     TODO: Feature - List any excluded accounts at the end
     TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
     TODO: Feature - Parameter to specify properties to include in report
@@ -164,6 +168,9 @@ param (
     #>
     [scriptblock]$GroupNamingConvention = { $true },
 
+    # Open the HTML report at the end using Invoke-Item (useful only interactively)
+    [switch]$OpenReportAtEnd,
+
     # If all four of the PRTG parameters are specified,
     # the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     [string]$PrtgProbe,
@@ -192,17 +199,14 @@ if ($ModulesDir -eq '$PSScriptRoot\Modules') {
 
 #----------------[ Functions ]------------------
 
-# Load all modules contained in the specified directory
-Get-ChildItem -Directory -LiteralPath $ModulesDir |
-ForEach-Object {
-    Remove-Module $_.Name -Force -ErrorAction SilentlyContinue *>$null
-    Import-Module $_.FullName -ErrorAction Stop #*>$null
-}
+# This is where the function definitions will be inserted in the portable version of this script
 
 #----------------[ Logging ]----------------
 
 $LogDir = New-DatedSubfolder -Root $LogDir
-Start-Transcript "$LogDir\Transcript.log"
+$TranscriptFile = "$LogDir\Transcript.log"
+Start-Transcript $TranscriptFile *>$null
+Write-Information $TranscriptFile
 
 #----------------[ Declarations ]----------------
 
@@ -212,16 +216,16 @@ $AdsiServerCache = [hashtable]::Synchronized(@{})
 $Permissions = $null
 $FolderTargets = $null
 $SecurityPrincipals = $null
-$AccountPermissions = $null
+$FormattedSecurityPrincipals = $null
 $DedupedUserPermissions = $null
 $FolderPermissions = $null
 
 #----------------[ Main Execution ]---------------
 
-Write-Verbose "$(Get-Date -Format s)`t$(hostname)`tExport-Permission`tTarget Folder: '$TargetPath'"
-$FolderTargets = Get-FolderTarget -FolderPath $TargetPath
 $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $LevelsOfSubfolders
 $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $LevelsOfSubfolders
+Write-Verbose "$(Get-Date -Format s)`t$(hostname)`tExport-Permission`tTarget Folder: '$TargetPath'"
+$FolderTargets = Get-FolderTarget -FolderPath $TargetPath
 $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $LevelsOfSubfolders
 
 # If $TargetPath was on a local disk such as C:\
@@ -235,21 +239,20 @@ if ($null -eq $Permissions) {
 }
 
 # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
-$NtfsAccessControlEntriesCsv = "$LogDir\NtfsAccessControlEntries.csv"
+$CsvFilePath = "$LogDir\1-AccessControlEntries.csv"
 
 $Permissions |
 Select-Object -Property @{
     Label      = 'Path'
     Expression = { $_.SourceAccessList.Path }
 }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags |
-Export-Csv -NoTypeInformation -LiteralPath $NtfsAccessControlEntriesCsv
+Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 
-Write-Information $NtfsAccessControlEntriesCsv
+Write-Information $CsvFilePath
 
-
-# This will address an issue where threads that start near the same time will all find the cache empty, then attempt the costly operations to populate it
-# The issue causes repetitive queries to the same directory servers
 # Identify unique directory servers to populate into the AdsiServerCache
+# This will address an issue where threads that start near the same time will all find the cache empty, then attempt the costly operations to populate it
+# The prevents repetitive queries to the same directory servers
 $UniqueServerNames = $Permissions.SourceAccessList.Path |
 Sort-Object -Unique |
 ForEach-Object { Find-ServerNameInPath -LiteralPath $_ } |
@@ -266,7 +269,8 @@ $GetAdsiServer = @{
 }
 $null = Split-Thread @GetAdsiServer
 
-# Resolve the Identity References directly from the NTFS ACEs to their associated SIDs/Names
+# Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
+# The resolved name includes the domain name (or local computer name for local accounts)
 $ResolveAce = @{
     Command              = 'Resolve-Ace'
     InputObject          = $Permissions
@@ -276,24 +280,26 @@ $ResolveAce = @{
         KnownServers = $AdsiServerCache
     }
 }
-$Identities = Split-Thread @ResolveAce
+$PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAce
 
 # Save a CSV report of the resolved identity references
-$IdentityReferencesCsv = "$LogDir\NtfsIdentityReferences.csv"
+$CsvFilePath = "$LogDir\2-AccessControlEntriesWithResolvedIdentityReferences.csv"
 
-$Identities |
+$PermissionsWithResolvedIdentityReferences |
 Select-Object -Property @{
     Label      = 'Path'
     Expression = { $_.SourceAccessList.Path }
 }, * |
-Export-Csv -NoTypeInformation -LiteralPath $IdentityReferencesCsv
+Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 
-Write-Information $IdentityReferencesCsv
+Write-Information $CsvFilePath
 
-$GroupedIdentities = $Identities |
+# Group the Access Control Entries by their resolved identity references
+# This avoids repeat ADSI lookups for the same security principal
+$GroupedIdentities = $PermissionsWithResolvedIdentityReferences |
 Group-Object -Property IdentityReferenceResolved
 
-# Use ADSI to collect more information about each IdentityReference (e.g. CONTOSO\user1) in NTFS Access Control Entries
+# Use ADSI to collect more information about each resolved identity reference
 $ExpandIdentityReference = @{
     Command              = 'Expand-IdentityReference'
     InputObject          = $GroupedIdentities
@@ -318,24 +324,28 @@ $FormatSecurityPrincipal = @{
     Timeout              = 1200
     ObjectStringProperty = 'Name'
 }
-$AccountPermissions = Split-Thread @FormatSecurityPrincipal
+$FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipal
 
-$ExpandedAccountPermissions = Expand-AccountPermission -AccountPermission $AccountPermissions
+# Expand the collection of security principals from Format-SecurityPrincipal
+# back into a collection of access control entries (one per ACE per principal)
+# This operation is a bunch simple type conversions, no queries are being performed
+# That makes it fast enough that it is not worth multi-threading
+$ExpandedAccountPermissions = Expand-AccountPermission -AccountPermission $FormattedSecurityPrincipals
 
 # Save a CSV report of the expanded account permissions
 #TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-$ExpandedAccountPermissionsCsv = "$LogDir\ResultantAccountPermissions.csv"
+$CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
 
 $ExpandedAccountPermissions |
 Select-Object -Property @{
     Label      = 'SourceAclPath'
     Expression = { $_.ACESourceAccessList.Path }
 }, * |
-Export-Csv -NoTypeInformation -LiteralPath $ExpandedAccountPermissionsCsv
+Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 
-Write-Information $ExpandedAccountPermissionsCsv
+Write-Information $CsvFilePath
 
-$Accounts = $AccountPermissions |
+$Accounts = $FormattedSecurityPrincipals |
 Group-Object -Property User |
 Sort-Object -Property Name
 
@@ -411,10 +421,14 @@ $PrtgSensorParams = @{
 }
 Send-PrtgXmlSensorOutput @PrtgSensorParams
 
-Stop-Transcript
+# Open the HTML report file (useful only interactively)
+if ($OpenReportAtEnd) {
+    Invoke-Item $ReportFile
+}
+
+Stop-Transcript  *>$null
 
 # Output the XML so the script can be directly used as a PRTG sensor
-Invoke-Item $ReportFile
-
-# Output the XML so the script can be directly used as a PRTG sensor
+# Caution: This use may be a problem for a PRTG probe because of how long the script can run on large folders/domains
+# Recommendation: Specify the appropriate parameters to run this as a PRTG push sensor instead
 return $XMLOutput
