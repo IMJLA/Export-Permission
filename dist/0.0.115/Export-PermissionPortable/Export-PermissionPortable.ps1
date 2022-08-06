@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.114
+.VERSION 0.0.115
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,12 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated script help
+Build with minor debug output changes and updated versions of module dependencies
 
 .PRIVATEDATA
 
 #> 
-
 
 
 
@@ -63,6 +62,11 @@ Updated script help
     - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
 
+    Does not support these scenarios:
+    - Mapped network drives (TODO feature)
+    - ACL Owners or Groups (only the DACL is reported)
+    - File share permissions (only NTFS permissions are reported)
+
     Behavior:
     - Gets all permissions for the target folder
     - Gets non-inherited permissions for subfolders (if specified)
@@ -78,6 +82,11 @@ Updated script help
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
+    This code has not been reviewed or audited by a third party
+    This code has limited or no tests
+    It was designed for presenting reports to non-technical management or administrative staff
+    It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
+
     ToDo:
     - Currently requires a string for input (the path to a target folder). FileInfo or DirectoryInfo instead?
     - When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.
@@ -1120,7 +1129,7 @@ function Expand-IdentityReference {
                     Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a local security principal or unresolved SID"
 
                     # Determine if SID belongs to current domain
-                    $IdentityDomainSID = (($StartingIdentityName -split '-') | Select-Object -SkipLast 1) -join '-'
+                    $IdentityDomainSID = $StartingIdentityName.Substring(0, $StartingIdentityName.LastIndexOf("-"))
                     if ($IdentityDomainSID -eq $CurrentDomainSID) {
                         Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
                     } else {
@@ -1130,6 +1139,7 @@ function Expand-IdentityReference {
                     if ($null -eq $name) { $name = $StartingIdentityName }
 
                     if ($name -like "S-1-*") {
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is an unresolved SID"
 
                         # The SID of the domain is the SID of the user minus the last block of numbers
                         $DomainSid = $name.Substring(0, $name.LastIndexOf("-"))
@@ -1175,6 +1185,7 @@ function Expand-IdentityReference {
                         }
 
                     } else {
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a local security principal"
                         $DomainNetbiosCacheResult = $DomainsByNetbios[$domainNetbiosString]
                         if ($DomainNetbiosCacheResult) {
                             $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainNetbiosCacheResult.Dns)/$name"
@@ -1207,19 +1218,20 @@ function Expand-IdentityReference {
                     if ($NoGroupMembers -eq $false) {
 
                         if (
-                            $DirectoryEntry.Properties['objectClass'] -contains 'group' -or
-                            $DirectoryEntry.SchemaClassName -eq 'group'
+                            # WinNT DirectoryEntries do not contain an objectClass property
+                            # If this property exists it is an LDAP DirectoryEntry rather than WinNT
+                            $DirectoryEntry.Properties['objectClass'] -contains 'group'
                         ) {
-
                             # Retrieve the members of groups from the LDAP provider
-                            #$Members = (Get-AdsiGroup -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $DirectoryEntry.Path -DomainsByNetbios $DomainsByNetbios).FullMembers
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) is an LDAP security principal"
                             $Members = (Get-AdsiGroupMember -Group $DirectoryEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios).FullMembers
-
                         } else {
-
                             # Retrieve the members of groups from the WinNT provider
-                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) must be a WinNT user or group"
-                            $Members = Get-WinNTGroupMember -DirectoryEntryCache $DirectoryEntryCache -DirectoryEntry $DirectoryEntry -KnownDomains $KnownDomains -DomainsByNetbios $DomainsByNetbios
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) is a WinNT security principal"
+                            if ( $DirectoryEntry.SchemaClassName -eq 'group') {
+                                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) is a WinNT group"
+                                $Members = Get-WinNTGroupMember -DirectoryEntryCache $DirectoryEntryCache -DirectoryEntry $DirectoryEntry -KnownDomains $KnownDomains -DomainsByNetbios $DomainsByNetbios
+                            }
 
                         }
 
@@ -1765,6 +1777,8 @@ function Get-DirectoryEntry {
                 $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             # Workgroup computers do not return a DirectoryEntry with a SearchRoot Path so this ends up being an empty string
+            # This is also invoked when DirectoryPath is null for any reason
+            # We will return a WinNT object representing the local computer's WinNT directory
             '^$' {
                 Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t$(hostname) does not appear to be domain-joined since the SearchRoot Path is empty. Defaulting to WinNT provider for localhost instead."
                 $Workgroup = (Get-CimInstance -ClassName Win32_ComputerSystem).Workgroup
@@ -1785,7 +1799,7 @@ function Get-DirectoryEntry {
                 Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
 
             }
-            # Otherwise the DirectoryPath is an LDAP path
+            # Otherwise the DirectoryPath is an LDAP path or a WinNT path (treated the same at this stage)
             default {
 
                 Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
@@ -6530,7 +6544,7 @@ $ReportParameters = @{
     Description = $ReportDescription
     Body        = $Body
 }
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tNew-BootstrapReport @ReportParameters"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-BootstrapReport @ReportParameters"
 $Report = New-BootstrapReport @ReportParameters
 
 # Save the Html report
@@ -6547,11 +6561,11 @@ $NtfsIssueParams = @{
     UserPermissions       = $Accounts
     GroupNamingConvention = $GroupNamingConvention
 }
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tNew-NtfsAclIssueReport @NtfsIssueParams"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-NtfsAclIssueReport @NtfsIssueParams"
 $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
 # Format the information as a custom XML sensor for Paessler PRTG Network Monitor
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tGet-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
 $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
 
 # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
@@ -6569,7 +6583,7 @@ $PrtgSensorParams = @{
     PrtgSensorPort     = $PrtgSensorPort
     PrtgSensorToken    = $PrtgSensorToken
 }
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tSend-PrtgXmlSensorOutput @PrtgSensorParams"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSend-PrtgXmlSensorOutput @PrtgSensorParams"
 Send-PrtgXmlSensorOutput @PrtgSensorParams
 
 # Open the HTML report file (useful only interactively)

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.114
+.VERSION 0.0.115
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated script help
+Build with minor debug output changes and updated versions of module dependencies
 
 .PRIVATEDATA
 
@@ -39,7 +39,6 @@ Updated script help
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
 
 
 <#
@@ -58,6 +57,11 @@ Updated script help
     - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
 
+    Does not support these scenarios:
+    - Mapped network drives (TODO feature)
+    - ACL Owners or Groups (only the DACL is reported)
+    - File share permissions (only NTFS permissions are reported)
+
     Behavior:
     - Gets all permissions for the target folder
     - Gets non-inherited permissions for subfolders (if specified)
@@ -73,6 +77,11 @@ Updated script help
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
+    This code has not been reviewed or audited by a third party
+    This code has limited or no tests
+    It was designed for presenting reports to non-technical management or administrative staff
+    It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
+
     ToDo:
     - Currently requires a string for input (the path to a target folder). FileInfo or DirectoryInfo instead?
     - When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.
@@ -497,7 +506,7 @@ $ReportParameters = @{
     Description = $ReportDescription
     Body        = $Body
 }
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tNew-BootstrapReport @ReportParameters"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-BootstrapReport @ReportParameters"
 $Report = New-BootstrapReport @ReportParameters
 
 # Save the Html report
@@ -514,11 +523,11 @@ $NtfsIssueParams = @{
     UserPermissions       = $Accounts
     GroupNamingConvention = $GroupNamingConvention
 }
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tNew-NtfsAclIssueReport @NtfsIssueParams"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-NtfsAclIssueReport @NtfsIssueParams"
 $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
 # Format the information as a custom XML sensor for Paessler PRTG Network Monitor
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tGet-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
 $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
 
 # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
@@ -536,7 +545,7 @@ $PrtgSensorParams = @{
     PrtgSensorPort     = $PrtgSensorPort
     PrtgSensorToken    = $PrtgSensorToken
 }
-Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tSend-PrtgXmlSensorOutput @PrtgSensorParams"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSend-PrtgXmlSensorOutput @PrtgSensorParams"
 Send-PrtgXmlSensorOutput @PrtgSensorParams
 
 # Open the HTML report file (useful only interactively)

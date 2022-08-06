@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.115] - 2022-08-06 - Build with minor debug output changes and updated versions of module dependencies
+
 ## [0.0.114] - 2022-08-06 - Updated script help
 
 ## [0.0.113] - 2022-08-06 - Updated modules with bugfixes

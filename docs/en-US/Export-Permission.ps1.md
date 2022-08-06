@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.113
+help version: 0.0.114
 locale: en-US
 Module Name:
 online version:
@@ -35,6 +35,11 @@ Supports these scenarios:
 - UNC file paths
 - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
 - Active Directory domain trusts, and unresolved SIDs for deleted accounts
+
+Does not support these scenarios:
+- Mapped network drives (TODO feature)
+- ACL Owners or Groups (only the DACL is reported)
+- File share permissions (only NTFS permissions are reported)
 
 Behavior:
 - Gets all permissions for the target folder
@@ -385,6 +390,11 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### [System.String] XML PRTG sensor output
 ## NOTES
+This code has not been reviewed or audited by a third party
+This code has limited or no tests
+It was designed for presenting reports to non-technical management or administrative staff
+It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
+
 ToDo:
 - Currently requires a string for input (the path to a target folder).
 FileInfo or DirectoryInfo instead?
