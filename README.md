@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.114
+help version: 0.0.115
 locale: en-US
 Module Name:
 online version:
@@ -391,8 +391,11 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### [System.String] XML PRTG sensor output
 ## NOTES
 This code has not been reviewed or audited by a third party
+
 This code has limited or no tests
+
 It was designed for presenting reports to non-technical management or administrative staff
+
 It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
 ToDo:

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.115
+.VERSION 0.0.116
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Build with minor debug output changes and updated versions of module dependencies
+Updated notes
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Build with minor debug output changes and updated versions of module dependencie
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -78,8 +79,11 @@ Build with minor debug output changes and updated versions of module dependencie
     [System.String] XML PRTG sensor output
 .NOTES
     This code has not been reviewed or audited by a third party
+
     This code has limited or no tests
+
     It was designed for presenting reports to non-technical management or administrative staff
+
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
     ToDo:

@@ -424,7 +424,10 @@
     </command:returnValues>
     <maml:alertSet>
       <maml:alert>
-        <maml:para>This code has not been reviewed or audited by a third party This code has limited or no tests It was designed for presenting reports to non-technical management or administrative staff It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses</maml:para>
+        <maml:para>This code has not been reviewed or audited by a third party</maml:para>
+        <maml:para>This code has limited or no tests</maml:para>
+        <maml:para>It was designed for presenting reports to non-technical management or administrative staff</maml:para>
+        <maml:para>It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses</maml:para>
         <maml:para>ToDo: - Currently requires a string for input (the path to a target folder). FileInfo or DirectoryInfo instead? - When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query. - Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too. - Investigate - Looks like we are filtering out ignored domains in 2 places?  redundant?  Why is the IgnoreDomain syntax regex with slashes required? (works but should not be required, that makes no sense) - Investigate - What happens if an ACE contains a SID that is in an object's SID history?</maml:para>
         <maml:para>- Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.</maml:para>
         <maml:para>Add debug output suffix "# For $ComputerName" so debug is easier to read - Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api</maml:para>

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.115
+.VERSION 0.0.116
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Build with minor debug output changes and updated versions of module dependencies
+Updated notes
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -83,8 +84,11 @@ Build with minor debug output changes and updated versions of module dependencie
     [System.String] XML PRTG sensor output
 .NOTES
     This code has not been reviewed or audited by a third party
+
     This code has limited or no tests
+
     It was designed for presenting reports to non-technical management or administrative staff
+
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
     ToDo:
