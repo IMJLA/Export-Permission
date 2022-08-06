@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.111
+help version: 0.0.112
 locale: en-US
 Module Name:
 online version:
@@ -24,23 +24,26 @@ Export-Permission.ps1 [[-TargetPath] <String>] [[-ExcludeAccount] <String[]>] [-
 ```
 
 ## DESCRIPTION
-Gets all permissions for the target folder
-
-Gets non-inherited permissions for subfolders (if specified)
-
-Exports the permissions to a .csv file
-
-Uses ADSI to get information about the accounts and groups listed in the permissions
-
-Exports information about the accounts and groups to a .csv file
-
-Uses ADSI to recursively retrieve the members of nested groups
-
-Exports information about all accounts with access to a .csv file
-
-Exports information about all accounts with access to a report generated as a .html file
-
-Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
+Benefits:
+- Generates reports that are easy to read for everyone
+- Provides additional information about each user such as Name, Department, Title
+- Multithreaded with caching for fast results
+- Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
+Supports these scenarios:
+- local file paths (resolves them to their UNC paths using the administrative shares, so that the computer name is shown in the reports)
+- UNC file paths
+- DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
+- Active Directory domain trusts, and unresolved SIDs for deleted accounts
+Behavior:
+- Gets all permissions for the target folder
+- Gets non-inherited permissions for subfolders (if specified)
+- Exports the permissions to a .csv file
+- Uses ADSI to get information about the accounts and groups listed in the permissions
+- Exports information about the accounts and groups to a .csv file
+- Uses ADSI to recursively retrieve the members of nested groups
+- Exports information about all accounts with access to a .csv file
+- Exports information about all accounts with access to a report generated as a .html file
+- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 
 ## EXAMPLES
 
@@ -84,6 +87,19 @@ Remove the CONTOSO domain prefix from associated accounts and groups
 
 ### EXAMPLE 5
 ```
+Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
+```
+
+Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
+Remove the CONTOSO1\ and CONTOSO2\ domain prefixes from associated accounts and groups
+
+Across the two domains, accounts with the same samAccountNames will be considered equivalent
+
+Across the two domains, groups with the same Names will be considered equivalent
+
+### EXAMPLE 6
+```
 Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 ```
 
@@ -91,14 +107,14 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 
 Redirect logs and output files to C:\Logs instead of the default location in AppData
 
-### EXAMPLE 6
+### EXAMPLE 7
 ```
 Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 
-### EXAMPLE 7
+### EXAMPLE 8
 ```
 Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
 ```
@@ -107,7 +123,7 @@ Generate reports on the NTFS permissions for the folder C:\Test
 
 Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 
-### EXAMPLE 8
+### EXAMPLE 9
 ```
 Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 ```
@@ -328,7 +344,7 @@ Accept wildcard characters: False
 ```
 
 ### -TargetPath
-Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
+Path to the item whose permissions to export
 
 ```yaml
 Type: System.String
@@ -352,7 +368,7 @@ Aliases:
 
 Required: False
 Position: 6
-Default value: Folder Permissions Report
+Default value: Permissions Report
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -367,9 +383,30 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### [System.String] XML PRTG sensor output
 ## NOTES
+Requires a string for input (the path to a target folder) # TODO: FileInfo or DirectoryInfo instead?
+
+TODO: When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID.
+Skip the query.
+
+TODO: Investigate - FileInfo or DirectoryInfo rather than string for target folder input param. 
+Will a string auto-cast to these types if sent as input?
+I think it will. 
+Add Test-Path input validation script too.
+
 TODO: Investigate - Looks like I am filtering out ignored domains in 2 separate places? 
 redundant?
 
+TODO: Investigate - What happens if an ACE contains a SID that is in an object's SID history?
+
+TODO: Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination. 
+Add debug output suffix "# For $ComputerName" so debug is easier to read
+
+TODO: Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
+
+TODO: Consider implementing universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER
+    WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
+    WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
+    WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
 TODO: Bug - Logic Flaw for Owner.
             Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
             This misses folders with only inherited access rules but a different owner.
@@ -384,8 +421,8 @@ TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptio
             When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
             New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
             Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
-            Need to fix it myself because that makes no sense
-            workaround is to include markdown syntax in PowerShell comment-based help
+            Need to fix it myself and submit a PR because that makes no sense
+            Until then, workaround is to include markdown syntax in PowerShell comment-based help
             That is why there are so many extra blank lines in the commented metadata in this script
 
 TODO: Feature - List any excluded accounts at the end

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.112
+.VERSION 0.0.113
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,14 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated comment-based help
+Updated modules with bugfixes
 
 .PRIVATEDATA
 
 #> 
-
-
-
 
 
 
@@ -53,30 +50,49 @@ Updated comment-based help
     Create CSV, HTML, and XML reports of permissions
 
 .DESCRIPTION
-    Gets all permissions for the target folder
-
-    Gets non-inherited permissions for subfolders (if specified)
-
-    Exports the permissions to a .csv file
-
-    Uses ADSI to get information about the accounts and groups listed in the permissions
-
-    Exports information about the accounts and groups to a .csv file
-
-    Uses ADSI to recursively retrieve the members of nested groups
-
-    Exports information about all accounts with access to a .csv file
-
-    Exports information about all accounts with access to a report generated as a .html file
-
-    Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
+    Benefits:
+    - Generates reports that are easy to read for everyone
+    - Provides additional information about each user such as Name, Department, Title
+    - Multithreaded with caching for fast results
+    - Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
+    Supports these scenarios:
+    - local file paths (resolves them to their UNC paths using the administrative shares, so that the computer name is shown in the reports)
+    - UNC file paths
+    - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
+    - Active Directory domain trusts, and unresolved SIDs for deleted accounts
+    Behavior:
+    - Gets all permissions for the target folder
+    - Gets non-inherited permissions for subfolders (if specified)
+    - Exports the permissions to a .csv file
+    - Uses ADSI to get information about the accounts and groups listed in the permissions
+    - Exports information about the accounts and groups to a .csv file
+    - Uses ADSI to recursively retrieve the members of nested groups
+    - Exports information about all accounts with access to a .csv file
+    - Exports information about all accounts with access to a report generated as a .html file
+    - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
     None. Pipeline input is not accepted.
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
+    Requires a string for input (the path to a target folder) # TODO: FileInfo or DirectoryInfo instead?
+
+    TODO: When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.
+
+    TODO: Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too.
+
     TODO: Investigate - Looks like I am filtering out ignored domains in 2 separate places?  redundant?
 
+    TODO: Investigate - What happens if an ACE contains a SID that is in an object's SID history?
+
+    TODO: Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.  Add debug output suffix "# For $ComputerName" so debug is easier to read
+
+    TODO: Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
+
+    TODO: Consider implementing universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER
+        WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
+        WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
+        WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
     TODO: Bug - Logic Flaw for Owner.
                 Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
                 This misses folders with only inherited access rules but a different owner.
@@ -91,8 +107,8 @@ Updated comment-based help
                 When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
                 New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
                 Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
-                Need to fix it myself because that makes no sense
-                workaround is to include markdown syntax in PowerShell comment-based help
+                Need to fix it myself and submit a PR because that makes no sense
+                Until then, workaround is to include markdown syntax in PowerShell comment-based help
                 That is why there are so many extra blank lines in the commented metadata in this script
 
     TODO: Feature - List any excluded accounts at the end
@@ -133,6 +149,16 @@ Updated comment-based help
 
     Remove the CONTOSO domain prefix from associated accounts and groups
 .EXAMPLE
+    Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
+
+    Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
+    Remove the CONTOSO1\ and CONTOSO2\ domain prefixes from associated accounts and groups
+
+    Across the two domains, accounts with the same samAccountNames will be considered equivalent
+
+    Across the two domains, groups with the same Names will be considered equivalent
+.EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -157,9 +183,9 @@ Updated comment-based help
 #>
 param (
 
-    # Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)
+    # Path to the item whose permissions to export
     [string]$TargetPath = 'C:\Test',
-    #[string]$TargetPath = '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubolderWithoutTarget\DfsSubfolderWithTarget\',
+    #[string]$TargetPath = '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\',
 
     # Regular expressions matching names of Users or Groups to exclude from the HTML report
     [string[]]$ExcludeAccount,
@@ -178,7 +204,7 @@ param (
 
     Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
     #>
-    [string[]]$IgnoreDomain, # = @('CONTOSO1\\','CONTOSO2\\'),
+    [string[]]$IgnoreDomain,
 
     # Path to save the logs and reports generated by this script
     [string]$LogDir = "$env:AppData\Export-Permission\Logs",
@@ -198,7 +224,7 @@ param (
     [int]$SubfolderLevels = -1,
 
     # Title at the top of the HTML report
-    [string]$Title = "Folder Permissions Report",
+    [string]$Title = "Permissions Report",
 
     <#
     Valid group names that are allowed to appear in ACEs
@@ -278,7 +304,9 @@ function Add-DomainFqdnToLdapPath {
 
         # Incomplete LDAP directory path containing a distinguishedName but lacking a server address
         [Parameter(ValueFromPipeline)]
-        [string[]]$DirectoryPath
+        [string[]]$DirectoryPath,
+
+        [hashtable]$DomainsByNetbios = [hashtable]::Synchronized(@{})
 
     )
     begin {
@@ -297,19 +325,19 @@ function Add-DomainFqdnToLdapPath {
                     $DomainDN = $null
                     $DomainFqdn = $null
                     $DomainDN = ([regex]::Matches($ThisPath, $DomainRegEx) | ForEach-Object { $_.Value }) -join ','
-                    $DomainFqdn = $DomainDN | ConvertTo-Fqdn
+                    $DomainFqdn = ConvertTo-Fqdn -DistinguishedName $DomainDN -DomainsByNetbios $DomainsByNetbios
                     if ($ThisPath -match "LDAP:\/\/$DomainFqdn\/") {
-                        #Write-Debug "Domain FQDN already found in the directory path: $($ThisPath)"
+                        #Write-Debug -Message "Domain FQDN already found in the directory path: $($ThisPath)"
                         $FQDNPath = $ThisPath
                     } else {
                         $FQDNPath = $ThisPath -replace 'LDAP:\/\/', "LDAP://$DomainFqdn/"
                     }
                 } else {
-                    #Write-Debug "Domain DN not found in the directory path: $($ThisPath)"
+                    #Write-Debug -Message "Domain DN not found in the directory path: $($ThisPath)"
                     $FQDNPath = $ThisPath
                 }
             } else {
-                #Write-Debug "Not an expected directory path: $($ThisPath)"
+                #Write-Debug -Message "Not an expected directory path: $($ThisPath)"
                 $FQDNPath = $ThisPath
             }
 
@@ -349,8 +377,10 @@ function Add-SidInfo {
         #>
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
 
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
         # Hashtable containing known domain SIDs as the keys and their names as the values
-        $TrustedDomainSidNameMap = (Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache)
+        $TrustedDomainSidNameMap = (Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios)
 
     )
 
@@ -359,6 +389,9 @@ function Add-SidInfo {
     process {
         ForEach ($Object in $InputObject) {
             $SID = $null
+            $SamAccountName = $null
+            $DomainObject = $null
+
             if ($null -eq $Object) { continue }
             elseif (
                 $null -ne $Object.objectSid.Value -and
@@ -369,22 +402,22 @@ function Add-SidInfo {
                 $Object.objectSid.Value.GetType().FullName -ne 'System.Management.Automation.PSMethod'
             ) {
                 [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.objectSid.Value, 0)
-            } elseif ($Object.Properties['objectSid'].Value) {
-                [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.Properties['objectSid'].Value, 0)
-            } elseif ($Object.Properties['objectSid']) {
-                [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]($Object.Properties['objectSid'] | ForEach-Object { $_ }), 0)
+            } elseif ($Object.Properties) {
+                if ($Object.Properties['objectSid'].Value) {
+                    [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.Properties['objectSid'].Value, 0)
+                } elseif ($Object.Properties['objectSid']) {
+                    [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]($Object.Properties['objectSid'] | ForEach-Object { $_ }), 0)
+                }
+                if ($Object.Properties['samaccountname']) {
+                    $SamAccountName = $Object.Properties['samaccountname']
+                } else {
+                    #DirectoryEntries from the WinNT provider for local accounts do not have a samaccountname attribute so we use name instead
+                    $SamAccountName = $Object.Properties['name']
+                }
             } elseif ($Object.objectSid) {
                 [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.objectSid, 0)
             }
 
-            if ($Object.Properties['samaccountname']) {
-                $SamAccountName = $Object.Properties['samaccountname']
-            } else {
-                #DirectoryEntries from the WinNT provider for local accounts do not have a samaccountname attribute so we use name instead
-                $SamAccountName = $Object.Properties['name']
-            }
-
-            $DomainObject = $null
             if ($Object.Domain.Sid) {
                 #if ($Object.Domain.GetType().FullName -ne 'System.Management.Automation.PSMethod') {
                 # This would only have come from Add-SidInfo in the first place
@@ -395,7 +428,7 @@ function Add-SidInfo {
                 $DomainObject = $Object.Domain
                 #}
             }
-            if (!($DomainObject)) {
+            if (-not $DomainObject) {
                 # The SID of the domain is the SID of the user minus the last block of numbers
                 $DomainSid = $SID.Substring(0, $Sid.LastIndexOf("-"))
 
@@ -403,7 +436,7 @@ function Add-SidInfo {
                 $DomainObject = $TrustedDomainSidNameMap[$DomainSid]
             }
 
-            #Write-Debug "$SamAccountName`t$SID"
+            #Write-Debug -Message "$SamAccountName`t$SID"
 
             $Object |
             Add-Member -PassThru -Force @{
@@ -527,25 +560,95 @@ function ConvertTo-DistinguishedName {
     [OutputType([System.String])]
     param (
         # NetBIOS name of the domain
-        [Parameter(Mandatory, ValueFromPipeline)]
-        [string[]]$Domain
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'NetBIOS')]
+        [string[]]$Domain,
+
+        [Parameter(ParameterSetName = 'NetBIOS')]
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        # NetBIOS name of the domain
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'FQDN')]
+        [string[]]$DomainFQDN,
+
+        # Type of initialization to be performed
+        # Will be translated to the corresponding integer for use as the lnSetType parameter of the IADsNameTranslate::Init method (iads.h)
+        # https://docs.microsoft.com/en-us/windows/win32/api/iads/ne-iads-ads_name_inittype_enum
+        [string]$InitType = 'ADS_NAME_INITTYPE_GC',
+
+        # Format of the name of the directory object that will be used for the input
+        # Will be translated to the corresponding integer for use as the lnSetType parameter of the IADsNameTranslate::Set method (iads.h)
+        # https://docs.microsoft.com/en-us/windows/win32/api/iads/ne-iads-ads_name_type_enum
+        [string]$InputType = 'ADS_NAME_TYPE_NT4',
+
+        # Format of the name of the directory object that will be used for the output
+        # Will be translated to the corresponding integer for use as the lnSetType parameter of the IADsNameTranslate::Get method (iads.h)
+        # https://docs.microsoft.com/en-us/windows/win32/api/iads/ne-iads-ads_name_type_enum
+        [string]$OutputType = 'ADS_NAME_TYPE_1779'
+
     )
+    begin {
+
+        $ThisHostname = HOSTNAME.EXE
+
+        # Declare constants for these Windows enums
+        # We need to because PowerShell makes it hard to directly use the Win32 API and read the enum definition
+        # Use hashtables instead of enums since this use case is so simple
+        $ADS_NAME_INITTYPE_dict = @{
+            ADS_NAME_INITTYPE_DOMAIN = 1 #Initializes a NameTranslate object by setting the domain that the object binds to.
+            ADS_NAME_INITTYPE_SERVER = 2 #Initializes a NameTranslate object by setting the server that the object binds to.
+            ADS_NAME_INITTYPE_GC     = 3 #Initializes a NameTranslate object by locating the global catalog that the object binds to.
+        }
+        $ADS_NAME_TYPE_dict = @{
+            ADS_NAME_TYPE_1779                    = 1 #Name format as specified in RFC 1779. For example, "CN=Jeff Smith,CN=users,DC=Fabrikam,DC=com".
+            ADS_NAME_TYPE_CANONICAL               = 2 #Canonical name format. For example, "Fabrikam.com/Users/Jeff Smith".
+            ADS_NAME_TYPE_NT4                     = 3 #Account name format used in Windows. For example, "Fabrikam\JeffSmith".
+            ADS_NAME_TYPE_DISPLAY                 = 4 #Display name format. For example, "Jeff Smith".
+            ADS_NAME_TYPE_DOMAIN_SIMPLE           = 5 #Simple domain name format. For example, "JeffSmith@Fabrikam.com".
+            ADS_NAME_TYPE_ENTERPRISE_SIMPLE       = 6 #Simple enterprise name format. For example, "JeffSmith@Fabrikam.com".
+            ADS_NAME_TYPE_GUID                    = 7 #Global Unique Identifier format. For example, "{95ee9fff-3436-11d1-b2b0-d15ae3ac8436}".
+            ADS_NAME_TYPE_UNKNOWN                 = 8 #Unknown name type. The system will estimate the format. This element is a meaningful option only with the IADsNameTranslate.Set or the IADsNameTranslate.SetEx method, but not with the IADsNameTranslate.Get or IADsNameTranslate.GetEx method.
+            ADS_NAME_TYPE_USER_PRINCIPAL_NAME     = 9 #User principal name format. For example, "JeffSmith@Fabrikam.com".
+            ADS_NAME_TYPE_CANONICAL_EX            = 10 #Extended canonical name format. For example, "Fabrikam.com/Users Jeff Smith".
+            ADS_NAME_TYPE_SERVICE_PRINCIPAL_NAME  = 11 #Service principal name format. For example, "www/www.fabrikam.com@fabrikam.com".
+            ADS_NAME_TYPE_SID_OR_SID_HISTORY_NAME = 12 #A SID string, as defined in the Security Descriptor Definition Language (SDDL), for either the SID of the current object or one from the object SID history. For example, "O:AOG:DAD:(A;;RPWPCCDCLCSWRCWDWOGA;;;S-1-0-0)"
+        }
+        $ChosenInitType = $ADS_NAME_INITTYPE_dict[$InitType]
+        $ChosenInputType = $ADS_NAME_TYPE_dict[$InputType]
+        $ChosenOutputType = $ADS_NAME_TYPE_dict[$OutputType]
+
+    }
     process {
         ForEach ($ThisDomain in $Domain) {
-            $IADsNameTranslateComObject = New-Object -comObject "NameTranslate"
-            $IADsNameTranslateInterface = $IADsNameTranslateComObject.GetType()
-            $null = $IADsNameTranslateInterface.InvokeMember("Init", "InvokeMethod", $Null, $IADsNameTranslateComObject, (3, $Null))
-            $null = $IADsNameTranslateInterface.InvokeMember("Set", "InvokeMethod", $Null, $IADsNameTranslateComObject, (3, "$ThisDomain\"))
-            $IADsNameTranslateInterface.InvokeMember("Get", "InvokeMethod", $Null, $IADsNameTranslateComObject, 1)
+            $DomainCacheResult = $DomainsByNetbios[$ThisDomain]
+            if ($DomainCacheResult) {
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tConvertTo-DistinguishedName`t# Domain NetBIOS cache hit for '$ThisDomain'"
+                ConvertTo-DistinguishedName -DomainFQDN $DomainCacheResult.Dns
+            } else {
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tConvertTo-DistinguishedName`t# Domain NetBIOS cache miss for '$ThisDomain'. Available keys: $($DomainsByNetBios.Keys -join ',')"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostname`tConvertTo-DistinguishedName`t`$IADsNameTranslateComObject = New-Object -comObject 'NameTranslate' # For '$ThisDomain'"
+                $IADsNameTranslateComObject = New-Object -comObject "NameTranslate"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostname`tConvertTo-DistinguishedName`t`$IADsNameTranslateInterface = `$IADsNameTranslateComObject.GetType() # For '$ThisDomain'"
+                $IADsNameTranslateInterface = $IADsNameTranslateComObject.GetType()
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostname`tConvertTo-DistinguishedName`t`$null = `$IADsNameTranslateInterface.InvokeMember('Init', 'InvokeMethod', `$Null, `$IADsNameTranslateComObject, ($ChosenInitType, `$Null)) # For '$ThisDomain'"
+                $null = $IADsNameTranslateInterface.InvokeMember("Init", "InvokeMethod", $Null, $IADsNameTranslateComObject, ($ChosenInitType, $Null))
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostname`tConvertTo-DistinguishedName`t`$null = `$IADsNameTranslateInterface.InvokeMember('Set', 'InvokeMethod', `$Null, `$IADsNameTranslateComObject, ($ChosenInputType, '$ThisDomain\')) # For '$ThisDomain'"
+                $null = $IADsNameTranslateInterface.InvokeMember("Set", "InvokeMethod", $Null, $IADsNameTranslateComObject, ($ChosenInputType, "$ThisDomain\"))
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostname`tConvertTo-DistinguishedName`t`$IADsNameTranslateInterface.InvokeMember('Get', 'InvokeMethod', `$Null, `$IADsNameTranslateComObject, $ChosenOutputType) # For '$ThisDomain'"
+                $IADsNameTranslateInterface.InvokeMember("Get", "InvokeMethod", $Null, $IADsNameTranslateComObject, $ChosenOutputType)
+            }
+        }
+        ForEach ($ThisDomain in $DomainFQDN) {
+            "dc=$($ThisDomain -replace '\.',',dc=')"
         }
     }
 }
 function ConvertTo-Fqdn {
     <#
         .SYNOPSIS
-        Convert a domain distinguishedName name to its FQDN
+        Convert a domain distinguishedName name or NetBIOS name to its FQDN
         .DESCRIPTION
-        Uses PowerShell's -replace operator to perform the conversion
+        For the DistinguishedName parameter, uses PowerShell's -replace operator to perform the conversion
+        For the NetBIOS parameter, uses ConvertTo-DistinguishedName to convert from NetBIOS to distinguishedName, then recursively calls this function to get the FQDN
         .INPUTS
         [System.String]$DistinguishedName
         .OUTPUTS
@@ -559,12 +662,41 @@ function ConvertTo-Fqdn {
     [OutputType([System.String])]
     param (
         # distinguishedName of the domain
-        [Parameter(ValueFromPipeline)]
-        [string[]]$DistinguishedName
+        [Parameter(
+            ParameterSetName = 'DistinguishedName',
+            ValueFromPipeline
+        )]
+        [string[]]$DistinguishedName,
+
+        # NetBIOS name of the domain
+        [Parameter(
+            ParameterSetName = 'NetBIOS',
+            ValueFromPipeline
+        )]
+        [string[]]$NetBIOS,
+
+        [hashtable]$DomainsByNetbios = [hashtable]::Synchronized(@{}),
+
+        [hashtable]$KnownDomains = [hashtable]::Synchronized(@{})
     )
     process {
         ForEach ($DN in $DistinguishedName) {
             $DN -replace ',DC=', '.' -replace 'DC=', ''
+        }
+
+        ForEach ($ThisNetBios in $NetBIOS) {
+            $DomainDn = $KnownDomains[$DomainNetBIOS]
+
+            if (
+                -not $DomainDn -and
+                -not [string]::IsNullOrEmpty($DomainNetBIOS)
+            ) {
+                $KnownDomains[$DomainNetBIOS] = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tConvertTo-Fqdn`tCache miss for domain $($DomainNetBIOS).  Adding its Distinguished Name to dictionary of known domains for future lookup"
+            }
+
+            $DomainDn = $KnownDomains[$DomainNetBIOS]
+            ConvertTo-Fqdn -DistinguishedName $DomainDn
         }
     }
 }
@@ -628,6 +760,52 @@ function ConvertTo-HexStringRepresentationForLDAPFilterString {
     }
     "\$($Hexes -join '\')"
 }
+function ConvertTo-LDAPDomainNetBIOS {
+    param (
+        [string]$DomainFQDN,
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known directory servers to reduce duplicate queries
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
+
+    )
+
+    $DomainCacheResult = $DomainsByFqdn[$DomainFQDN]
+    if ($DomainCacheResult) {
+        return $DomainCacheResult.Netbios
+    }
+
+    $ThisHostName = HOSTNAME.EXE
+
+    $AdsiServer = Get-AdsiServer -AdsiServer $DomainFQDN -AdsiServersByDns $AdsiServersByDns
+    if ($AdsiServer.AdsiProvider -eq 'LDAP') {
+        $RootDSE = Get-DirectoryEntry -DirectoryPath "LDAP://$DomainFQDN/rootDSE" -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+        Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tConvertTo-LDAPDomainNetBIOS`t`$RootDSE.InvokeGet('defaultNamingContext')"
+        $DomainDistinguishedName = $RootDSE.InvokeGet("defaultNamingContext")
+        Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tConvertTo-LDAPDomainNetBIOS`t`$RootDSE.InvokeGet('configurationNamingContext')"
+        $ConfigurationDN = $rootDSE.InvokeGet("configurationNamingContext")
+        $partitions = Get-DirectoryEntry -DirectoryPath "LDAP://$DomainFQDN/cn=partitions,$ConfigurationDN" -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+
+        ForEach ($Child In $Partitions.Children) {
+            If ($Child.nCName -contains $DomainDistinguishedName) {
+                return $Child.nETBIOSName
+            }
+        }
+    } else {
+        ($DomainFQDN -split '\.')[0]
+    }
+
+}
 function ConvertTo-SidByteArray {
     <#
         .SYNOPSIS
@@ -689,8 +867,10 @@ function Expand-AdsiGroupMember {
         #>
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
 
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
         # Hashtable containing known domain SIDs as the keys and their names as the values
-        $TrustedDomainSidNameMap = (Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache)
+        $TrustedDomainSidNameMap = (Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios)
 
     )
 
@@ -705,7 +885,7 @@ function Expand-AdsiGroupMember {
             $i++
 
             #$status = ("$(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`tStatus: Using ADSI to get info on group member $i`: " + $Entry.Name)
-            #Write-Debug "  $status"
+            #Write-Debug -Message "  $status"
 
             $Principal = $null
 
@@ -721,11 +901,11 @@ function Expand-AdsiGroupMember {
 
                     #$Success = $true
                     #try {
-                    $Principal = Get-DirectoryEntry -DirectoryPath "LDAP://$($Domain.Dns)/<SID=$SID>" -DirectoryEntryCache $DirectoryEntryCache
+                    $Principal = Get-DirectoryEntry -DirectoryPath "LDAP://$($Domain.Dns)/<SID=$SID>" -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                     #} catch {
                     #    $Success = $false
                     #    $Principal = $Entry
-                    #    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`t$SID could not be retrieved from $Domain"
+                    #    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`t$SID could not be retrieved from $Domain"
                     #}
 
                     #if ($Success -eq $true) {
@@ -735,13 +915,17 @@ function Expand-AdsiGroupMember {
                     } catch {
                         #$Success = $false
                         $Principal = $Entry
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`t$SID could not be retrieved from $Domain"
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`t$SID could not be retrieved from $Domain"
                     }
 
                     # Recursively enumerate group members
                     if ($Principal.properties['objectClass'].Value -contains 'group') {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`t'$($Principal.properties['name'])' is a group in $Domain"
-                        $Principal = ($Principal | Get-AdsiGroupMember -DirectoryEntryCache $DirectoryEntryCache).FullMembers | Expand-AdsiGroupMember -DirectoryEntryCache $DirectoryEntryCache -TrustedDomainSidNameMap $TrustedDomainSidNameMap
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-AdsiGroupMember`t'$($Principal.properties['name'])' is a group in $Domain"
+                        $Principal = (
+                            $Principal |
+                            Get-AdsiGroupMember -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+                        ).FullMembers |
+                        Expand-AdsiGroupMember -DirectoryEntryCache $DirectoryEntryCache -TrustedDomainSidNameMap $TrustedDomainSidNameMap -DomainsByNetbios $DomainsByNetbios
 
                     }
 
@@ -753,7 +937,7 @@ function Expand-AdsiGroupMember {
                 $Principal = $Entry
             }
 
-            $Principal | Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache -TrustedDomainSidNameMap $TrustedDomainSidNameMap
+            Add-SidInfo -InputObject $Principal -DirectoryEntryCache $DirectoryEntryCache -TrustedDomainSidNameMap $TrustedDomainSidNameMap -DomainsByNetbios $DomainsByNetbios
 
         }
     }
@@ -799,13 +983,17 @@ function Expand-IdentityReference {
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
 
         # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
-        [hashtable]$IdentityReferenceCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$IdentityReferenceCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
 
     )
 
     begin {
 
-        #Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$(($AccessControlEntry | Measure).Count) unique IdentityReferences found in the $(($AccessControlEntry | Measure).Count) ACEs"
+        #Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$(($AccessControlEntry | Measure).Count) unique IdentityReferences found in the $(($AccessControlEntry | Measure).Count) ACEs"
 
         # Get the SID of the current domain
         $CurrentDomain = (Get-CurrentDomain)
@@ -814,7 +1002,7 @@ function Expand-IdentityReference {
         [string]$CurrentDomainSID = & { [System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0) } 2>$null
 
         $KnownDomains = @{}
-        $i = 0
+        #$i = 0
 
     }
 
@@ -824,23 +1012,32 @@ function Expand-IdentityReference {
 
             $ThisIdentityGroup = $ThisIdentity.Group
 
-            $i++
+            #$i++
             #Calculate the completion percentage, and format it to show 0 decimal places
-            $percentage = "{0:N0}" -f (($i / ($AccessControlEntry.Count)) * 100)
+            #$percentage = "{0:N0}" -f (($i / ($AccessControlEntry.Count)) * 100)
 
             #Display the progress bar
-            $status = $percentage + "% - Using ADSI to get info on NTFS IdentityReference $i of " + $AccessControlEntry.Count + ": " + $ThisIdentity.Name
-            #Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tStatus: $status"
+            #$status = $percentage + "% - Using ADSI to get info on NTFS IdentityReference $i of " + $AccessControlEntry.Count + ": " + $ThisIdentity.Name
+            #Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tStatus: $status"
 
             #Write-Progress -Activity ("Unique IdentityReferences: " + $AccessControlEntry.Count) -Status $status -PercentComplete $percentage
 
             if ($null -eq $IdentityReferenceCache[$ThisIdentity.Name]) {
 
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tIdentityReferenceCache miss for '$($ThisIdentity.Name)'"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tIdentityReferenceCache miss for '$($ThisIdentity.Name)'"
 
                 $DomainDN = $null
                 $DirectoryEntry = $null
                 $Members = $null
+
+                $GetDirectoryEntryParams = @{
+                    DirectoryEntryCache = $DirectoryEntryCache
+                    DomainsByNetbios    = $DomainsByNetbios
+                }
+                $SearchDirectoryParams = @{
+                    DirectoryEntryCache = $DirectoryEntryCache
+                    DomainsByNetbios    = $DomainsByNetbios
+                }
 
                 $StartingIdentityName = $ThisIdentity.Name
                 $split = $StartingIdentityName.Split('\')
@@ -851,38 +1048,56 @@ function Expand-IdentityReference {
                     $null -ne $name -and
                     ($ThisIdentity.Group.AdsiProvider | Select-Object -First 1) -eq 'LDAP'
                 ) {
-                    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a domain security principal"
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a domain security principal"
 
-                    # Add this domain to our list of known domains
-                    if (
-                        -not $KnownDomains[$domainNetbiosString] -and
-                        -not [string]::IsNullOrEmpty($domainNetbiosString)
-                    ) {
-                        $KnownDomains[$domainNetbiosString] = ConvertTo-DistinguishedName -Domain $domainNetbiosString
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tCache miss for domain $($domainNetbiosString).  Adding its Distinguished Name to dictionary of known domains for future lookup"
+                    $DomainNetbiosCacheResult = $DomainsByNetbios[$domainNetbiosString]
+                    if ($DomainNetbiosCacheResult) {
+                        $DomainDn = $DomainNetbiosCacheResult.DistinguishedName
+                        $SearchDirectoryParams['DirectoryPath'] = "LDAP://$($DomainNetbiosCacheResult.Dns)/$DomainDn"
+                    } else {
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tDomain NetBIOS cache miss for '$($domainNetbiosString)'"
+                        if ( -not [string]::IsNullOrEmpty($domainNetbiosString) ) {
+                            $DomainDn = ConvertTo-DistinguishedName -Domain $domainNetbiosString -DomainsByNetbios $DomainsByNetbios
+                        }
+                        $SearchDirectoryParams['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$domainNetbiosString" -DomainsByNetbios $DomainsByNetbios
                     }
 
                     # Search the domain for the principal
-                    $DomainDn = $KnownDomains[$domainNetbiosString]
+                    $SearchDirectoryParams['Filter'] = "(samaccountname=$Name)"
+                    $SearchDirectoryParams['PropertiesToLoad'] = @(
+                        'objectClass',
+                        'distinguishedName',
+                        'name',
+                        'grouptype',
+                        'description',
+                        'managedby',
+                        'member',
+                        'objectClass',
+                        'Department',
+                        'Title'
+                    )
                     try {
-                        $SearchPath = "LDAP://$DomainDn" | Add-DomainFqdnToLdapPath
-                        $DirectoryEntry = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $SearchPath -Filter "(samaccountname=$Name)" -PropertiesToLoad @('objectClass', 'distinguishedName', 'name', 'grouptype', 'description', 'managedby', 'member', 'objectClass', 'Department', 'Title')
+                        $DirectoryEntry = Search-Directory @SearchDirectoryParams
                     } catch {
                         Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) could not be resolved against its directory"
                         Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($_.Exception.Message)"
                     }
 
                 } elseif (((($StartingIdentityName -split '-') | Select-Object -SkipLast 1) -join '-') -eq $CurrentDomainSID) {
-                    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is an unresolved SID from the current domain"
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is an unresolved SID from the current domain"
 
                     # Get the distinguishedName and netBIOSName of the current domain.  This also determines whether the domain is online.
                     $DomainDN = $CurrentDomain.distinguishedName.Value
                     $DomainFQDN = $DomainDN | ConvertTo-Fqdn
-                    $PartitionsPath = "LDAP://cn=partitions,cn=configuration,$DomainDn" | Add-DomainFqdnToLdapPath
-                    $DomainCrossReference = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $PartitionsPath -Filter "(&(objectcategory=crossref)(dnsroot=$DomainFQDN)(netbiosname=*))" -PropertiesToLoad netbiosname
+
+                    $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/cn=partitions,cn=configuration,$DomainDn"
+                    $SearchDirectoryParams['Filter'] = "(&(objectcategory=crossref)(dnsroot=$DomainFQDN)(netbiosname=*))"
+                    $SearchDirectoryParams['PropertiesToLoad'] = 'netbiosname'
+
+                    $DomainCrossReference = Search-Directory @SearchDirectoryParams
                     if ($DomainCrossReference.Properties ) {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tThe domain '$DomainFQDN' is online"
-                        $domainNetbiosString = $DomainCrossReference.Properties['netbiosname']
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tThe domain '$DomainFQDN' is online"
+                        [string]$domainNetbiosString = $DomainCrossReference.Properties['netbiosname']
                         # TODO: The domain is online, so let's see if any domain trusts have issues?  Determine if SID is foreign security principal?
                         # TODO: What if the foreign security principal exists but the corresponding domain trust is down?  Don't want to recommend deletion of the ACE in that case.
                     }
@@ -890,8 +1105,22 @@ function Expand-IdentityReference {
                     $SidBytes = [byte[]]::new($SidObject.BinaryLength)
                     $null = $SidObject.GetBinaryForm($SidBytes, 0)
                     $ObjectSid = ConvertTo-HexStringRepresentationForLDAPFilterString -SIDByteArray $SidBytes
+                    $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/$DomainDn"
+                    $SearchDirectoryParams['Filter'] = "(objectsid=$ObjectSid)"
+                    $SearchDirectoryParams['PropertiesToLoad'] = @(
+                        'objectClass',
+                        'distinguishedName',
+                        'name',
+                        'grouptype',
+                        'description',
+                        'managedby',
+                        'member',
+                        'objectClass',
+                        'Department',
+                        'Title'
+                    )
                     try {
-                        $DirectoryEntry = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath "LDAP://$DomainDn" -Filter "(objectsid=$ObjectSid)" -PropertiesToLoad @('objectClass', 'distinguishedName', 'name', 'grouptype', 'description', 'managedby', 'member', 'objectClass', 'Department', 'Title')
+                        $DirectoryEntry = Search-Directory @SearchDirectoryParams
                     } catch {
                         Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) could not be resolved against its directory"
                         Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($_.Exception.Message)"
@@ -900,91 +1129,87 @@ function Expand-IdentityReference {
 
                 } else {
 
-                    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a local security principal or unresolved SID"
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a local security principal or unresolved SID"
 
                     # Determine if SID belongs to current domain
                     $IdentityDomainSID = (($StartingIdentityName -split '-') | Select-Object -SkipLast 1) -join '-'
                     if ($IdentityDomainSID -eq $CurrentDomainSID) {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
                     } else {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
                     }
 
                     if ($null -eq $name) { $name = $StartingIdentityName }
 
-                    if ($name -match 'S-\d+-\d+-\d+-\d+-\d+\-\d+\-\d+') {
-                        if ($Domains.Count -gt 1) {
-                            $DirectoryEntry = ForEach ($domainNetbiosString in $Domains) {
+                    if ($name -like "S-1-*") {
 
-                                try {
-                                    $UsersGroup = Get-DirectoryEntry -DirectoryPath "WinNT://$domainNetbiosString/Users,group" -DirectoryEntryCache $DirectoryEntryCache
-                                } catch {
-                                    Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tCould not connect to $domainNetbiosString using PSRemoting"
-                                    Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$_"
-                                }
-                                $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache
-                                $MembersOfUsersGroup | Where-Object -FilterScript { ($name -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
-                                $ThisIdentity = [pscustomobject]@{
-                                    Count = $(($ThisIdentityGroup | Measure-Object).Count)
-                                    Name  = "$domainNetbiosString\" + $DirectoryEntry.Name
-                                    Group = $ThisIdentityGroup | Where-Object -FilterScript { ($_.SourceAccessList.Path -split '\\')[2] -eq $domainNetbiosString }
-                                    #####Group = $ThisIdentityGroup | Where-Object -FilterScript { ($_.Path -split '\\')[2] -eq $domainNetbiosString }
-                                }
+                        # The SID of the domain is the SID of the user minus the last block of numbers
+                        $DomainSid = $name.Substring(0, $name.LastIndexOf("-"))
 
-                            }
-
-                        }
-
-                        else {
-
-                            try {
-                                $UsersGroup = Get-DirectoryEntry -DirectoryPath "WinNT://$domainNetbiosString/Users,group" -DirectoryEntryCache $DirectoryEntryCache
-                            } catch {
-                                Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tCould not connect to $domainNetbiosString using PSRemoting"
-                                Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$_"
-                            }
-                            $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache
-                            $DirectoryEntry = $MembersOfUsersGroup | Where-Object -FilterScript { ($name -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
-                            $ThisIdentity = [pscustomobject]@{
-                                Count = $(($ThisIdentityGroup | Measure-Object).Count)
-                                Name  = "$domainNetbiosString\" + $DirectoryEntry.Name
-                                Group = $ThisIdentityGroup
-                            }
-
-                        }
-
-                    }
-
-                    else {
-                        if ($Domains.Count -gt 1) {
-                            $DirectoryEntry = ForEach ($domainNetbiosString in $Domains) {
-                                $DirectoryPath = "WinNT://$domainNetbiosString/$name"
-                                try {
-                                    Get-DirectoryEntry -DirectoryPath $DirectoryPath -PropertiesToLoad members -DirectoryEntryCache $DirectoryEntryCache
-                                } catch {
-                                    Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryPath) could not be resolved"
-                                }
-                            }
+                        # Lookup other information about the domain using its SID as the key
+                        $DomainObject = $DomainsBySID[$DomainSid]
+                        if ($DomainObject) {
+                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainObject.Dns)/Users,group"
+                            $domainNetbiosString = $DomainObject.Netbios
                         } else {
-                            $DirectoryPath = "WinNT://$domainNetbiosString/$name"
-                            try {
-                                $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath -PropertiesToLoad members -DirectoryEntryCache $DirectoryEntryCache
-                            } catch {
-                                Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryPath) could not be resolved"
-                            }
+                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$domainNetbiosString/Users,group"
+                        }
 
+                        try {
+                            $UsersGroup = Get-DirectoryEntry @GetDirectoryEntryParams
+                        } catch {
+                            Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tCould not get '$($GetDirectoryEntryParams['DirectoryPath'])' using PSRemoting"
+                            Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$_"
+                        }
+                        $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+
+                        $DirectoryEntry = $MembersOfUsersGroup |
+                        Where-Object -FilterScript { ($name -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
+
+                        if ($DirectoryEntry.Name) {
+                            $AccountName = $DirectoryEntry.Name
+                        } else {
+                            if ($DirectoryEntry.Properties) {
+                                if ($DirectoryEntry.Properties['name'].Value) {
+                                    $AccountName = $DirectoryEntry.Properties['name'].Value
+                                } else {
+                                    $AccountName = $DirectoryEntry.Properties['name']
+                                }
+                            }
+                        }
+
+                        $ThisIdentity = [pscustomobject]@{
+                            Count = $(($ThisIdentityGroup | Measure-Object).Count)
+                            Name  = "$domainNetbiosString\" + $AccountName
+                            Group = $ThisIdentityGroup
+                            # Unclear why this was filtered so I have removed it to see what happens
+                            #Group = $ThisIdentityGroup | Where-Object -FilterScript { ($_.SourceAccessList.Path -split '\\')[2] -eq $domainNetbiosString } # Should be already Resolved to a UNC path so it reflects the server name
+                        }
+
+                    } else {
+                        $DomainNetbiosCacheResult = $DomainsByNetbios[$domainNetbiosString]
+                        if ($DomainNetbiosCacheResult) {
+                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainNetbiosCacheResult.Dns)/$name"
+                        } else {
+                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$domainNetbiosString/$name"
+                        }
+                        try {
+                            $GetDirectoryEntryParams['PropertiesToLoad'] = 'members'
+                            $DirectoryEntry = Get-DirectoryEntry @GetDirectoryEntryParams
+                        } catch {
+                            Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($GetDirectoryEntryParams['DirectoryPath']) could not be resolved"
                         }
                     }
-
                 }
 
                 $ObjectType = $null
                 if ($null -ne $DirectoryEntry) {
-                    $ThisIdentity | Add-Member -Name 'DirectoryEntry' -Value $DirectoryEntry -MemberType NoteProperty -Force
+                    $ThisIdentity |
+                    Add-Member -Name 'DirectoryEntry' -Value $DirectoryEntry -MemberType NoteProperty -Force
 
                     if (
                         $DirectoryEntry.Properties['objectClass'] -contains 'group' -or
-                        $DirectoryEntry.SchemaClassName -contains 'Group'
+                        $DirectoryEntry.SchemaClassName -eq 'group'
                     ) {
                         $ObjectType = 'Group'
                     } else {
@@ -993,17 +1218,20 @@ function Expand-IdentityReference {
 
                     if ($NoGroupMembers -eq $false) {
 
-                        if ($DirectoryEntry.Properties['objectClass'] -contains 'group') {
+                        if (
+                            $DirectoryEntry.Properties['objectClass'] -contains 'group' -or
+                            $DirectoryEntry.SchemaClassName -eq 'group'
+                        ) {
 
                             # Retrieve the members of groups from the LDAP provider
-                            #$Members = (Get-AdsiGroup -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $DirectoryEntry.Path).FullMembers
-                            $Members = Get-AdsiGroupMember -Group $DirectoryEntry -DirectoryEntryCache $DirectoryEntryCache
+                            #$Members = (Get-AdsiGroup -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $DirectoryEntry.Path -DomainsByNetbios $DomainsByNetbios).FullMembers
+                            $Members = (Get-AdsiGroupMember -Group $DirectoryEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios).FullMembers
 
                         } else {
 
                             # Retrieve the members of groups from the WinNT provider
-                            Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) must be a WinNT user or group"
-                            $Members = Get-WinNTGroupMember -DirectoryEntryCache $DirectoryEntryCache -DirectoryEntry $DirectoryEntry -KnownDomains $KnownDomains
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) must be a WinNT user or group"
+                            $Members = Get-WinNTGroupMember -DirectoryEntryCache $DirectoryEntryCache -DirectoryEntry $DirectoryEntry -KnownDomains $KnownDomains -DomainsByNetbios $DomainsByNetbios
 
                         }
 
@@ -1014,13 +1242,15 @@ function Expand-IdentityReference {
 
                                 if ($_.Domain) {
 
-                                    $_ | Add-Member -Force -NotePropertyMembers @{
+                                    $_ |
+                                    Add-Member -Force -NotePropertyMembers @{
                                         Group = $ThisIdentityGroup
                                     }
 
                                 } else {
 
-                                    $_ | Add-Member -Force -NotePropertyMembers @{
+                                    $_ |
+                                    Add-Member -Force -NotePropertyMembers @{
                                         Group  = $ThisIdentityGroup
                                         Domain = [pscustomobject]@{
                                             Dns     = $domainNetbiosString
@@ -1032,7 +1262,7 @@ function Expand-IdentityReference {
                             }
                         }
 
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) has $(($Members | Measure-Object).Count) members"
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($DirectoryEntry.Path) has $(($Members | Measure-Object).Count) members"
 
                         $ThisIdentity |
                         Add-Member -Name 'Members' -Value $Members -MemberType NoteProperty -Force
@@ -1040,7 +1270,9 @@ function Expand-IdentityReference {
                 } else {
                     Write-Warning "$(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) could not be matched to a DirectoryEntry"
                 }
-                $ThisIdentity | Add-Member -Force -NotePropertyMembers @{
+
+                $ThisIdentity |
+                Add-Member -Force -NotePropertyMembers @{
                     DomainDn      = $DomainDn
                     DomainNetbios = $DomainNetBiosString
                     ObjectType    = $ObjectType
@@ -1050,7 +1282,7 @@ function Expand-IdentityReference {
             }
 
             else {
-                #Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tIdentityReferenceCache hit for '$($ThisIdentity.Name)'"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tIdentityReferenceCache hit for '$($ThisIdentity.Name)'"
                 $null = $IdentityReferenceCache[$ThisIdentity.Name].Group.Add($ThisIdentityGroup)
                 $ThisIdentity = $IdentityReferenceCache[$ThisIdentity.Name]
             }
@@ -1091,7 +1323,9 @@ function Expand-WinNTGroupMember {
         Hashtable containing cached directory entries so they don't need to be retrieved from the directory again
         Uses a thread-safe hashtable by default
         #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
 
     )
     begin {}
@@ -1102,25 +1336,25 @@ function Expand-WinNTGroupMember {
                 Write-Warning "'$ThisEntry' has no properties"
             } elseif ($ThisEntry.Properties['objectClass'] -contains 'group') {
 
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is an ADSI group"
-                (Get-AdsiGroup -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $ThisEntry.Path).FullMembers |
-                Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is an ADSI group"
+                (Get-AdsiGroup -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $ThisEntry.Path -DomainsByNetbios $DomainsByNetbios).FullMembers |
+                Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
 
             } else {
 
-                if ($ThisEntry.SchemaClassName -contains 'group') {
-                    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a WinNT group"
+                if ($ThisEntry.SchemaClassName -eq 'group') {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a WinNT group"
 
                     if ($ThisEntry.GetType().FullName -eq 'System.Collections.Hashtable') {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a special group with no direct memberships"
-                        $ThisEntry | Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a special group with no direct memberships"
+                        $ThisEntry | Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                     } else {
-                        Get-WinNTGroupMember -DirectoryEntry $ThisEntry -DirectoryEntryCache $DirectoryEntryCache
+                        Get-WinNTGroupMember -DirectoryEntry $ThisEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                     }
 
                 } else {
-                    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a user account"
-                    $ThisEntry | Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a user account"
+                    $ThisEntry | Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                 }
 
             }
@@ -1164,19 +1398,19 @@ function Find-AdsiProvider {
         ForEach ($ThisServer in $AdsiServer) {
             $AdsiProvider = $null
             $AdsiPath = "LDAP://$ThisServer"
-            Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t[System.DirectoryServices.DirectoryEntry]::Exists('$AdsiPath')"
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t[System.DirectoryServices.DirectoryEntry]::Exists('$AdsiPath')"
             try {
                 $null = [System.DirectoryServices.DirectoryEntry]::Exists($AdsiPath)
                 $AdsiProvider = 'LDAP'
-            } catch { Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t$ThisServer is not an LDAP server" }
+            } catch { Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t# $ThisServer did not respond to LDAP" }
             if (!$AdsiProvider) {
                 $AdsiPath = "WinNT://$ThisServer"
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t[System.DirectoryServices.DirectoryEntry]::Exists('$AdsiPath')"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t[System.DirectoryServices.DirectoryEntry]::Exists('$AdsiPath')"
                 try {
                     $null = [System.DirectoryServices.DirectoryEntry]::Exists($AdsiPath)
                     $AdsiProvider = 'WinNT'
                 } catch {
-                    Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t$ThisServer is not a WinNT server"
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tFind-AdsiProvider`t# $ThisServer did not respond to WinNT"
                 }
             }
             if (!$AdsiProvider) {
@@ -1243,7 +1477,9 @@ function Get-AdsiGroup {
         Hashtable containing cached directory entries so they don't have to be retrieved from the directory again
         Uses a thread-safe hashtable by default
         #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
 
     )
 
@@ -1251,10 +1487,12 @@ function Get-AdsiGroup {
         DirectoryEntryCache = $DirectoryEntryCache
         DirectoryPath       = $DirectoryPath
         PropertiesToLoad    = $PropertiesToLoad
+        DomainsByNetbios    = $DomainsByNetbios
     }
     $GroupMemberParams = @{
         DirectoryEntryCache = $DirectoryEntryCache
         PropertiesToLoad    = $PropertiesToLoad
+        DomainsByNetbios    = $DomainsByNetbios
     }
 
     switch -Regex ($DirectoryPath) {
@@ -1311,7 +1549,9 @@ function Get-AdsiGroupMember {
         Hashtable containing cached directory entries so they don't have to be retrieved from the directory again
         Uses a thread-safe hashtable by default
         #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
 
     )
     begin {
@@ -1322,9 +1562,10 @@ function Get-AdsiGroupMember {
         $SearchParameters = @{
             PropertiesToLoad    = $PropertiesToLoad
             DirectoryEntryCache = $DirectoryEntryCache
+            DomainsByNetbios    = $DomainsByNetbios
         }
 
-        $TrustedDomainSidNameMap = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache
+        $TrustedDomainSidNameMap = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
 
     }
     process {
@@ -1339,37 +1580,39 @@ function Get-AdsiGroupMember {
 
             if ($ThisGroup.Path -match $PathRegEx) {
 
-                $SearchParameters['DirectoryPath'] = $Matches.Path | Add-DomainFqdnToLdapPath
+                $SearchParameters['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath $Matches.Path -DomainsByNetbios $DomainsByNetbios
 
                 if ($ThisGroup.Path -match $DomainRegEx) {
                     $Domain = ([regex]::Matches($ThisGroup.Path, $DomainRegEx) | ForEach-Object { $_.Value }) -join ','
-                    $SearchParameters['DirectoryPath'] = "LDAP://$Domain" | Add-DomainFqdnToLdapPath
+                    $SearchParameters['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$Domain" -DomainsByNetbios $DomainsByNetbios
                 } else {
-                    $SearchParameters['DirectoryPath'] = $ThisGroup.Path | Add-DomainFqdnToLdapPath
+                    $SearchParameters['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath $ThisGroup.Path -DomainsByNetbios $DomainsByNetbios
                 }
 
             } else {
-                $SearchParameters['DirectoryPath'] = $ThisGroup.Path | Add-DomainFqdnToLdapPath
+                $SearchParameters['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath $ThisGroup.Path -DomainsByNetbios $DomainsByNetbios
             }
 
-            #Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-AdsiGroupMember`t$($SearchParameters['Filter'])"
+            #Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-AdsiGroupMember`t$($SearchParameters['Filter'])"
 
             $GroupMemberSearch = Search-Directory @SearchParameters
 
             if ($GroupMemberSearch.Count -gt 0) {
 
                 $CurrentADGroupMembers = $GroupMemberSearch | ForEach-Object {
-                    $FQDNPath = $_.Path | Add-DomainFqdnToLdapPath
-                    Get-DirectoryEntry -DirectoryPath $FQDNPath -DirectoryEntryCache $DirectoryEntryCache
+                    $FQDNPath = Add-DomainFqdnToLdapPath -DirectoryPath $_.Path -DomainsByNetbios $DomainsByNetbios
+                    Get-DirectoryEntry -DirectoryPath $FQDNPath -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                 }
 
             } else {
                 $CurrentADGroupMembers = $null
             }
 
-            Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-AdsiGroupMember`t$($ThisGroup.Properties.name) has $(($CurrentADGroupMembers | Measure-Object).Count) members"
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-AdsiGroupMember`t$($ThisGroup.Properties.name) has $(($CurrentADGroupMembers | Measure-Object).Count) members"
 
-            $ProcessedGroupMembers = $CurrentADGroupMembers | Expand-AdsiGroupMember -DirectoryEntryCache $DirectoryEntryCache -TrustedDomainSidNameMap $TrustedDomainSidNameMap
+            $ProcessedGroupMembers = $CurrentADGroupMembers |
+            Expand-AdsiGroupMember -DirectoryEntryCache $DirectoryEntryCache -TrustedDomainSidNameMap $TrustedDomainSidNameMap -DomainsByNetbios $DomainsByNetbios
+
             $ThisGroup |
             Add-Member -MemberType NoteProperty -Name FullMembers -Value $ProcessedGroupMembers -Force -PassThru
 
@@ -1406,20 +1649,34 @@ function Get-AdsiServer {
         [string[]]$AdsiServer,
 
         # Cache of known directory servers to reduce duplicate queries
-        [hashtable]$KnownServers = [hashtable]::Synchronized(@{})
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
+
+        # Cache of known Win32_Account instances keyed by domain and SID
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{}))
 
     )
     process {
         ForEach ($ThisServer in $AdsiServer) {
-            if (!($KnownServers[$ThisServer])) {
+            if (-not $AdsiServersByDns[$ThisServer]) {
+                $AdsiProvider = $null
                 $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServer
-                $WellKnownSIDs = Get-WellKnownSid -CimServerName $ThisServer
-                $KnownServers[$ThisServer] = [pscustomobject]@{
-                    AdsiProvider  = $AdsiProvider
-                    WellKnownSIDs = $WellKnownSIDs
+                # Attempt to use CIM to populate the account caches with known instances of the Win32_Account class on $ThisServer
+                # Note: CIM is not expected to be reachable on domain controllers or other scenarios
+                # Because this does not interfere with returning the ADSI Server's PSCustomObject with the AdsiProvider, -ErrorAction SilentlyContinue was used
+                $null = Get-WellKnownSid -CimServerName $ThisServer -Win32AccountsBySID $Win32AccountsBySID -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                    $Win32AccountsBySID["$($_.Domain)\$($_.SID)"] = $_
+                    $Win32AccountsByCaption["$($_.Domain)\$($_.Caption)"] = $_
+                }
+                $AdsiServersByDns[$ThisServer] = [pscustomobject]@{
+                    AdsiProvider = $AdsiProvider
+                    ServerName   = $ThisServer
                 }
             }
-            $KnownServers[$ThisServer]
+            $AdsiServersByDns[$ThisServer]
         }
     }
 }
@@ -1491,7 +1748,9 @@ function Get-DirectoryEntry {
         Hashtable containing cached directory entries so they don't have to be retrieved from the directory again
         Uses a thread-safe hashtable by default
         #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
 
     )
 
@@ -1519,10 +1778,10 @@ function Get-DirectoryEntry {
             }
             # Workgroup computers do not return a DirectoryEntry with a SearchRoot Path so this ends up being an empty string
             '^$' {
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t$(hostname) does not appear to be domain-joined since the SearchRoot Path is empty. Defaulting to WinNT provider for localhost instead."
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t$(hostname) does not appear to be domain-joined since the SearchRoot Path is empty. Defaulting to WinNT provider for localhost instead."
                 $Workgroup = (Get-CimInstance -ClassName Win32_ComputerSystem).Workgroup
                 $DirectoryPath = "WinNT://$Workgroup/$(hostname)"
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
                 if ($Credential) {
                     $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
                 } else {
@@ -1532,15 +1791,16 @@ function Get-DirectoryEntry {
                 $SampleUser = $DirectoryEntry.PSBase.Children |
                 Where-Object -FilterScript { $_.schemaclassname -eq 'user' } |
                 Select-Object -First 1 |
-                Add-SidInfo
+                Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
 
-                $DirectoryEntry | Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
+                $DirectoryEntry |
+                Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
 
             }
             # Otherwise the DirectoryPath is an LDAP path
             default {
 
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`t[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
                 if ($Credential) {
                     $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
                 } else {
@@ -1553,7 +1813,7 @@ function Get-DirectoryEntry {
 
         $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
     } else {
-        #Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`tDirectoryEntryCache hit for '$DirectoryPath'"
+        #Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-DirectoryEntry`tDirectoryEntryCache hit for '$DirectoryPath'"
         $DirectoryEntry = $DirectoryEntryCache[$DirectoryPath]
     }
 
@@ -1594,6 +1854,8 @@ function Get-TrustedDomainSidNameMap {
         Get-TrustedDomainSidNameMap
 
         Get the trusted domains of the current computer
+        .NOTES
+        TODO: Audit usage of this function, have it return objects instead of hashtable, since it updates the threadsafe hashtables instead
     #>
     [OutputType([System.Collections.Hashtable])]
     param (
@@ -1605,7 +1867,13 @@ function Get-TrustedDomainSidNameMap {
         Hashtable containing cached directory entries so they don't have to be retrieved from the directory again
         Uses a thread-safe hashtable by default
         #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
 
     )
 
@@ -1626,7 +1894,7 @@ function Get-TrustedDomainSidNameMap {
             continue
         }
 
-        $DomainDirectoryEntry = Get-DirectoryEntry -DirectoryPath "LDAP://$DomainDnsName" -DirectoryEntryCache $DirectoryEntryCache
+        $DomainDirectoryEntry = Get-DirectoryEntry -DirectoryPath "LDAP://$DomainDnsName" -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
         try {
             $null = $DomainDirectoryEntry.RefreshCache('objectSid')
         } catch {
@@ -1641,45 +1909,41 @@ function Get-TrustedDomainSidNameMap {
             continue
         }
 
-        $DistinguishedName = ConvertTo-DistinguishedName -Domain $DomainNetbios
+        $DistinguishedName = ConvertTo-DistinguishedName -Domain $DomainNetbios -DomainsByNetbios $DomainsByNetbios
+        $OutputObject = [pscustomobject]@{
+            Dns               = $DomainDnsName
+            Netbios           = $DomainNetbios
+            Sid               = $DomainSid
+            DistinguishedName = $DistinguishedName
+        }
+        $DomainsBySID[$DomainSid] = $OutputObject
+        $DomainsByNetbios[$DomainNetbios] = $OutputObject
+        $DomainsByFqdn[$DomainDnsName] = $OutputObject
         if ($KeyByNetbios -eq $true) {
-            $Map[$DomainNetbios] = [pscustomobject]@{
-                Dns               = $DomainDnsName
-                Netbios           = $DomainNetbios
-                Sid               = $DomainSid
-                DistinguishedName = $DistinguishedName
-            }
+            $Map[$DomainNetbios] = $OutputObject
         } else {
-            $Map[$DomainSid] = [pscustomobject]@{
-                Dns               = $DomainDnsName
-                Netbios           = $DomainNetbios
-                Sid               = $DomainSid
-                DistinguishedName = $DistinguishedName
-            }
+            $Map[$DomainSid] = $OutputObject
         }
     }
 
     # Add the WinNT domain of the local computer as well
-    $LocalAccountSID = Get-CimInstance -Query "SELECT SID FROM Win32_UserAccount WHERE LocalAccount = 'True'" |
-    Select-Object -First 1 -ExpandProperty SID
+    $LocalAccountSID = (Get-CimInstance -Query "SELECT SID FROM Win32_UserAccount WHERE LocalAccount = 'True'").SID[0]
     $DomainSid = $LocalAccountSID.Substring(0, $LocalAccountSID.LastIndexOf("-"))
     $DomainNetBios = hostname
     $DomainDnsName = "$DomainNetbios.$((Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters').'NV Domain')"
-
+    $OutputObject = [pscustomobject]@{
+        Dns               = $DomainDnsName
+        Netbios           = $DomainNetbios
+        Sid               = $DomainSid
+        DistinguishedName = $null
+    }
+    $DomainsBySID[$DomainSid] = $OutputObject
+    $DomainsByNetbios[$DomainNetbios] = $OutputObject
+    $DomainsByFqdn[$DomainDnsName] = $OutputObject
     if ($KeyByNetbios -eq $true) {
-        $Map[$DomainNetbios] = [pscustomobject]@{
-            Dns               = $DomainDnsName
-            Netbios           = $DomainNetbios
-            Sid               = $DomainSid
-            DistinguishedName = $null
-        }
+        $Map[$DomainNetbios] = $OutputObject
     } else {
-        $Map[$DomainSid] = [pscustomobject]@{
-            Dns               = $DomainDnsName
-            Netbios           = $DomainNetbios
-            Sid               = $DomainSid
-            DistinguishedName = $null
-        }
+        $Map[$DomainSid] = $OutputObject
     }
 
     return $Map
@@ -1704,27 +1968,59 @@ function Get-WellKnownSid {
 
         Get the well-known SIDs on the remote computer 'server123'
     #>
+    [CmdletBinding()]
     [OutputType([Microsoft.Management.Infrastructure.CimInstance])]
     param (
         [Parameter(ValueFromPipeline)]
-        [string[]]$CimServerName
+        [string[]]$CimServerName,
+
+        # Cache of known Win32_Account instances keyed by domain and SID
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known directory servers to reduce duplicate queries
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
     )
+    begin {
+        $AdsiServersWhoseWin32AccountsExistInCache = $Win32AccountsBySID.Keys |
+        ForEach-Object { ($_ -split '\\')[0] } |
+        Sort-Object -Unique
+    }
     process {
         ForEach ($ThisServer in $CimServerName) {
-            if ($ThisServer -eq (hostname) -or $ThisServer -eq 'localhost' -or $ThisServer -eq '127.0.0.1') {
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-WellKnownSid`tNew-CimSession"
-                $CimSession = New-CimSession
+            if ($ThisServer -eq (hostname) -or $ThisServer -eq 'localhost' -or $ThisServer -eq '127.0.0.1' -or [string]::IsNullOrEmpty($ThisServer)) {
+                $ThisServer = hostname
+            }
+            # Return matching objects from the cache if possible rather than performing a CIM query
+            # The cache is based on the Caption of the Win32 accounts which conatins only NetBios names
+            $ThisServerNetbios = ConvertTo-LDAPDomainNetBIOS -DomainFQDN
+            if ($AdsiServersWhoseWin32AccountsExistInCache -contains $ThisServer) {
+                $Win32AccountsBySID.Keys | ForEach-Object {
+                    if ($_ -like "$ThisServer\*") {
+                        $Win32AccountsBySID[$_]
+                    }
+                }
             } else {
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-WellKnownSid`tNew-CimSession -ComputerName '$ThisServer'"
-                $CimSession = New-CimSession -ComputerName $ThisServer
+                if ($ThisServer -eq (hostname)) {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WellKnownSid`t`$CimSession = New-CimSession # For '$ThisServer'"
+                    $CimSession = New-CimSession
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WellKnownSid`tGet-CimInstance -ClassName Win32_Account -CimSession `$CimSession # For '$ThisServer'"
+                } else {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WellKnownSid`t`$CimSession = New-CimSession -ComputerName '$ThisServer' # For '$ThisServer'"
+                    $CimSession = New-CimSession -ComputerName $ThisServer
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WellKnownSid`tGet-CimInstance -ClassName Win32_Account -CimSession `$CimSession # For '$ThisServer'"
+                }
+
+                Get-CimInstance -ClassName Win32_Account -CimSession $CimSession
+
+                Remove-CimSession -CimSession $CimSession
             }
-            $Results = @{}
-            Get-CimInstance -ClassName Win32_Account -CimSession $CimSession |
-            ForEach-Object {
-                $Results[$_.Name] = $_
-            }
-            $Results
-            Remove-CimSession -CimSession $CimSession
         }
     }
 }
@@ -1760,15 +2056,17 @@ function Get-WinNTGroupMember {
         # Properties of the group members to find in the directory
         [string[]]$PropertiesToLoad,
 
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
         # Hashtable of domain DNs
-        $KnownDomains = (Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -KeyByNetbios)
+        $KnownDomains = (Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -KeyByNetbios -DomainsByNetbios $DomainsByNetbios)
 
     )
     process {
         ForEach ($ThisDirEntry in $DirectoryEntry) {
             $SourceDomain = $ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf
             # Retrieve the members of local groups
-            if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -contains 'Group') {
+            if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -eq 'group') {
                 # Assembly: System.DirectoryServices.dll
                 # Namespace: System.DirectoryServices
                 # DirectoryEntry.Invoke(String, Object[]) Method
@@ -1789,7 +2087,8 @@ function Get-WinNTGroupMember {
                 # Maybe that could be a feature in the future
                 # https://docs.microsoft.com/en-us/windows/win32/adsi/adsi-object-model-for-winnt-providers?redirectedfrom=MSDN
                 $DirectoryMembers = & { $ThisDirEntry.Invoke('Members') } 2>$null
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members"
+
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members # For $($ThisDirEntry.Path)"
                 ForEach ($DirectoryMember in $DirectoryMembers) {
                     # The IADsGroup::Members method returns ComObjects
                     # But proper .Net objects are much easier to work with
@@ -1797,39 +2096,50 @@ function Get-WinNTGroupMember {
                     $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
                     $MemberDomainDn = $null
                     if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)') {
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$DirectoryPath' has a domain of '$($Matches.Domain)' and an account name of '$($Matches.Acct)'"
                         $MemberName = $Matches.Acct
                         $MemberDomainNetbios = $Matches.Domain
 
-                        if ($KnownDomains[$MemberDomainNetbios] -and $MemberDomainNetbios -ne $SourceDomain) {
-                            $MemberDomainDn = $KnownDomains[$MemberDomainNetbios].DistinguishedName
+                        $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
+                        if ($DomainCacheResult) {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'# Domain NetBIOS cache hit for '$MemberDomainNetBios'"
+                            if ( "WinNT:\\$MemberDomainNetbios" -ne $SourceDomain ) {
+                                $MemberDomainDn = $DomainCacheResult.DistinguishedName
+                            }
+                        } else {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'# Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',')"
                         }
                         if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$DirectoryPath' came from an ADSI server joined to the domain of '$($Matches.Domain)' but its domain is '$($Matches.Middle)' and its name is '$($Matches.Acct)'"
                             if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
                                 $MemberDomainDn = $null
                             }
                         }
+                    } else {
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$DirectoryPath' does not match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)'"
                     }
 
                     $MemberParams = @{
                         DirectoryEntryCache = $DirectoryEntryCache
                         DirectoryPath       = $DirectoryPath
                         PropertiesToLoad    = $PropertiesToLoad
+                        DomainsByNetbios    = $DomainsByNetbios
                     }
                     if ($MemberDomainDn) {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$MemberName' is a domain security principal"
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$MemberName' is a domain security principal"
                         $MemberParams['DirectoryPath'] = "LDAP://$MemberDomainDn"
                         $MemberParams['Filter'] = "(samaccountname=$MemberName)"
                         $MemberDirectoryEntry = Search-Directory @MemberParams
                     } else {
-                        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$DirectoryPath' is a local security principal"
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$DirectoryPath' is a local security principal"
                         $MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
                     }
 
-                    $MemberDirectoryEntry | Expand-WinNTGroupMember -DirectoryEntryCache $DirectoryEntryCache
+                    $MemberDirectoryEntry | Expand-WinNTGroupMember -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
 
                 }
             } else {
-                Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$($ThisDirEntry.Path)' is not a group"
+                Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tGet-WinNTGroupMember`t'$($ThisDirEntry.Path)' is not a group"
             }
         }
     }
@@ -1939,7 +2249,7 @@ function New-FakeDirectoryEntry {
                 Description = $Description
                 objectSid   = $SidByteAray
             }
-            $Properties['SchemaClassName'] = 'User'
+            $Properties['SchemaClassName'] = 'user'
         }
         'SYSTEM$' {
             $Properties['objectSid'] = 'S-1-5-18' | ConvertTo-SidByteArray
@@ -1949,7 +2259,7 @@ function New-FakeDirectoryEntry {
                 Description = $Description
                 objectSid   = $SidByteAray
             }
-            $Properties['SchemaClassName'] = 'User'
+            $Properties['SchemaClassName'] = 'user'
         }
         'INTERACTIVE$' {
             $Properties['objectSid'] = 'S-1-5-4' | ConvertTo-SidByteArray
@@ -1959,7 +2269,7 @@ function New-FakeDirectoryEntry {
                 Description = $Description
                 objectSid   = $SidByteAray
             }
-            $Properties['SchemaClassName'] = 'Group'
+            $Properties['SchemaClassName'] = 'group'
         }
         'Authenticated Users$' {
             $Properties['objectSid'] = 'S-1-5-11' | ConvertTo-SidByteArray
@@ -1969,7 +2279,7 @@ function New-FakeDirectoryEntry {
                 Description = $Description
                 objectSid   = $SidByteAray
             }
-            $Properties['SchemaClassName'] = 'Group'
+            $Properties['SchemaClassName'] = 'group'
         }
         'TrustedInstaller$' {
             $Properties['objectSid'] = 'S-1-5-11' | ConvertTo-SidByteArray
@@ -1979,16 +2289,18 @@ function New-FakeDirectoryEntry {
                 Description = $Description
                 objectSid   = $SidByteAray
             }
-            $Properties['SchemaClassName'] = 'User'
+            $Properties['SchemaClassName'] = 'user'
         }
     }
 
     $DirectoryEntry = [pscustomobject]::new($Properties)
-    $DirectoryEntry | Add-Member -MemberType ScriptMethod -Name RefreshCache -Force -Value {}
+
+    $DirectoryEntry |
+    Add-Member -MemberType ScriptMethod -Name RefreshCache -Force -Value {}
+
     return $DirectoryEntry
 
 }
-
 function Resolve-Ace {
     <#
         .SYNOPSIS
@@ -2086,9 +2398,29 @@ function Resolve-Ace {
         )]
         [PSObject[]]$InputObject,
 
-        # Dictionary to cache known servers to avoid redundant lookups
-        # Defaults to an empty thread-safe hashtable
-        [hashtable]$KnownServers = [hashtable]::Synchronized(@{})
+        <#
+        Dictionary to cache known servers to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
 
     )
 
@@ -2097,6 +2429,15 @@ function Resolve-Ace {
         $ACEPropertyNames = (Get-Member -InputObject $InputObject[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
         ForEach ($ThisACE in $InputObject) {
 
+            $IdentityReference = $ThisACE.IdentityReference.ToString()
+
+            if ([string]::IsNullOrEmpty($IdentityReference)) {
+                return
+            }
+
+            $ThisServerDns = $null
+            $DomainNetBios = $null
+
             # Remove the PsProvider prefix from the path string
             if (-not [string]::IsNullOrEmpty($ThisACE.SourceAccessList.Path)) {
                 $LiteralPath = $ThisACE.SourceAccessList.Path -replace [regex]::escape("$($ThisACE.SourceAccessList.PsProvider)::"), ''
@@ -2104,20 +2445,97 @@ function Resolve-Ace {
                 $LiteralPath = $LiteralPath -replace [regex]::escape("$($ThisACE.SourceAccessList.PsProvider)::"), ''
             }
 
-            $ThisServer = Find-ServerNameInPath -LiteralPath $LiteralPath
-            $AdsiServer = Get-AdsiServer -AdsiServer $ThisServer -KnownServers $KnownServers
-            $ResolvedIdentityReference = Resolve-IdentityReference -IdentityReference $ThisACE.IdentityReference -ServerName $ThisServer -AdsiServer $AdsiServer
-            $FullyResolved = $ResolvedIdentityReference.UnresolvedIdentityReference -replace
-            'NT AUTHORITY', $ThisServer -replace
-            'NT SERVICE', $ThisServer -replace
-            'BUILTIN', $ThisServer
+            switch -Wildcard ($IdentityReference) {
+                "S-1-*" {
+                    # IdentityReference is a SID (Revision 1)
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t'$IdentityReference'.LastIndexOf('-')"
+                    $IndexOfLastHyphen = $IdentityReference.LastIndexOf("-")
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t'$IdentityReference'.Substring(0, $IndexOfLastHyphen)"
+                    $DomainSid = $IdentityReference.Substring(0, $IndexOfLastHyphen)
+                    if ($DomainSid) {
+                        $DomainCacheResult = $DomainsBySID[$DomainSid]
+                        if ($DomainCacheResult) {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain SID cache hit for '$DomainSid'"
+                            $ThisServerDns = $DomainCacheResult.Dns
+                            $DomainNetBios = $DomainCacheResult.Netbios
+                        } else {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain SID cache miss for '$DomainSid'"
+                        }
+                    }
+                }
+                "NT SERVICE\*" {
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                }
+                "BUILTIN\*" {
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                }
+                "NT AUTHORITY\*" {
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                }
+                default {
+                    $DomainNetBios = ($IdentityReference -split '\\')[0]
+                    if ($DomainNetBios) {
+                        $ThisServerDns = $DomainsByNetbios[$DomainNetBios].Dns #Doesn't work for BUILTIN, etc.
+                    }
+                    if (-not $ThisServerDns) {
+                        $ThisServerDn = ConvertTo-DistinguishedName -Domain $DomainNetBios -DomainsByNetbios $DomainsByNetbios
+                        $ThisServerDns = ConvertTo-Fqdn -DistinguishedName $ThisServerDn -DomainsByNetbios $DomainsByNetbios
+                    }
+                }
+            }
+
+            if (-not $ThisServerDns) {
+                # Bug: I think this will report incorrectly for a remote domain not in the cache (trust broken or something)
+                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+            }
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# '$IdentityReference' has a domain DNS name of '$ThisServerDns'"
+
+            if (-not $DomainNetBios) {
+                $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
+                if ($DomainCacheResult) {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain FQDN cache hit for '$ThisServerDns'"
+                    $DomainNetBios = $DomainCacheResult.Netbios
+                } else {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain FQDN cache miss for '$ThisServerDns'"
+                }
+            }
+
+            if (-not $DomainNetBios) {
+                $DomainNetBios = ConvertTo-LDAPDomainNetBIOS -DomainFQDN $ThisServerDns -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -AdsiServersByDns $AdsiServersByDns -DomainsByNetbios $DomainsByNetbios
+            }
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# '$IdentityReference' has a domain NetBIOS name of '$DomainNetBios'"
+
+            $GetAdsiServerParams = @{
+                AdsiServer             = $ThisServerDns
+                AdsiServersByDns       = $AdsiServersByDns
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+            }
+            $AdsiServer = Get-AdsiServer @GetAdsiServerParams
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# '$IdentityReference' has an ADSI server of '$($AdsiServer.AdsiProvider)://$($AdsiServer.ServerName)'"
+
+            $ResolveIdentityReferenceParams = @{
+                IdentityReference      = $IdentityReference
+                ServerName             = $ThisServerDns
+                AdsiServer             = $AdsiServer
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+                DirectoryEntryCache    = $DirectoryEntryCache
+                DomainsBySID           = $DomainsBySID
+                DomainsByNetbios       = $DomainsByNetbios
+                AdsiServersByDns       = $AdsiServersByDns
+                DomainsByFqdn          = $DomainsByFqdn
+            }
+            $ResolvedIdentityReference = Resolve-IdentityReference @ResolveIdentityReferenceParams
+
+            # not sure if I should add a param to offer DNS instead of NetBIOS
 
             $ObjectProperties = @{
                 AdsiProvider              = $AdsiServer.AdsiProvider
-                AdsiServer                = $ThisServer
+                AdsiServer                = $AdsiServer.ServerName
                 IdentityReferenceSID      = $ResolvedIdentityReference.SIDString
-                IdentityReferenceName     = $ResolvedIdentityReference.UnresolvedIdentityReference
-                IdentityReferenceResolved = $FullyResolved
+                IdentityReferenceName     = $ResolvedIdentityReference.IdentityReferenceUnresolved
+                IdentityReferenceResolved = $ResolvedIdentityReference.IdentityReferenceNetBios
             }
             ForEach ($ThisProperty in $ACEPropertyNames) {
                 $ObjectProperties[$ThisProperty] = $ThisACE.$ThisProperty
@@ -2129,6 +2547,7 @@ function Resolve-Ace {
     }
 
 }
+
 function Resolve-IdentityReference {
     <#
         .SYNOPSIS
@@ -2151,74 +2570,340 @@ function Resolve-IdentityReference {
     param (
         # IdentityReference from an Access Control Entry
         # Expecting either a SID (S-1-5-18) or an NT account name (CONTOSO\User)
+        [Parameter(Mandatory)]
         [string]$IdentityReference,
 
         # Name of the directory server to use to resolve the IdentityReference
         [string]$ServerName,
 
         # Object from Get-AdsiServer representing the directory server and its attributes
-        [PSObject]$AdsiServer
+        [PSObject]$AdsiServer,
+
+        [hashtable]$KnownDomains = [hashtable]::Synchronized(@{}),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Dictionary to cache known servers to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{})
     )
 
     $ThisHostName = hostname
-
-    if ($IdentityReference -like 'S-1-*') {
-        # The IdentityReference is a SID
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.SecurityIdentifier]::new('$IdentityReference')"
-        $SecurityIdentifier = [System.Security.Principal.SecurityIdentifier]::new($IdentityReference)
-
-        # This .Net method makes it impossible to redirect the error stream directly
-        # Wrapping it in a scriptblock (which is then executed with &) fixes the problem
-        # I don't understand exactly why
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.SecurityIdentifier]::new('$IdentityReference').Translate([System.Security.Principal.NTAccount])"
-        $UnresolvedIdentityReference = & { $SecurityIdentifier.Translate([System.Security.Principal.NTAccount]).Value } 2>$null
-        $SIDString = $IdentityReference
+    if ($AdsiServer.AdsiProvider -eq 'LDAP') {
+        $ServerNetBIOS = ConvertTo-LDAPDomainNetBIOS -DomainFQDN $AdsiServer.ServerName -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -AdsiServersByDns $AdsiServersByDns -DomainsByNetbios $DomainsByNetbios
     } else {
-        # The IdentityReference is an NTAccount
-        $UnresolvedIdentityReference = $IdentityReference
-        # Resolve NTAccount to SID
-        $Name = ($UnresolvedIdentityReference -split '\\')[1]
-        # Well-Known SIDs cannot be translated with the Translate method so instead we will use CIM
-        $SIDString = $AdsiServer.WellKnownSIDs[$Name].SID
-        if (!($SIDString)) {
-            Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.NTAccount]::new('$ServerName','$IdentityReference')"
-            $NTAccount = [System.Security.Principal.NTAccount]::new($ServerName, $IdentityReference)
-            Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.NTAccount]::new('$ServerName','$IdentityReference').Translate([System.Security.Principal.SecurityIdentifier])"
-            $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+        $ServerNetBIOS = ($AdsiServer.ServerName -split '\.')[0]
+    }
 
-            if (!($SIDString)) {
-                # Some built-in groups such as BUILTIN\Users and BUILTIN\Administrators are not in the CIM class or translatable with the Translate method
+    $split = $IdentityReference.Split('\')
+    $DomainNetBIOS = $split[0]
+    $DomainNetBIOS = $ServerNetBIOS
+    $Name = $split[1]
 
-
-                if ($UnresolvedIdentityReference -like "NT SERVICE\*") {
-                    # Some of them are services (yes services can have SIDs)
-                    if ($ServerName -eq $ThisHostName) {
-                        Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`tsc.exe showsid $Name"
-                        [string[]]$ScResult = & sc.exe showsid $Name
-                    } else {
-                        Write-Debug "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`tInvoke-Command -ComputerName $ServerName -ScriptBlock { & sc.exe showsid `$args[0] } -ArgumentList $Name"
-                        [string[]]$ScResult = Invoke-Command -ComputerName $ServerName -ScriptBlock { & sc.exe showsid $args[0] } -ArgumentList $Name
-                    }
-                    $ScResultProps = @{}
-                    $ScResult |
-                    ForEach-Object {
-                        $Prop, $Value = ($_ -split ':').Trim()
-                        $ScResultProps[$Prop] = $Value
-                    }
-                    $SIDString = $ScResultProps['SERVICE SID']
-                } else {
-                    # Otherwise they may have real DirectoryEntry objects
-                    $DirectoryPath = "$($AdsiServer.AdsiProvider)`://$ServerName/$Name"
-                    $SIDString = (Get-DirectoryEntry -DirectoryPath $DirectoryPath |
-                        Add-SidInfo).SidString
+    # Many Well-Known SIDs cannot be translated with the Translate method
+    # Instead we have used CIM to collect information on instances of the Win32_Account class from the AdsiServer
+    # This has been done by Get-AdsiServer and it updated the Win32AccountsBySID and Win32AccountsByCaption caches
+    # Search the caches now
+    $CacheResult = $Win32AccountsBySID["$ServerNetBIOS\$IdentityReference"]
+    if ($CacheResult) {
+        #IdentityReference is a SID, and has been cached from this server
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Win32_Account SID cache hit for '$ServerNetBIOS\$IdentityReference'"
+        return [PSCustomObject]@{
+            IdentityReferenceOriginal   = $IdentityReference
+            # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
+            IdentityReferenceUnresolved = $null # Could parse SID to get this?
+            SIDString                   = $CacheResult.SID
+            IdentityReferenceNetBios    = $CacheResult.Caption
+            IdentityReferenceDns        = "$($AdsiServer.ServerName)\$($CacheResult.Name)"
+        }
+    } else {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Win32_Account SID cache miss for '$ServerNetBIOS\$IdentityReference'"
+    }
+    if ($Name) {
+        # Win32_Account provides a NetBIOS-resolved IdentityReference
+        # NT Authority\SYSTEM on would be SERVER123\SYSTEM as a Win32_Account on a server with hostname server123
+        # This could also match on a domain account since those can be returned as Win32_Account, not sure if that will be a bug or what
+        $CacheResult = $Win32AccountsByCaption["$ServerNetBIOS\$ServerNetBIOS\$Name"]
+        if ($CacheResult) {
+            # IdentityReference is an NT Account Name, and has been cached from this server
+            Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Win32_Account caption cache hit for '$ServerNetBIOS\$ServerNetBIOS\$Name'"
+            if ($ServerNetBIOS -eq $CacheResult.Domain) {
+                $DomainDns = $AdsiServer.ServerName
+            }
+            if (-not $DomainDns) {
+                $DomainCacheResult = $DomainsByNetbios[$CacheResult.Domain]
+                if ($DomainCacheResult) {
+                    $DomainDns = $DomainCacheResult.Dns
                 }
+            }
+            if (-not $DomainDns) {
+                $DomainDns = ConvertTo-Fqdn -NetBIOS $DomainNetBIOS -KnownDomains $KnownDomains -DomainsByNetbios $DomainsByNetbios
+                $DomainDn = $KnownDomains[$DomainNetBIOS]
+            }
+
+            return [PSCustomObject]@{
+                IdentityReferenceOriginal   = $IdentityReference
+                # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
+                IdentityReferenceUnresolved = $IdentityReference
+                SIDString                   = $CacheResult.SID
+                IdentityReferenceNetBios    = $CacheResult.Caption
+                IdentityReferenceDns        = "$DomainDns\$($CacheResult.Name)"
+            }
+        } else {
+            Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Win32_Account caption cache miss for '$ServerNetBIOS\$ServerNetBIOS\$Name'"
+        }
+    }
+    $CacheResult = $Win32AccountsByCaption["$ServerNetBIOS\$IdentityReference"]
+    if ($CacheResult) {
+        # IdentityReference is an NT Account Name, and has been cached from this server
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Win32_Account caption cache hit for '$ServerNetBIOS\$IdentityReference'"
+        return [PSCustomObject]@{
+            IdentityReferenceOriginal   = $IdentityReference
+            # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
+            IdentityReferenceUnresolved = $null
+            SIDString                   = $CacheResult.SID
+            IdentityReferenceNetBios    = $CacheResult.Caption
+            IdentityReferenceDns        = "$($AdsiServer.ServerName)\$($CacheResult.Name)"
+        }
+    } else {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Win32_Account caption cache miss for '$ServerNetBIOS\$IdentityReference'"
+    }
+
+    switch -Wildcard ($IdentityReference) {
+        "S-1-*" {
+            # IdentityReference is a SID (Revision 1)
+
+            # Constricted a SecurityIdentifier object based on the SID
+            Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.SecurityIdentifier]::new('$IdentityReference')"
+            $SecurityIdentifier = [System.Security.Principal.SecurityIdentifier]::new($IdentityReference)
+
+            <#
+            Use the SecurityIdentifier.Translate() method to translate the SID to an NT Account name
+                This .Net method makes it impossible to redirect the error stream directly
+                Wrapping it in a scriptblock (which is then executed with &) fixes the problem
+                I don't understand exactly why
+                The scriptblock will evaluate null if the SID cannot be translated, and the error stream redirection supresses the error
+            #>
+            Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.SecurityIdentifier]::new('$IdentityReference').Translate([System.Security.Principal.NTAccount])"
+            $UnresolvedIdentityReference = & { $SecurityIdentifier.Translate([System.Security.Principal.NTAccount]).Value } 2>$null
+
+            # The SID of the domain is everything up to (but not including) the last hyphen
+            $DomainSid = $IdentityReference.Substring(0, $IdentityReference.LastIndexOf("-"))
+
+            # Search the cache of domains (TrustedDomainSidNameMap)
+            $DomainCacheResult = $DomainsBySID[$DomainSid]
+            if (-not $DomainCacheResult) {
+                $split = $UnresolvedIdentityReference -split '\\'
+                $DomainCacheResult = $DomainsByNetbios[$split[0]]
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Domain SID cache miss for '$DomainSid'"
+            } else {
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Domain SID cache hit for '$DomainSid'"
+            }
+            if ($DomainCacheResult) {
+                $DomainNetBIOS = $DomainCacheResult.Netbios
+                $DomainDns = $DomainCacheResult.Dns
+            } else {
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Domain SID '$DomainSid' is unknown."
+                $DomainNetBIOS = $split[0]
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# Translated NTAccount name for '$IdentityReference' is '$UnresolvedIdentityReference'"
+                $DomainDns = ConvertTo-Fqdn -NetBIOS $DomainNetBIOS -KnownDomains $KnownDomains -DomainsByNetbios $DomainsByNetbios
+            }
+            $AdsiServer = Get-AdsiServer -AdsiServer $DomainDns -AdsiServersByDns $AdsiServersByDns
+
+            # Recursively call this function to resolve the new IdentityReference we have
+            $ResolveIdentityReferenceParams = @{
+                IdentityReference      = $UnresolvedIdentityReference
+                ServerName             = $DomainDns
+                AdsiServer             = $AdsiServer
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+                DirectoryEntryCache    = $DirectoryEntryCache
+                DomainsBySID           = $DomainsBySID
+                DomainsByNetbios       = $DomainsByNetbios
+            }
+            $Resolved = Resolve-IdentityReference @ResolveIdentityReferenceParams
+
+            if ( -not $UnresolvedIdentityReference ) {
+                $Resolved = [PSCustomObject]@{
+                    IdentityReferenceOriginal   = $IdentityReference
+                    IdentityReferenceUnresolved = $IdentityReference
+                    SIDString                   = $IdentityReference
+                    IdentityReferenceNetBios    = "$DomainNetBIOS\$IdentityReference"
+                    IdentityReferenceDns        = "$DomainDns\$IdentityReference"
+                }
+            }
+
+            return $Resolved
+
+        }
+        "NT SERVICE\*" {
+            # Some of them are services (yes services can have SIDs, notably this includes TrustedInstaller but it is also common with SQL)
+            if ($ServerNetBIOS -eq $ThisHostName) {
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`tsc.exe showsid $Name"
+                [string[]]$ScResult = & sc.exe showsid $Name
+            } else {
+                Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`tInvoke-Command -ComputerName $ServerNetBIOS -ScriptBlock { & sc.exe showsid `$args[0] } -ArgumentList $Name"
+                [string[]]$ScResult = Invoke-Command -ComputerName $ServerNetBIOS -ScriptBlock { & sc.exe showsid $args[0] } -ArgumentList $Name
+            }
+            $ScResultProps = @{}
+
+            $ScResult |
+            ForEach-Object {
+                $Prop, $Value = ($_ -split ':').Trim()
+                $ScResultProps[$Prop] = $Value
+            }
+
+            $SIDString = $ScResultProps['SERVICE SID']
+            $Caption = $IdentityReference -replace 'NT SERVICE', $ServerNetBIOS
+
+            $DomainCacheResult = $DomainsByNetbios[$ServerNetBIOS]
+            if ($DomainCacheResult) {
+                $DomainDns = $DomainCacheResult.Dns
+            }
+            if (-not $DomainDns) {
+                $DomainDns = ConvertTo-Fqdn -NetBIOS $ServerNetBIOS -KnownDomains $KnownDomains -DomainsByNetbios $DomainsByNetbios
+            }
+
+            # Update the caches
+            $Win32Acct = [PSCustomObject]@{
+                SID     = $SIDString
+                Caption = $Caption
+                Domain  = $ServerNetBIOS
+                Name    = $Name
+            }
+            $Win32AccountsByCaption["$ServerNetBIOS\$Caption"] = $Win32Acct
+            $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
+
+            return [PSCustomObject]@{
+                IdentityReferenceOriginal   = $IdentityReference
+                IdentityReferenceUnresolved = $IdentityReference
+                SIDString                   = $SIDString
+                IdentityReferenceNetBios    = $Caption
+                IdentityReferenceDns        = "$DomainDns\$Name"
+            }
+        }
+        "BUILTIN\*" {
+            # Some built-in groups such as BUILTIN\Users and BUILTIN\Administrators are not in the CIM class or translatable with the NTAccount.Translate() method
+            # But they may have real DirectoryEntry objects
+            # Try to find the DirectoryEntry object locally on the server
+            $DirectoryPath = "$($AdsiServer.AdsiProvider)`://$ServerNetBIOS/$Name"
+            $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+            $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios).SidString
+            $Caption = $IdentityReference -replace 'BUILTIN', $ServerNetBIOS
+            $DomainDns = $AdsiServer.ServerName
+
+            # Update the caches
+            $Win32Acct = [PSCustomObject]@{
+                SID     = $SIDString
+                Caption = $Caption
+                Domain  = $ServerNetBIOS
+                Name    = $Name
+            }
+            $Win32AccountsByCaption["$ServerNetBIOS\$Caption"] = $Win32Acct
+            $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
+
+            return [PSCustomObject]@{
+                IdentityReferenceOriginal   = $IdentityReference
+                IdentityReferenceUnresolved = $IdentityReference
+                SIDString                   = $SIDString
+                IdentityReferenceNetBios    = $Caption
+                IdentityReferenceDns        = "$DomainDns\$Name"
             }
         }
     }
 
-    [PSCustomObject]@{
-        UnresolvedIdentityReference = $UnresolvedIdentityReference
+    # The IdentityReference is an NTAccount
+    # Resolve NTAccount to SID
+    # Start by determining the domain
+
+    if (-not [string]::IsNullOrEmpty($DomainNetBIOS)) {
+    }
+    $DomainDNCacheResult = $DomainsByNetbios[$DomainNetBIOS]
+    if (-not $DomainDNCacheResult) {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-IdentityReference`t# Domain NetBIOS cache miss for '$($DomainNetBIOS)'."
+        $KnownDomains[$DomainNetBIOS] = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios
+    } else {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-IdentityReference`t# Domain NetBIOS cache hit for '$($DomainNetBIOS)'."
+        $KnownDomains[$DomainNetBIOS] = $DomainDNCacheResult
+    }
+
+    $DomainDn = $KnownDomains[$DomainNetBIOS]
+    $DomainDns = ConvertTo-Fqdn -DistinguishedName $DomainDn -DomainsByNetbios $DomainsByNetbios
+
+    # Try to resolve the account against the server the Access Control Entry came from (which may or may not be the directory server for the account)
+    Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.NTAccount]::new('$ServerNetBIOS', '$Name')"
+    $NTAccount = [System.Security.Principal.NTAccount]::new($ServerNetBIOS, $Name)
+    Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.NTAccount]::new('$ServerNetBIOS', '$Name').Translate([System.Security.Principal.SecurityIdentifier])"
+    $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+
+    if (-not $SIDString) {
+        # Try to resolve the account against the domain indicated in its NT Account Name (which may or may not be the correct ADSI server for the account, it won't be if it's NT AUTHORITY\SYSTEM for example)
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.NTAccount]::new('$DomainNetBIOS', '$Name')"
+        $NTAccount = [System.Security.Principal.NTAccount]::new($DomainNetBIOS, $Name)
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t[System.Security.Principal.NTAccount]::new('$DomainNetBIOS', '$Name').Translate([System.Security.Principal.SecurityIdentifier])"
+        $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+    } else {
+        $DomainNetBIOS = $ServerNetBIOS
+    }
+
+    if (-not $SIDString) {
+        # Try to resolve the account against the domain indicated in its NT Account Name
+        # Add this domain to our list of known domains
+        try {
+            $SearchPath = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$DomainDn" -DomainsByNetbios $DomainsByNetbios
+            $DirectoryEntry = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $SearchPath -Filter "(samaccountname=$Name)" -PropertiesToLoad @('objectClass', 'distinguishedName', 'name', 'grouptype', 'description', 'managedby', 'member', 'objectClass', 'Department', 'Title') -DomainsByNetbios $DomainsByNetbios
+            $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios).SidString
+        } catch {
+            Write-Warning "$(Get-Date -Format s)`t$(hostname)`tResolve-IdentityReference`t$($StartingIdentityName) could not be resolved against its directory"
+            Write-Warning "$(Get-Date -Format s)`t$(hostname)`tResolve-IdentityReference`t$($_.Exception.Message)"
+        }
+    }
+
+    if (-not $SIDString) {
+
+        # Try to find the DirectoryEntry object directly on the server
+        $DirectoryPath = "$($AdsiServer.AdsiProvider)`://$ServerNetBIOS/$Name"
+        $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+        $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios).SidString
+
+    }
+
+    if ($SIDString) {
+        $DomainNetBIOS = $ServerNetBIOS
+    }
+
+    # This covers unresolved SIDs for deleted accounts, broken domain trusts, etc.
+    if ( '' -eq "$Name" ) {
+        $Name = $IdentityReference
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# An identity reference girl has no name ($Name)"
+    } else {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tResolve-IdentityReference`t# '$IdentityReference' is named '$Name'"
+    }
+
+    return [PSCustomObject]@{
+        IdentityReferenceOriginal   = $IdentityReference
+        IdentityReferenceUnresolved = $IdentityReference
         SIDString                   = $SIDString
+        IdentityReferenceNetBios    = "$DomainNetBios\$Name"
+        IdentityReferenceDns        = "$DomainDns\$Name"
     }
 
 }
@@ -2265,12 +2950,17 @@ function Search-Directory {
         Hashtable containing cached directory entries so they don't have to be retrieved from the directory again
         Uses a thread-safe hashtable by default
         #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{}))
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
 
     )
 
+    $ThisHostName = HOSTNAME.EXE
+
     $DirectoryEntryParameters = @{
         DirectoryEntryCache = $DirectoryEntryCache
+        DomainsByNetbios    = $DomainsByNetbios
     }
 
     if ($Credential) {
@@ -2285,19 +2975,25 @@ function Search-Directory {
 
     $DirectoryEntry = Get-DirectoryEntry @DirectoryEntryParameters
 
+    Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tSearch-Directory`t`$DirectorySearcher = [System.DirectoryServices.DirectorySearcher]::new(([System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')))"
     $DirectorySearcher = [System.DirectoryServices.DirectorySearcher]::new($DirectoryEntry)
 
     if ($Filter) {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tSearch-Directory`t`$DirectorySearcher.Filter = '$Filter'"
         $DirectorySearcher.Filter = $Filter
     }
 
+    Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tSearch-Directory`t`$DirectorySearcher.PageSize = '$PageSize'"
     $DirectorySearcher.PageSize = $PageSize
+    Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tSearch-Directory`t`$DirectorySearcher.SearchScope = '$SearchScope'"
     $DirectorySearcher.SearchScope = $SearchScope
 
     ForEach ($Property in $PropertiesToLoad) {
+        Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tSearch-Directory`t`$DirectorySearcher.PropertiesToLoad.Add('$Property')"
         $null = $DirectorySearcher.PropertiesToLoad.Add($Property)
     }
 
+    Write-Debug -Message "  $(Get-Date -Format s)`t$ThisHostName`tSearch-Directory`t`$DirectorySearcher.FindAll()"
     $SearchResultCollection = $DirectorySearcher.FindAll()
     # TODO: Fix this.  Problems in integration testing trying to use the objects later if I dispose them here now.
     # Error: Cannot access a disposed object.
@@ -2685,7 +3381,6 @@ function Expand-AccountPermission {
     )
     ForEach ($Account in $AccountPermission) {
 
-
         $Props = @{}
 
         $AccountNoteProperties = $Account |
@@ -2834,6 +3529,47 @@ function Format-FolderPermission {
             Write-Verbose $status
             Write-Progress -Activity ("Total Users: " + $UserPermission.Count) -Status $status -PercentComplete $percentage
 
+            if ($ThisUser.Group.DirectoryEntry.Properties) {
+                $Name = $ThisUser.Group.DirectoryEntry.Properties['name'] | Sort-Object -Unique
+                $Dept = $ThisUser.Group.DirectoryEntry.Properties['department'] | Sort-Object -Unique
+                $Title = $ThisUser.Group.DirectoryEntry.Properties['title'] | Sort-Object -Unique
+            } else {
+                $Name = $ThisUser.Group.name | Sort-Object -Unique
+                $Dept = $ThisUser.Group.department | Sort-Object -Unique
+                $Title = $ThisUser.Group.title | Sort-Object -Unique
+            }
+            if ("$Name" -eq '') {
+                $Name = $ThisUser.Name
+            }
+            if ($ThisUser.Group.DirectoryEntry.Properties) {
+                if ($ThisUser.Group.DirectoryEntry.Properties['objectclass'] -contains 'group' -or
+                    "$($ThisUser.Group.DirectoryEntry.Properties['groupType'])" -ne ''
+                ) {
+                    $SchemaClassName = 'group'
+                } else {
+                    $SchemaClassName = 'user'
+                }
+            } else {
+                if ($ThisUser.Group.Properties) {
+                    if (
+                        $ThisUser.Group.Properties['objectclass'] -contains 'group' -or
+                        "$($ThisUser.Group.Properties['groupType'])" -ne ''
+                    ) {
+                        $SchemaClassName = 'group'
+                    } else {
+                        $SchemaClassName = 'user'
+                    }
+                } else {
+                    if ($ThisUser.Group.DirectoryEntry.SchemaClassName) {
+                        $SchemaClassName = $ThisUser.Group.DirectoryEntry.SchemaClassName |
+                        Select-Object -First 1
+                    } else {
+                        $SchemaClassName = $ThisUser.Group.SchemaClassName |
+                        Select-Object -First 1
+                    }
+                }
+            }
+
             ForEach ($ThisACE in $ThisUser.Group.NtfsAccessControlEntries) {
 
                 switch ($ThisACE.InheritanceFlags) {
@@ -2843,15 +3579,6 @@ function Format-FolderPermission {
                     default { $Scope = 'this folder but not subfolders' }
                 }
 
-                if ($ThisUser.Group.DirectoryEntry.Properties) {
-                    $Name = $ThisUser.Group.DirectoryEntry.Properties['name'] | Sort-Object -Unique
-                    $Dept = $ThisUser.Group.DirectoryEntry.Properties['department'] | Sort-Object -Unique
-                    $Title = $ThisUser.Group.DirectoryEntry.Properties['title'] | Sort-Object -Unique
-                } else {
-                    $Name = $ThisUser.Group.name | Sort-Object -Unique
-                    $Dept = $ThisUser.Group.department | Sort-Object -Unique
-                    $Title = $ThisUser.Group.title | Sort-Object -Unique
-                }
                 if ($null -eq $ThisUser.Group.IdentityReference) {
                     $IdentityReference = $null
                 } else {
@@ -2873,7 +3600,7 @@ function Format-FolderPermission {
                     Title                    = $Title
                     IdentityReference        = $IdentityReference
                     AccessControlEntry       = $ThisACE
-                    SchemaClassName          = $ThisUser.Group.SchemaClassName | Select-Object -First 1
+                    SchemaClassName          = $SchemaClassName
                 }
 
             }
@@ -2933,7 +3660,9 @@ function Format-SecurityPrincipal {
         #>
         Select-Object -Property @{
             Label      = 'User'
-            Expression = { "$($_.Domain.Netbios)\$($_.SamAccountName)" }
+            Expression = {
+                "$($_.Domain.Netbios)\$($_.Properties['Name'])"
+            }
         },
         @{
             Label      = 'IdentityReference'
@@ -3049,17 +3778,33 @@ function Get-FolderTarget {
 
             $RegEx = '^(?<DriveLetter>\w):'
             if ($TargetPath -match $RegEx) {
+                # TODO: Resolve mapped network drives to their UNC path, currently this will incorrectly treat them as local paths
                 $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
             } else {
-                #$DFSDetails = [NetApi32Dll]::NetDfsGetInfo($TargetPath) # Can't use this because it doesn't work if the provided path is a subfolder of a DFS folder
+                # Can't use [NetApi32Dll]::NetDfsGetInfo($TargetPath) because it doesn't work if the provided path is a subfolder of a DFS folder
+                # Can't use [NetApi32Dll]::NetDfsGetClientInfo($TargetPath) because it does not return disabled folder targets
+                # Instead need to use [NetApi32Dll]::NetDfsEnum($TargetPath) then Where-Object to filter results
                 $AllDfs = Get-NetDfsEnum -Verbose -FolderPath $TargetPath
-                $DfsDetails = $AllDfs |
+
+                $MatchingDfsEntryPaths = $AllDfs |
                 Group-Object -Property DfsEntryPath |
-                Where-Object -FilterScript { "$TargetPath" -like "$($_.Name)\*" } |
+                Where-Object -FilterScript {
+                    $TargetPath -match [regex]::Escape($_.Name)
+                }
+
+                # Filter out the DFS Namespace
+                # TODO: I know this is an inefficient n2 algorithm, but my brain is fried...plez...halp...leeloo dallas multipass
+                $RemainingDfsEntryPaths = $MatchingDfsEntryPaths |
+                Where-Object -FilterScript {
+                    -not [bool]$(
+                        ForEach ($ThisEntryPath in $MatchingDfsEntryPaths) {
+                            if ($ThisEntryPath.Name -match "$([regex]::Escape("$($_.Name)")).+") { $true }
+                        }
+                    )
+                } |
                 Sort-Object -Property Name
-                $DfsNamespaceRoot = $DfsDetails |
-                Select-Object -First 1
-                $DfsDetails |
+
+                $RemainingDfsEntryPaths |
                 Select-Object -Last 1 -ExpandProperty Group |
                 ForEach-Object {
                     $_.FullOriginalQueryPath -replace [regex]::Escape($_.DfsEntryPath), $_.DfsTarget
@@ -3487,8 +4232,8 @@ function Add-PsCommand {
                 }
                 'ScriptBlock' {
                     <#NormallyCommentThisForPerformanceOptimization#>###Write-Debug "Add-PsCommand adding Script (a ScriptBlock)"
-                    <#NormallyCommentThisForPerformanceOptimization#>##Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tAdd-PsCommand`t`$PowershellInterface.AddScript('$Command')"
-                    <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tAdd-PsCommand`t`$PowershellInterface.AddScript(`"`$Command`") # `$Command variable not expanded in debug message for brevity"
+                    <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tAdd-PsCommand`t`$PowershellInterface.AddScript('$Command')"
+                    <#NormallyCommentThisForPerformanceOptimization#>##Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tAdd-PsCommand`t`$PowershellInterface.AddScript(`"`$Command`") # `$Command variable not expanded in debug message for brevity"
                     $null = $ThisPowershell.AddScript($Command)
                 }
                 default {
@@ -3524,7 +4269,6 @@ function Add-PsModule {
         ModuleInfo object for the module to add to the Powershell interface
         #>
         [Parameter(
-            Mandatory,
             Position = 0
         )]
         [System.Management.Automation.PSModuleInfo[]]$ModuleInfo
@@ -3590,6 +4334,8 @@ function Convert-FromPsCommandInfoToString {
                 }
                 'ExternalScript' {
                     "$($ThisCmd.ScriptBlock)"
+                    #"$($ThisCmd.CommandInfo.ScriptBlock)"
+                    #"$Command"
                 }
                 'ScriptBlock' {
                     "$Command"
@@ -3618,13 +4364,22 @@ function Expand-PsCommandInfo {
     )
 
     # Add the first object to the cache
-    $Cache[$PsCommandInfo.CommandInfo.Name] = $PsCommandInfo
+    if (-not $PsCommandInfo.CommandInfo.Name) {
+        $PsCommandInfo
+    } else {
+        $Cache[$PsCommandInfo.CommandInfo.Name] = $PsCommandInfo
+    }
 
     # Tokenize the function definition
     $PsTokens = $null
     $TokenizerErrors = $null
     $AbstractSyntaxTree = [System.Management.Automation.Language.Parser]::ParseInput(
-        $PsCommandInfo.CommandInfo.Definition,
+        # We need the property which contains tokenizable PowerShell
+        # For a function in a ScriptModule, the definition and scriptblock properties are the same
+        # For an ExternalScript, the definition is the filepath and the scriptblock is tokenizable powershell
+        # This is why the Scriptblock property has been chosen
+        #$PsCommandInfo.CommandInfo.Definition,
+        $PsCommandInfo.CommandInfo.Scriptblock,
         [ref]$PsTokens,
         [ref]$TokenizerErrors
     )
@@ -3739,9 +4494,21 @@ function Get-PsCommandInfo {
     } else {
         $CommandInfo = Get-Command $Command -ErrorAction SilentlyContinue
         [string]$CommandType = $CommandInfo.CommandType
-        if ($CommandInfo.Source) {
-            $ModuleInfo = Get-Module -Name $CommandInfo.Source -ErrorAction SilentlyContinue
+        if ($CommandInfo.Source -like "*\*") {
+            $ModuleInfo = Get-Module -Name $CommandInfo.Source -ListAvailable -ErrorAction SilentlyContinue
+        } else {
+            if ($CommandInfo.Source) {
+                <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-PsCommandInfo`tGet-Module -Name '$($CommandInfo.Source)'"
+                $ModuleInfo = Get-Module -Name $CommandInfo.Source -ErrorAction SilentlyContinue
+            }
         }
+    }
+
+    if ($ModuleInfo.Path -like "*.ps1") {
+        $ModuleInfo = $null
+        $SourceModuleName = $null
+    } else {
+        $SourceModuleName = $CommandInfo.Source
     }
 
     #CommentedForPerformanceOptimization#Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGet-PsCommandInfo`t$Command is a $CommandType"
@@ -3750,7 +4517,7 @@ function Get-PsCommandInfo {
         ModuleInfo             = $ModuleInfo
         CommandType            = $CommandType
         SourceModuleDefinition = $ModuleInfo.Definition
-        SourceModuleName       = $CommandInfo.Source
+        SourceModuleName       = $SourceModuleName
     }
 
 }
@@ -3823,13 +4590,21 @@ function Open-Thread {
         if ($CommandInfo) {
 
             # Begin to build the command that the script will run with all its parameters
-            $CommandStringForScriptDefinition = [System.Text.StringBuilder]::new($Command)
+            if (Test-Path $Command -ErrorAction SilentlyContinue) {
+                # If $Command is a valid file path, dot-source it and wrap it in single quotes to handle spaces
+                $CommandStringForScriptDefinition = [System.Text.StringBuilder]::new(". '$Command'")
+            } else {
+                $CommandStringForScriptDefinition = [System.Text.StringBuilder]::new($Command)
+            }
 
             # Build the param block of the script. Along the way, add any necessary parameters and switches
             # Avoided using AppendJoin for slight performance and code readability penalty due to lack of support in PS 5.1
             $ScriptDefinition = [System.Text.StringBuilder]::new()
             $null = $ScriptDefinition.AppendLine('param (')
-            If ( -not [string]::IsNullOrEmpty($InputParameter)) {
+            If ([string]::IsNullOrEmpty($InputParameter)) {
+                $null = $ScriptDefinition.Append("    `$PsRunspaceArgument1")
+                $null = $CommandStringForScriptDefinition.Append(" `$PsRunspaceArgument1")
+            } else {
                 $null = $ScriptDefinition.Append("    `$$InputParameter")
                 $null = $CommandStringForScriptDefinition.Append(" -$InputParameter `$$InputParameter")
             }
@@ -3855,6 +4630,13 @@ function Open-Thread {
             }
             $null = $ScriptDefinition.AppendLine()
             $ScriptString = $ScriptDefinition.ToString()
+
+            # Remove blank lines
+            # Commented out due to risk of unintended side effects: what if the code includes a here-string that requires blank lines, etc)
+            #while ( $ScriptString -match '\r\n\r\n' ) {
+            #    $ScriptString = $ScriptString -replace "`r`n`r`n", "`r`n"
+            #}
+
             $ScriptBlock = [scriptblock]::Create($ScriptString)
         }
 
@@ -3887,15 +4669,16 @@ function Open-Thread {
                 $null = Add-PsCommand -Command $Command -PowershellInterface $PowershellInterface -Force
             }
 
+            # Prepare to pass $InputObject into the runspace as a parameter not an argument
+            # Do this even if we end up passing it as an argument to the command inside the runspace
             If ([string]::IsNullOrEmpty($InputParameter)) {
-                <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$PowershellInterface.AddArgument('$ObjectString') # for '$Command' on '$ObjectString'"
-                $null = $PowershellInterface.AddArgument($Object)
-                <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = "'$ObjectString'"
-            } Else {
-                <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$PowershellInterface.AddParameter('$InputParameter', '$ObjectString') # for '$Command' on '$ObjectString'"
-                $null = $PowershellInterface.AddParameter($InputParameter, $Object)
-                <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = "-$InputParameter '$ObjectString'"
+                $InputParameter = 'PsRunspaceArgument1'
             }
+
+            <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tOpen-Thread`t`$PowershellInterface.AddParameter('$InputParameter', '$ObjectString') # for '$Command' on '$ObjectString'"
+            $null = $PowershellInterface.AddParameter($InputParameter, $Object)
+            <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = "-$InputParameter '$ObjectString'"
+
 
             $AdditionalParameters = @()
             $AdditionalParameters = ForEach ($Key in $AddParam.Keys) {
@@ -4039,20 +4822,25 @@ function Split-Thread {
 
         $OriginalCommandInfo = Get-PsCommandInfo -Command $Command
         <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tSplit-Thread`t# Found 1 original PsCommandInfo for '$Command'"
+
         $CommandInfo = Expand-PsCommandInfo -PsCommandInfo $OriginalCommandInfo
         <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tSplit-Thread`t# Found $(($CommandInfo | Measure-Object).Count) nested PsCommandInfos for '$Command' ($($CommandInfo.CommandInfo.Name -join ','))"
 
         # Prepare our collection of PowerShell modules to import in each thread
         # This will include any modules specified by name with the -AddModule parameter
-        # This will also include any modules identified by tokenizing the -Command parameter or its definition, and recursing through all nested command tokens
         $ModulesToAdd = [System.Collections.Generic.List[System.Management.Automation.PSModuleInfo]]::new()
         ForEach ($Module in $AddModule) {
-            $ModuleObj = Get-Module $Module -ErrorAction SilentlyContinue
+            <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tSplit-Thread`tGet-Module -Name '$Module'"
+            $ModuleObj = Get-Module -Name $Module -ErrorAction SilentlyContinue
             $null = $ModulesToAdd.Add($ModuleObj)
         }
 
-        $ModulesToAdd = $CommandInfo.ModuleInfo |
-        Sort-Object -Property Name -Unique
+        # This will also include any modules identified by tokenizing the -Command parameter or its definition, and recursing through all nested command tokens
+        $CommandInfo.ModuleInfo |
+        Sort-Object -Property Name -Unique |
+        ForEach-Object {
+            $null = $ModulesToAdd.Add($_)
+        }
 
         $CommandInfo = $CommandInfo |
         Where-Object -FilterScript {
@@ -4061,7 +4849,9 @@ function Split-Thread {
         }
         <#NormallyCommentThisForPerformanceOptimization#>#Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tSplit-Thread`t# Found $(($CommandInfo | Measure-Object).Count) remaining PsCommandInfos to define for '$Command' (not in modules: $($CommandInfo.CommandInfo.Name -join ','))"
 
-        $null = Add-PsModule -InitialSessionState $InitialSessionState -ModuleInfo $ModulesToAdd
+        if ($ModulesToAdd.Count -gt 0) {
+            $null = Add-PsModule -InitialSessionState $InitialSessionState -ModuleInfo $ModulesToAdd
+        }
 
         # Set the preference variables for PowerShell output streams in each thread to match the current preferences
         $OutputStream = @('Debug', 'Verbose', 'Information', 'Warning', 'Error')
@@ -5310,6 +6100,10 @@ function Get-FolderPermissionsBlock {
         $IgnoreDomain
     )
 
+    $ShortestFolderPath = $ThisFolder.Name |
+    Sort-Object |
+    Select-Object -First 1
+
     ForEach ($ThisFolder in $FolderPermissions) {
 
         $ThisHeading = New-HtmlHeading "Accounts with access to $($ThisFolder.Name)" -Level 5
@@ -5323,7 +6117,11 @@ function Get-FolderPermissionsBlock {
         }
         if ('' -ne $ParentLeaf) {
             if (($ThisFolder.Group.FolderInheritanceEnabled | Select-Object -First 1) -eq $true) {
-                $ThisSubHeading = "Accounts with access to the parent folder and subfolders ($ParentLeaf) can access this folder. So can any users listed below:"
+                if ($ThisFolder.Name -eq $ShortestFolderPath) {
+                    $ThisSubHeading = "Inherited permissions from the parent folder ($ParentLeaf) are included.  This folder can only be accessed by the users listed below:"
+                } else {
+                    $ThisSubHeading = "Accounts with access to the parent folder and subfolders ($ParentLeaf) can access this folder. So can any users listed below:"
+                }
             } else {
                 $ThisSubHeading = "Accounts with access to the parent folder and subfolders ($ParentLeaf) cannot access this folder unless they are listed below:"
             }
@@ -5344,11 +6142,20 @@ function Get-FolderPermissionsBlock {
             )
         }
 
+        # Exclude groups with members (the group will be reflected on the report with its members)
+        $FilteredAccounts = $FilteredAccounts |
+        Where-Object -FilterScript {
+            -not (
+                $_.Group.SchemaClassName -contains 'group' -and
+                $null -eq $_.Group.IdentityReference
+            )
+        }
+
         if ($ExcludeEmptyGroups) {
             $FilteredAccounts = $FilteredAccounts |
             Where-Object -FilterScript {
                 #Eliminate empty groups (not useful to see in the middle of a list of users/job titles/departments/etc).
-                $_.Group.SchemaClassName -notcontains 'Group'
+                $_.Group.SchemaClassName -notcontains 'group'
             }
         }
 
@@ -5512,7 +6319,12 @@ Write-Information $TranscriptFile
 
 $DirectoryEntryCache = [hashtable]::Synchronized(@{})
 $IdentityReferenceCache = [hashtable]::Synchronized(@{})
-$AdsiServerCache = [hashtable]::Synchronized(@{})
+$AdsiServersByDns = [hashtable]::Synchronized(@{})
+$Win32AccountsBySID = ([hashtable]::Synchronized(@{}))
+$Win32AccountsByCaption = ([hashtable]::Synchronized(@{}))
+$DomainsBySID = ([hashtable]::Synchronized(@{}))
+$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
+$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
 $Permissions = $null
 $FolderTargets = $null
 $SecurityPrincipals = $null
@@ -5520,12 +6332,21 @@ $FormattedSecurityPrincipals = $null
 $DedupedUserPermissions = $null
 $FolderPermissions = $null
 
+if ($env:COMPUTERNAME) {
+    $ThisHostname = $env:COMPUTERNAME
+} else {
+    $ThisHostname = HOSTNAME.EXE
+}
+
 #----------------[ Main Execution ]---------------
 
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
 $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
 $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
-Write-Verbose "$(Get-Date -Format s)`t$(hostname)`tExport-Permission`tTarget Folder: '$TargetPath'"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderTarget -FolderPath '$TargetPath'"
 $FolderTargets = Get-FolderTarget -FolderPath $TargetPath
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
 $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels
 
 # If $TargetPath was on a local disk such as C:\
@@ -5535,6 +6356,7 @@ $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfo
 # As a workaround here we will instead get the folder ACL for the original $TargetPath
 # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
 if ($null -eq $Permissions) {
+    Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderAccessList -FolderTargets '$TargetPath' -LevelsOfSubfolders $SubfolderLevels"
     $Permissions = Get-FolderAccessList -FolderTargets $TargetPath -LevelsOfSubfolders $SubfolderLevels
 }
 
@@ -5550,23 +6372,42 @@ Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 
 Write-Information $CsvFilePath
 
-# Identify unique directory servers to populate into the AdsiServerCache
+# Identify unique directory servers to populate into the AdsiServersByDns cache
 # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
 # This prevents repetitive queries to the same directory servers
-$UniqueServerNames = $Permissions.SourceAccessList.Path |
+[string[]]$UniqueServerNames = $Permissions.SourceAccessList.Path |
 Sort-Object -Unique |
-ForEach-Object { Find-ServerNameInPath -LiteralPath $_ } |
+ForEach-Object { Find-ServerNameInPath -LiteralPath $_ }
+
+# Populate two caches of known domains
+# The first cache is keyed by SID
+# The second cache is keyed by NETBIOS name
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-TrustedDomainSidNameMap"
+$null = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySID -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
+
+# Add the discovered domains to our list of known ADSI server names we can query
+$DomainsByNetbios.Keys | ForEach-Object {
+    $UniqueServerNames += $DomainsByNetbios[$_].Dns
+}
+
+$UniqueServerNames = $UniqueServerNames |
 Sort-Object -Unique
 
-# Populate the AdsiServerCache
+# Populate the AdsiServersByDns cache of known ADSI servers
+# Populate two caches of known Win32_Account instances
+# The first cache is keyed on SID (e.g. S-1-5-2)
+# The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
 $GetAdsiServer = @{
     Command        = 'Get-AdsiServer'
     InputObject    = $UniqueServerNames
     InputParameter = 'AdsiServer'
     AddParam       = @{
-        KnownServers = $AdsiServerCache
+        AdsiServersByDns       = $AdsiServersByDns
+        Win32AccountsBySID     = $Win32AccountsBySID
+        Win32AccountsByCaption = $Win32AccountsByCaption
     }
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
 $null = Split-Thread @GetAdsiServer
 
 # Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
@@ -5577,9 +6418,16 @@ $ResolveAce = @{
     InputParameter       = 'InputObject'
     ObjectStringProperty = 'IdentityReference'
     AddParam             = @{
-        KnownServers = $AdsiServerCache
+        AdsiServersByDns       = $AdsiServersByDns
+        DirectoryEntryCache    = $DirectoryEntryCache
+        Win32AccountsBySID     = $Win32AccountsBySID
+        Win32AccountsByCaption = $Win32AccountsByCaption
+        DomainsBySID           = $DomainsBySID
+        DomainsByNetbios       = $DomainsByNetbios
+        DomainsByFqdn          = $DomainsByFqdn
     }
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions"
 $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAce
 
 # Save a CSV report of the resolved identity references
@@ -5607,12 +6455,15 @@ $ExpandIdentityReference = @{
     AddParam             = @{
         DirectoryEntryCache    = $DirectoryEntryCache
         IdentityReferenceCache = $IdentityReferenceCache
+        DomainsBySID           = $DomainsBySID
+        DomainsByNetbios       = $DomainsByNetbios
     }
     ObjectStringProperty = 'Name'
 }
 if ($NoGroupMembers) {
     $ExpandIdentityReference['AddSwitch'] = 'NoGroupMembers'
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
 $SecurityPrincipals = Split-Thread @ExpandIdentityReference
 
 # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
@@ -5624,12 +6475,14 @@ $FormatSecurityPrincipal = @{
     Timeout              = 1200
     ObjectStringProperty = 'Name'
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
 $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipal
 
 # Expand the collection of security principals from Format-SecurityPrincipal
 # back into a collection of access control entries (one per ACE per principal)
 # This operation is a bunch simple type conversions, no queries are being performed
 # That makes it fast enough that it is not worth multi-threading
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExpand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
 $ExpandedAccountPermissions = Expand-AccountPermission -AccountPermission $FormattedSecurityPrincipals
 
 # Save a CSV report of the expanded account permissions
@@ -5650,14 +6503,16 @@ Group-Object -Property User |
 Sort-Object -Property Name
 
 # Ensure accounts only appear once on the report if they exist in multiple domains
-$DedupedUserPermissions = $Accounts |
-Remove-DuplicatesAcrossIgnoredDomains -DomainToIgnore $IgnoreDomain
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tRemove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
+$DedupedUserPermissions = Remove-DuplicatesAcrossIgnoredDomains -UserPermission $Accounts -DomainToIgnore $IgnoreDomain
 
 # Group the user permissions back into folder permissions for the report
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tFormat-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
 $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
 Group-Object -Property Folder |
 Sort-Object -Property Name
 
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSelect-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
 $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
 ConvertTo-Html -Fragment |
 New-BootstrapTable
@@ -5668,14 +6523,18 @@ $GetFolderPermissionsBlock = @{
     ExcludeEmptyGroups = $ExcludeEmptyGroups
     IgnoreDomain       = $IgnoreDomain
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderPermissionsBlock @GetFolderPermissionsBlock"
 $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
 
 ##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
 ### Convert-ToHtml will not expand in-line HTML, so we had to use semicolons as placeholders and will now replace them with line breaks.
 ##$HtmlFolderPermissions = $HtmlFolderPermissions -replace ' ; ','<br>'
 
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-BootstrapAlert -Class Dark -Text '$TargetPath'"
 $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPath) $ReportDescription"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-HtmlFolderList -FolderTableHeader `$FolderTableHeader -HtmlTableOfFolders `$HtmlTableOfFolders"
 $FolderList = Get-HtmlFolderList -FolderTableHeader $FolderTableHeader -HtmlTableOfFolders $HtmlTableOfFolders
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
 [string]$Body = Get-HtmlBody -FolderList $FolderList -HtmlFolderPermissions $HtmlFolderPermissions
 
 $ReportParameters = @{
@@ -5683,6 +6542,7 @@ $ReportParameters = @{
     Description = $ReportDescription
     Body        = $Body
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tNew-BootstrapReport @ReportParameters"
 $Report = New-BootstrapReport @ReportParameters
 
 # Save the Html report
@@ -5699,9 +6559,11 @@ $NtfsIssueParams = @{
     UserPermissions       = $Accounts
     GroupNamingConvention = $GroupNamingConvention
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tNew-NtfsAclIssueReport @NtfsIssueParams"
 $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
 # Format the information as a custom XML sensor for Paessler PRTG Network Monitor
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tGet-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
 $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
 
 # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
@@ -5719,6 +6581,7 @@ $PrtgSensorParams = @{
     PrtgSensorPort     = $PrtgSensorPort
     PrtgSensorToken    = $PrtgSensorToken
 }
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tSend-PrtgXmlSensorOutput @PrtgSensorParams"
 Send-PrtgXmlSensorOutput @PrtgSensorParams
 
 # Open the HTML report file (useful only interactively)

@@ -10,15 +10,23 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Gets all permissions for the target folder</maml:para>
-      <maml:para>Gets non-inherited permissions for subfolders (if specified)</maml:para>
-      <maml:para>Exports the permissions to a .csv file</maml:para>
-      <maml:para>Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
-      <maml:para>Exports information about the accounts and groups to a .csv file</maml:para>
-      <maml:para>Uses ADSI to recursively retrieve the members of nested groups</maml:para>
-      <maml:para>Exports information about all accounts with access to a .csv file</maml:para>
-      <maml:para>Exports information about all accounts with access to a report generated as a .html file</maml:para>
-      <maml:para>Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
+      <maml:para>Benefits: - Generates reports that are easy to read for everyone</maml:para>
+      <maml:para>- Provides additional information about each user such as Name, Department, Title</maml:para>
+      <maml:para>- Multithreaded with caching for fast results</maml:para>
+      <maml:para>- Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
+      <maml:para>Supports these scenarios: - local file paths (resolves them to their UNC paths using the administrative shares, so that the computer name is shown in the reports)</maml:para>
+      <maml:para>- UNC file paths</maml:para>
+      <maml:para>- DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)</maml:para>
+      <maml:para>- Active Directory domain trusts, and unresolved SIDs for deleted accounts</maml:para>
+      <maml:para>Behavior: - Gets all permissions for the target folder</maml:para>
+      <maml:para>- Gets non-inherited permissions for subfolders (if specified)</maml:para>
+      <maml:para>- Exports the permissions to a .csv file</maml:para>
+      <maml:para>- Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
+      <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
+      <maml:para>- Uses ADSI to recursively retrieve the members of nested groups</maml:para>
+      <maml:para>- Exports information about all accounts with access to a .csv file</maml:para>
+      <maml:para>- Exports information about all accounts with access to a report generated as a .html file</maml:para>
+      <maml:para>- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
@@ -26,7 +34,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
           <maml:name>TargetPath</maml:name>
           <maml:description>
-            <maml:para>Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)</maml:para>
+            <maml:para>Path to the item whose permissions to export</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -123,7 +131,7 @@
             <maml:name>System.String</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>Folder Permissions Report</dev:defaultValue>
+          <dev:defaultValue>Permissions Report</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
           <maml:name>GroupNamingConvention</maml:name>
@@ -366,7 +374,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
         <maml:name>TargetPath</maml:name>
         <maml:description>
-          <maml:para>Path to the folder whose permissions to export (only tested with local paths, UNC may work, unknown)</maml:para>
+          <maml:para>Path to the item whose permissions to export</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -385,7 +393,7 @@
           <maml:name>System.String</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>Folder Permissions Report</dev:defaultValue>
+        <dev:defaultValue>Permissions Report</dev:defaultValue>
       </command:parameter>
     </command:parameters>
     <command:inputTypes>
@@ -410,11 +418,17 @@
     </command:returnValues>
     <maml:alertSet>
       <maml:alert>
+        <maml:para>Requires a string for input (the path to a target folder) # TODO: FileInfo or DirectoryInfo instead?</maml:para>
+        <maml:para>TODO: When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.</maml:para>
+        <maml:para>TODO: Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too.</maml:para>
         <maml:para>TODO: Investigate - Looks like I am filtering out ignored domains in 2 separate places?  redundant?</maml:para>
-        <maml:para>TODO: Bug - Logic Flaw for Owner.             Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.             This misses folders with only inherited access rules but a different owner.</maml:para>
+        <maml:para>TODO: Investigate - What happens if an ACE contains a SID that is in an object's SID history?</maml:para>
+        <maml:para>TODO: Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.  Add debug output suffix "# For $ComputerName" so debug is easier to read</maml:para>
+        <maml:para>TODO: Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api</maml:para>
+        <maml:para>TODO: Consider implementing universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER     WinNT://CONTOSO/Administrator for a domain account on a domain-joined server     WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server     WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain) TODO: Bug - Logic Flaw for Owner.             Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.             This misses folders with only inherited access rules but a different owner.</maml:para>
         <maml:para>TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).             The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.</maml:para>
         <maml:para>TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).             If it is a fake user, its name will correctly appear without the domain prefix (User123)</maml:para>
-        <maml:para>TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).             When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.             New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.             Declared as wontfix https://github.com/PowerShell/platyPS/issues/314             Need to fix it myself because that makes no sense             workaround is to include markdown syntax in PowerShell comment-based help             That is why there are so many extra blank lines in the commented metadata in this script</maml:para>
+        <maml:para>TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).             When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.             New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.             Declared as wontfix https://github.com/PowerShell/platyPS/issues/314             Need to fix it myself and submit a PR because that makes no sense             Until then, workaround is to include markdown syntax in PowerShell comment-based help             That is why there are so many extra blank lines in the commented metadata in this script</maml:para>
         <maml:para>TODO: Feature - List any excluded accounts at the end</maml:para>
         <maml:para>TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)</maml:para>
         <maml:para>TODO: Feature - Parameter to specify properties to include in report</maml:para>
@@ -459,6 +473,16 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Remove the CONTOSO1\ and CONTOSO2\ domain prefixes from associated accounts and groups</maml:para>
+          <maml:para>Across the two domains, accounts with the same samAccountNames will be considered equivalent</maml:para>
+          <maml:para>Across the two domains, groups with the same Names will be considered equivalent</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -466,14 +490,14 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
@@ -481,7 +505,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
