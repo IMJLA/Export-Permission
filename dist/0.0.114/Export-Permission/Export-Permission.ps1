@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.113
+.VERSION 0.0.114
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated modules with bugfixes
+Updated script help
 
 .PRIVATEDATA
 
@@ -41,6 +41,7 @@ Updated modules with bugfixes
 #Requires -Module Permission
 
 
+
 <#
 .SYNOPSIS
     Create CSV, HTML, and XML reports of permissions
@@ -50,11 +51,13 @@ Updated modules with bugfixes
     - Provides additional information about each user such as Name, Department, Title
     - Multithreaded with caching for fast results
     - Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
+
     Supports these scenarios:
     - local file paths (resolves them to their UNC paths using the administrative shares, so that the computer name is shown in the reports)
     - UNC file paths
     - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
+
     Behavior:
     - Gets all permissions for the target folder
     - Gets non-inherited permissions for subfolders (if specified)
@@ -70,53 +73,38 @@ Updated modules with bugfixes
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
-    Requires a string for input (the path to a target folder) # TODO: FileInfo or DirectoryInfo instead?
-
-    TODO: When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.
-
-    TODO: Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too.
-
-    TODO: Investigate - Looks like I am filtering out ignored domains in 2 separate places?  redundant?
-
-    TODO: Investigate - What happens if an ACE contains a SID that is in an object's SID history?
-
-    TODO: Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.  Add debug output suffix "# For $ComputerName" so debug is easier to read
-
-    TODO: Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
-
-    TODO: Consider implementing universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER
-        WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
-        WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
-        WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
-    TODO: Bug - Logic Flaw for Owner.
-                Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
-                This misses folders with only inherited access rules but a different owner.
-
-    TODO: Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
-                The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
-
-    TODO: Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
-                If it is a fake user, its name will correctly appear without the domain prefix (User123)
-
-    TODO: Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
-                When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
-                New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
-                Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
-                Need to fix it myself and submit a PR because that makes no sense
-                Until then, workaround is to include markdown syntax in PowerShell comment-based help
-                That is why there are so many extra blank lines in the commented metadata in this script
-
-    TODO: Feature - List any excluded accounts at the end
-
-    TODO: Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
-
-    TODO: Feature - Parameter to specify properties to include in report
-
-    TODO: Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
-
-    TODO: Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
-
-    TODO: Feature - Support ACLs from Registry or AD objects
+    ToDo:
+    - Currently requires a string for input (the path to a target folder). FileInfo or DirectoryInfo instead?
+    - When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.
+    - Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too.
+    - Investigate - Looks like we are filtering out ignored domains in 2 places?  redundant?  Why is the IgnoreDomain syntax regex with slashes required? (works but should not be required, that makes no sense)
+    - Investigate - What happens if an ACE contains a SID that is in an object's SID history?
+    - Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.  Add debug output suffix "# For $ComputerName" so debug is easier to read
+    - Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
+    - Consider implementing universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER
+        - WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
+        - WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
+        - WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
+    - Bug - Logic Flaw for Owner.
+        - Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
+        - This misses folders with only inherited access rules but a different owner.
+    - Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
+        - The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
+    - Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
+        - If it is a fake user, its name will correctly appear without the domain prefix (User123)
+    - Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
+        - When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
+        - New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
+        - Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
+        - Need to fix it myself and submit a PR because that makes no sense
+        - Until then, workaround is to include markdown syntax in PowerShell comment-based help
+        - That is why there are so many extra blank lines and unordered lists in the commented metadata in this script
+    - Feature - List any excluded accounts at the end
+    - Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
+    - Feature - Parameter to specify properties to include in report
+    - Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
+    - Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
+    - Feature - Support ACLs from Registry or AD objects
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
