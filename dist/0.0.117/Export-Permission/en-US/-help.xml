@@ -10,9 +10,10 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Benefits: - Generates reports that are easy to read for everyone</maml:para>
+      <maml:para>Benefits: - Presents complex nested permissions and group memberships in a report that is easy to read</maml:para>
       <maml:para>- Provides additional information about each user such as Name, Department, Title</maml:para>
       <maml:para>- Multithreaded with caching for fast results</maml:para>
+      <maml:para>- Works as a scheduled task</maml:para>
       <maml:para>- Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
       <maml:para></maml:para>
       <maml:para>Supports these scenarios: - local file paths (resolves them to their UNC paths using the administrative shares, so that the computer name is shown in the reports)</maml:para>
@@ -30,7 +31,7 @@
       <maml:para>- Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
       <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
       <maml:para>- Uses ADSI to recursively retrieve the members of nested groups</maml:para>
-      <maml:para>- Exports information about all accounts with access to a .csv file</maml:para>
+      <maml:para>    - For a significant performance improvement, the entire chain of group memberships is not retrieved     - Nested group members are retrieved, but nested groups themselves are not (only the group directly listed in the permissions) - Exports information about all accounts with access to a .csv file</maml:para>
       <maml:para>- Exports information about all accounts with access to a report generated as a .html file</maml:para>
       <maml:para>- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
     </maml:description>
@@ -437,6 +438,9 @@
         <maml:para>- Feature - Parameter to specify properties to include in report</maml:para>
         <maml:para>- Feature - This script does NOT account for individual file permissions.</maml:para>
         <maml:para>Only folder permissions are considered. - Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered. - Feature - Support ACLs from Registry or AD objects</maml:para>
+        <maml:para>- Feature - Parameter to retrieve entire group membership chain</maml:para>
+        <maml:para>- Feature - Parameter to retrieve entire directory of known directories, cache in memory.</maml:para>
+        <maml:para>Faster? - Feature - Implement Send-MailKitMessage module</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>
@@ -459,6 +463,24 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
+    'BUILTIN\\Administrators',
+    'BUILTIN\\Administrator',
+    'CREATOR OWNER',
+    'NT AUTHORITY\\SYSTEM'
+)</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
+          <maml:para>Exclude from the HTML report: - The built-in Administrator account</maml:para>
+          <maml:para>- The built-in Administrators group and its members (unless they appear elsewhere in the permissions)</maml:para>
+          <maml:para>- The CREATOR OWNER security principal</maml:para>
+          <maml:para>- The computer account (NT AUTHORITY\SYSTEM)</maml:para>
+          <maml:para></maml:para>
+          <maml:para>Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -466,7 +488,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -474,7 +496,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -484,7 +506,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -492,14 +514,14 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
@@ -507,11 +529,83 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 10 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Change the title of the HTML report to 'New Custom Report Title'</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 11 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'</dev:code>
+        <dev:remarks>
+          <maml:para>The target path is a DFS folder with folder targets</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 12 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'</dev:code>
+        <dev:remarks>
+          <maml:para>The target path is a DFS subfolder with folder targets</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 13 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'</dev:code>
+        <dev:remarks>
+          <maml:para>The target path is a subfolder of a DFS subfolder with folder targets</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 14 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'</dev:code>
+        <dev:remarks>
+          <maml:para>This is an edge case that is not currently supported</maml:para>
+          <maml:para>The target path is the root of an AD domain</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for ? Invalid/fail param validation?</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 15 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'</dev:code>
+        <dev:remarks>
+          <maml:para>This is an edge case that is not currently supported</maml:para>
+          <maml:para>The target path is the root of a server</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for ? Invalid/fail param validation?</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 16 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'</dev:code>
+        <dev:remarks>
+          <maml:para>This is an edge case that is not currently supported</maml:para>
+          <maml:para>The target path is a DFS namespace</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path</maml:para>
+          <maml:para>Add a warning that they are permissions from the DFS namespace server and could be confusing</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 17 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'</dev:code>
+        <dev:remarks>
+          <maml:para>This is an edge case that is not currently supported.</maml:para>
+          <maml:para>The target path is a DFS folder without a folder target</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path</maml:para>
+          <maml:para>Add a warning that they are permissions from the DFS namespace server and could be confusing</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 18 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'</dev:code>
+        <dev:remarks>
+          <maml:para>This is an edge case that is not currently supported.</maml:para>
+          <maml:para>The target path is a DFS subfolder without a folder target.</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path</maml:para>
+          <maml:para>Add a warning that they are permissions from the DFS namespace server and could be confusing</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>

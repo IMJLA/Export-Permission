@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.116
+.VERSION 0.0.117
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,12 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated notes
+Updated script metadata/comment-based help
 
 .PRIVATEDATA
 
 #> 
-
 
 
 
@@ -52,9 +51,10 @@ Updated notes
 
 .DESCRIPTION
     Benefits:
-    - Generates reports that are easy to read for everyone
+    - Presents complex nested permissions and group memberships in a report that is easy to read
     - Provides additional information about each user such as Name, Department, Title
     - Multithreaded with caching for fast results
+    - Works as a scheduled task
     - Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 
     Supports these scenarios:
@@ -75,6 +75,8 @@ Updated notes
     - Uses ADSI to get information about the accounts and groups listed in the permissions
     - Exports information about the accounts and groups to a .csv file
     - Uses ADSI to recursively retrieve the members of nested groups
+        - For a significant performance improvement, the entire chain of group memberships is not retrieved
+        - Nested group members are retrieved, but nested groups themselves are not (only the group directly listed in the permissions)
     - Exports information about all accounts with access to a .csv file
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
@@ -123,6 +125,9 @@ Updated notes
     - Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
     - Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
     - Feature - Support ACLs from Registry or AD objects
+    - Feature - Parameter to retrieve entire group membership chain
+    - Feature - Parameter to retrieve entire directory of known directories, cache in memory. Faster?
+    - Feature - Implement Send-MailKitMessage module
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
@@ -137,6 +142,23 @@ Updated notes
     The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
 
     The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
+        'BUILTIN\\Administrators',
+        'BUILTIN\\Administrator',
+        'CREATOR OWNER',
+        'NT AUTHORITY\\SYSTEM'
+    )
+
+    Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
+
+    Exclude from the HTML report:
+    - The built-in Administrator account
+    - The built-in Administrators group and its members (unless they appear elsewhere in the permissions)
+    - The CREATOR OWNER security principal
+    - The computer account (NT AUTHORITY\SYSTEM)
+
+    Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
 
@@ -181,21 +203,78 @@ Updated notes
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Change the title of the HTML report to 'New Custom Report Title'
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
+
+    The target path is a DFS folder with folder targets
+
+    Generate reports on the NTFS permissions for the DFS folder targets associated with this path
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
+
+    The target path is a DFS subfolder with folder targets
+
+    Generate reports on the NTFS permissions for the DFS folder targets associated with this path
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
+
+    The target path is a subfolder of a DFS subfolder with folder targets
+
+    Generate reports on the NTFS permissions for the DFS folder targets associated with this path
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'
+
+    This is an edge case that is not currently supported
+
+    The target path is the root of an AD domain
+
+    Generate reports on the NTFS permissions for ? Invalid/fail param validation?
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
+
+    This is an edge case that is not currently supported
+
+    The target path is the root of a server
+
+    Generate reports on the NTFS permissions for ? Invalid/fail param validation?
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
+
+    This is an edge case that is not currently supported
+
+    The target path is a DFS namespace
+
+    Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
+
+    Add a warning that they are permissions from the DFS namespace server and could be confusing
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
+
+    This is an edge case that is not currently supported.
+
+    The target path is a DFS folder without a folder target
+
+    Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
+
+    Add a warning that they are permissions from the DFS namespace server and could be confusing
+.EXAMPLE
+    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
+
+    This is an edge case that is not currently supported.
+
+    The target path is a DFS subfolder without a folder target.
+
+    Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
+
+    Add a warning that they are permissions from the DFS namespace server and could be confusing
 #>
 param (
 
     # Path to the item whose permissions to export
     [string]$TargetPath = 'C:\Test',
-    #[string]$TargetPath = '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\',
 
     # Regular expressions matching names of Users or Groups to exclude from the HTML report
     [string[]]$ExcludeAccount,
-    <#[string[]]$ExcludeAccount = @(
-        'BUILTIN\\Administrators',
-        'BUILTIN\\Administrator',
-        'CREATOR OWNER',
-        'NT AUTHORITY\\SYSTEM'
-    )#>
 
     # Exclude empty groups from the HTML report
     [switch]$ExcludeEmptyGroups,
@@ -6357,7 +6436,7 @@ $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfo
 
 # If $TargetPath was on a local disk such as C:\
 # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
-# Unfortunately if it is the root of that local disk, Get-Item is unable to retrieve a DirectoryInfo object for the root of the share
+# Unfortunately if it is the root of that local disk, Get-FolderAccessList's dependency Get-Item is unable to retrieve a DirectoryInfo object for the root of the share
 # (error: "Could not find item")
 # As a workaround here we will instead get the folder ACL for the original $TargetPath
 # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
