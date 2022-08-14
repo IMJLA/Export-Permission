@@ -51,6 +51,19 @@
           <dev:defaultValue>C:\Test</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
+          <maml:name>PrtgSensorProtocol</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
           <maml:name>PrtgSensorPort</maml:name>
           <maml:description>
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -63,7 +76,7 @@
           </dev:type>
           <dev:defaultValue>0</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
           <maml:name>PrtgSensorToken</maml:name>
           <maml:description>
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -159,20 +172,19 @@
           <dev:defaultValue>{ $true }</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
-          <maml:name>PrtgProbe</maml:name>
+          <maml:name>ThreadCount</maml:name>
           <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
-            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+            <maml:para>{{ Fill ThreadCount Description }}</maml:para>
           </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
           <dev:type>
-            <maml:name>System.String</maml:name>
+            <maml:name>System.Int32</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
+          <dev:defaultValue>4</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
-          <maml:name>PrtgSensorProtocol</maml:name>
+          <maml:name>PrtgProbe</maml:name>
           <maml:description>
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
             <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
@@ -311,7 +323,7 @@
         </dev:type>
         <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
         <maml:name>PrtgProbe</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -324,7 +336,7 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
         <maml:name>PrtgSensorPort</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -337,7 +349,7 @@
         </dev:type>
         <dev:defaultValue>0</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>PrtgSensorProtocol</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -350,7 +362,7 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
         <maml:name>PrtgSensorToken</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -389,6 +401,18 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>C:\Test</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
+        <maml:name>ThreadCount</maml:name>
+        <maml:description>
+          <maml:para>{{ Fill ThreadCount Description }}</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>4</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
         <maml:name>Title</maml:name>

@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.117
+help version: 0.0.118
 locale: en-US
 Module Name:
 online version:
@@ -18,9 +18,9 @@ Create CSV, HTML, and XML reports of permissions
 ```
 Export-Permission.ps1 [[-TargetPath] <String>] [[-ExcludeAccount] <String[]>] [-ExcludeEmptyGroups]
  [[-IgnoreDomain] <String[]>] [[-LogDir] <String>] [-NoGroupMembers] [[-SubfolderLevels] <Int32>]
- [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>] [-OpenReportAtEnd] [[-PrtgProbe] <String>]
- [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <Int32>] [[-PrtgSensorToken] <String>]
- [<CommonParameters>]
+ [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>] [[-ThreadCount] <Int32>] [-OpenReportAtEnd]
+ [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <Int32>]
+ [[-PrtgSensorToken] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -385,7 +385,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 8
+Position: 9
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -402,7 +402,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 10
+Position: 11
 Default value: 0
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -419,7 +419,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 9
+Position: 10
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -436,7 +436,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 11
+Position: 12
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -474,6 +474,21 @@ Aliases:
 Required: False
 Position: 1
 Default value: C:\Test
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ThreadCount
+{{ Fill ThreadCount Description }}
+
+```yaml
+Type: System.Int32
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 8
+Default value: 4
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
