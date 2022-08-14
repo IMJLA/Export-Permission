@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.117
+.VERSION 0.0.118
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated script metadata/comment-based help
+Updated build with latest versions of module dependencies
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Updated script metadata/comment-based help
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -536,6 +537,9 @@ $ExpandedAccountPermissions = Expand-AccountPermission -AccountPermission $Forma
 #TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
 $CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
 
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`t`$ExpandedAccountPermissions |"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`t`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExport-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
 $ExpandedAccountPermissions |
 Select-Object -Property @{
     Label      = 'SourceAclPath'

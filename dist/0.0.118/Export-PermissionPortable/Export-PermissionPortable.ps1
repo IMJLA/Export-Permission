@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.117
+.VERSION 0.0.118
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated script metadata/comment-based help
+Updated build with latest versions of module dependencies
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -1132,6 +1133,7 @@ function Expand-IdentityReference {
 
                     $DomainNetbiosCacheResult = $DomainsByNetbios[$domainNetbiosString]
                     if ($DomainNetbiosCacheResult) {
+                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`tDomain NetBIOS cache hit for '$($domainNetbiosString)'"
                         $DomainDn = $DomainNetbiosCacheResult.DistinguishedName
                         $SearchDirectoryParams['DirectoryPath'] = "LDAP://$($DomainNetbiosCacheResult.Dns)/$DomainDn"
                     } else {
@@ -1211,14 +1213,6 @@ function Expand-IdentityReference {
 
                     Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) is a local security principal or unresolved SID"
 
-                    # Determine if SID belongs to current domain
-                    $IdentityDomainSID = $StartingIdentityName.Substring(0, $StartingIdentityName.LastIndexOf("-"))
-                    if ($IdentityDomainSID -eq $CurrentDomainSID) {
-                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
-                    } else {
-                        Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
-                    }
-
                     if ($null -eq $name) { $name = $StartingIdentityName }
 
                     if ($name -like "S-1-*") {
@@ -1226,6 +1220,13 @@ function Expand-IdentityReference {
 
                         # The SID of the domain is the SID of the user minus the last block of numbers
                         $DomainSid = $name.Substring(0, $name.LastIndexOf("-"))
+
+                        # Determine if SID belongs to current domain
+                        if ($DomainSid -eq $CurrentDomainSID) {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
+                        } else {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-IdentityReference`t$($StartingIdentityName) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
+                        }
 
                         # Lookup other information about the domain using its SID as the key
                         $DomainObject = $DomainsBySID[$DomainSid]
@@ -1581,14 +1582,14 @@ function Get-AdsiGroup {
     switch -Regex ($DirectoryPath) {
         '^WinNT' {
             $GroupParams['DirectoryPath'] = "$DirectoryPath/$GroupName"
-            Get-DirectoryEntry @GroupParams |
-            Get-WinNTGroupMember @GroupMemberParams
+            $GroupMemberParams['DirectoryEntry'] = Get-DirectoryEntry @GroupParams
+            $FullMembers = Get-WinNTGroupMember @GroupMemberParams
         }
         '^$' {
             # This is expected for a workgroup computer
             $GroupParams['DirectoryPath'] = "WinNT://localhost/$GroupName"
-            Get-DirectoryEntry @GroupParams |
-            Get-WinNTGroupMember @GroupMemberParams
+            $GroupMemberParams['DirectoryEntry'] = Get-DirectoryEntry @GroupParams
+            $FullMembers = Get-WinNTGroupMember @GroupMemberParams
         }
         default {
             if ($GroupName) {
@@ -1596,10 +1597,12 @@ function Get-AdsiGroup {
             } else {
                 $GroupParams['Filter'] = "(objectClass=group)"
             }
-            Search-Directory @GroupParams |
-            Get-AdsiGroupMember @GroupMemberParams
+            $GroupMemberParams['Group'] = Search-Directory @GroupParams
+            $FullMembers = Get-AdsiGroupMember @GroupMemberParams
         }
     }
+
+    $FullMembers
 
 }
 function Get-AdsiGroupMember {
@@ -3717,7 +3720,17 @@ function Format-SecurityPrincipal {
         $ThisPrincipal |
         Select-Object -Property @{
             Label      = 'User'
-            Expression = { $_.Name }
+            Expression = {
+                $ThisPrincipalAccount = $null
+                if ($_.Properties) {
+                    $ThisPrincipalAccount = $_.Properties['sAmAccountName']
+                }
+                if ("$ThisPrincipalAccount" -eq '') {
+                    $_.Name
+                } else {
+                    $ThisPrincipalAccount
+                }
+            }
         },
         @{
             Label      = 'IdentityReference'
@@ -3746,12 +3759,28 @@ function Format-SecurityPrincipal {
         Select-Object -Property @{
             Label      = 'User'
             Expression = {
-                "$($_.Domain.Netbios)\$($_.Properties['Name'])"
+                $ThisPrincipalAccount = $null
+                if ($_.Properties) {
+                    $ThisPrincipalAccount = $_.Properties['sAmAccountName']
+                    if ("$ThisPrincipalAccount" -eq '') {
+                        $ThisPrincipalAccount = $_.Properties['Name']
+                    }
+                }
+
+                if ("$ThisPrincipalAccount" -eq '') {
+                    # This code should never execute
+                    # but if we are somehow not dealing with a DirectoryEntry,
+                    # it will not have sAmAcountName or Name properties
+                    # However it may have a direct Name attribute on the PSObject itself
+                    # We will attempt that as a last resort in hopes of avoiding a null Account name
+                    $ThisPrincipalAccount = $_.Name
+                }
+                "$($_.Domain.Netbios)\$ThisPrincipalAccount"
             }
         },
         @{
             Label      = 'IdentityReference'
-            Expression = { $ThisPrincipal.Group.IdentityReference | Sort-Object -Unique }
+            Expression = { $ThisPrincipal.Group.IdentityReferenceResolved | Sort-Object -Unique }
         },
         @{
             Label      = 'NtfsAccessControlEntries'
@@ -6179,10 +6208,18 @@ function Get-FolderAccessList {
 function Get-FolderPermissionsBlock {
     param (
         $FolderPermissions,
-        # Regular expressions that will identify Users or Groups you do not want included in the Html report
+
+        # Regular expressions matching names of Users or Groups to exclude from the Html report
         [string[]]$ExcludeAccount,
+
         $ExcludeEmptyGroups,
+
+        # Regular expressions matching domain NetBIOS names to ignore
+        # They will be removed from NTAccount names ('CONTOSO\User' will become 'User')
+        # Include the trailing \ in the RegEx pattern, and escape it with another \
+        # Example: 'CONTOSO\\'
         $IgnoreDomain
+
     )
 
     $ShortestFolderPath = $ThisFolder.Name |
@@ -6239,7 +6276,7 @@ function Get-FolderPermissionsBlock {
         if ($ExcludeEmptyGroups) {
             $FilteredAccounts = $FilteredAccounts |
             Where-Object -FilterScript {
-                #Eliminate empty groups (not useful to see in the middle of a list of users/job titles/departments/etc).
+                # Eliminate empty groups (not useful to see in the middle of a list of users/job titles/departments/etc).
                 $_.Group.SchemaClassName -notcontains 'group'
             }
         }
@@ -6258,6 +6295,7 @@ function Get-FolderPermissionsBlock {
         @{Label = 'Name'; Expression = { $_.Group.Name | Sort-Object -Unique } },
         @{Label = 'Department'; Expression = { $_.Group.Department | Sort-Object -Unique } },
         @{Label = 'Title'; Expression = { $_.Group.Title | Sort-Object -Unique } } |
+        Sort-Object -Property Name |
         ConvertTo-Html -Fragment |
         New-BootstrapTable
 
@@ -6574,6 +6612,9 @@ $ExpandedAccountPermissions = Expand-AccountPermission -AccountPermission $Forma
 #TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
 $CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
 
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`t`$ExpandedAccountPermissions |"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`t`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
+Write-Debug "$(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExport-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
 $ExpandedAccountPermissions |
 Select-Object -Property @{
     Label      = 'SourceAclPath'
