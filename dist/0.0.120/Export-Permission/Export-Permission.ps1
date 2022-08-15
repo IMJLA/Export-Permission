@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.119
+.VERSION 0.0.120
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated build with latest versions of module dependencies
+Updated PsRunspace module and PsLogMessage module to allow for toggleable debug output
 
 .PRIVATEDATA
 
@@ -39,8 +39,6 @@ Updated build with latest versions of module dependencies
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
 
 
 <#
@@ -91,8 +89,7 @@ Updated build with latest versions of module dependencies
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
     ToDo:
-    - Currently requires a string for input (the path to a target folder). FileInfo or DirectoryInfo instead?
-    - When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID. Skip the query.
+    - Expand-IdentityReference should not call Search-Directory when the account name is an unresolved SID
     - Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too.
     - Investigate - Looks like we are filtering out ignored domains in 2 places?  redundant?  Why is the IgnoreDomain syntax regex with slashes required? (works but should not be required, that makes no sense)
     - Investigate - What happens if an ACE contains a SID that is in an object's SID history?

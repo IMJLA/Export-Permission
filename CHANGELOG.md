@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.120] - 2022-08-14 - Updated PsRunspace module and PsLogMessage module to allow for toggleable debug output
+
 ## [0.0.119] - 2022-08-14 - Updated build with latest versions of module dependencies
 
 ## [0.0.118] - 2022-08-14 - Updated build with latest versions of module dependencies

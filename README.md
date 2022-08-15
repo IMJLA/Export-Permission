@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.118
+help version: 0.0.119
 locale: en-US
 Module Name:
 online version:
@@ -527,10 +527,7 @@ It was designed for presenting reports to non-technical management or administra
 It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
 ToDo:
-- Currently requires a string for input (the path to a target folder).
-FileInfo or DirectoryInfo instead?
-- When Expand-IdentityReference calls Search-Directory it should not do so when the account name is an unresolved SID.
-Skip the query.
+- Expand-IdentityReference should not call Search-Directory when the account name is an unresolved SID
 - Investigate - FileInfo or DirectoryInfo rather than string for target folder input param. 
 Will a string auto-cast to these types if sent as input?
 I think it will. 
