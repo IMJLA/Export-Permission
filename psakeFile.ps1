@@ -76,6 +76,7 @@ properties {
     $MainScript = Get-ChildItem -LiteralPath $SourceCodePath -Include *.ps1
 
     # Version of the script in the src directory before the build is run and the version is updated
+    Write-Host "Test-ScriptFileInfo -LiteralPath $($MainScript.FullName)"
     $ScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript.FullName
 
     # List of files (regular expressions) to exclude from output directory

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.120
+.VERSION 0.0.121
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated PsRunspace module and PsLogMessage module to allow for toggleable debug output
+Had to create Resolve-Ace3 (identical clone of Resolve-Ace) for no known reason to solve an error, makes no sense
 
 .PRIVATEDATA
 
@@ -467,6 +467,7 @@ if ($ThreadCount -eq 1) {
         Command        = 'Get-AdsiServer'
         InputObject    = $UniqueServerNames
         InputParameter = 'AdsiServer'
+        TodaysHostname = $ThisHostname
         AddParam       = @{
             AdsiServersByDns       = $AdsiServersByDns
             Win32AccountsBySID     = $Win32AccountsBySID
@@ -493,14 +494,16 @@ if ($ThreadCount -eq 1) {
     ForEach-Object {
         $ResolveAceParams['InputObject'] = $_
         Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tResolve-Ace -InputObject $($_.IdentityReference)"
-        Resolve-Ace @ResolveAceParams
+        Resolve-Ace3 @ResolveAceParams
     }
 } else {
     $ResolveAceParams = @{
-        Command              = 'Resolve-Ace'
+        Command              = 'Resolve-Ace3'
         InputObject          = $Permissions
         InputParameter       = 'InputObject'
         ObjectStringProperty = 'IdentityReference'
+        TodaysHostname       = $ThisHostname
+        DebugOutputStream    = 'Debug'
         AddParam             = @{
             AdsiServersByDns       = $AdsiServersByDns
             DirectoryEntryCache    = $DirectoryEntryCache
@@ -511,7 +514,7 @@ if ($ThreadCount -eq 1) {
             DomainsByFqdn          = $DomainsByFqdn
         }
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions"
+    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
     $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
 }
 
@@ -555,6 +558,7 @@ if ($ThreadCount -eq 1) {
         Command              = 'Expand-IdentityReference'
         InputObject          = $GroupedIdentities
         InputParameter       = 'AccessControlEntry'
+        TodaysHostname       = $ThisHostname
         AddParam             = @{
             DirectoryEntryCache    = $DirectoryEntryCache
             IdentityReferenceCache = $IdentityReferenceCache
@@ -586,6 +590,7 @@ if ($ThreadCount -eq 1) {
         InputParameter       = 'SecurityPrincipal'
         Timeout              = 1200
         ObjectStringProperty = 'Name'
+        TodaysHostname       = $ThisHostname
     }
     Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
     $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
@@ -606,6 +611,7 @@ if ($ThreadCount -eq 1) {
         Command        = 'Expand-AccountPermission'
         InputObject    = $FormattedSecurityPrincipals
         InputParameter = 'AccountPermission'
+        TodaysHostname = $ThisHostname
     }
     Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExpand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
     $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams

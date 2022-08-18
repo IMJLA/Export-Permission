@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.120
+.VERSION 0.0.121
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated PsRunspace module and PsLogMessage module to allow for toggleable debug output
+Had to create Resolve-Ace3 (identical clone of Resolve-Ace) for no known reason to solve an error, makes no sense
 
 .PRIVATEDATA
 
@@ -474,15 +474,22 @@ function Add-SidInfo {
             $DomainObject = $null
 
             if ($null -eq $Object) { continue }
-            elseif (
-                $null -ne $Object.objectSid.Value -and
+            elseif ($Object.objectSid.Value ) {
                 # With WinNT directory entries for the root (WinNT://localhost), objectSid is a method rather than a property
                 # So we need to filter out those instances here to avoid this error:
                 # The following exception occurred while retrieving the string representation for method "objectSid":
                 # "Object reference not set to an instance of an object."
-                $Object.objectSid.Value.GetType().FullName -ne 'System.Management.Automation.PSMethod'
-            ) {
-                [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.objectSid.Value, 0)
+                if ( $Object.objectSid.Value.GetType().FullName -ne 'System.Management.Automation.PSMethod' ) {
+                    [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.objectSid.Value, 0)
+                }
+            } elseif ($Object.objectSid) {
+                # With WinNT directory entries for the root (WinNT://localhost), objectSid is a method rather than a property
+                # So we need to filter out those instances here to avoid this error:
+                # The following exception occurred while retrieving the string representation for method "objectSid":
+                # "Object reference not set to an instance of an object."
+                if ($Object.objectSid.GetType().FullName -ne 'System.Management.Automation.PSMethod') {
+                    [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.objectSid, 0)
+                }
             } elseif ($Object.Properties) {
                 if ($Object.Properties['objectSid'].Value) {
                     [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.Properties['objectSid'].Value, 0)
@@ -1431,7 +1438,7 @@ function Expand-WinNTGroupMember {
 
                     if ($ThisEntry.GetType().FullName -eq 'System.Collections.Hashtable') {
                         Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tExpand-WinNTGroupMember`t'$($ThisEntry.Path)' is a special group with no direct memberships"
-                        $ThisEntry | Add-SidInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
+                        Add-SidInfo -InputObject $ThisEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                     } else {
                         Get-WinNTGroupMember -DirectoryEntry $ThisEntry -DirectoryEntryCache $DirectoryEntryCache -DomainsByNetbios $DomainsByNetbios
                     }
@@ -2636,6 +2643,378 @@ function Resolve-Ace {
     }
 
 }
+function Resolve-Ace3 {
+    <#
+        .SYNOPSIS
+        Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
+        .DESCRIPTION
+        Based on the IdentityReference proprety of each Access Control Entry:
+        Resolve SID to NT account name and vise-versa
+        Resolve well-known SIDs
+        Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+        Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
+        .INPUTS
+        [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
+        .OUTPUTS
+        [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
+        .EXAMPLE
+        Get-Acl |
+        Expand-Acl |
+        Resolve-Ace
+
+        Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
+        This works in either Windows Powershell or in Powershell
+        Get-Acl does not support long paths (>256 characters)
+        That was why I originally used the .Net Framework method
+        .EXAMPLE
+        Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
+        Resolve-Ace
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+        $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
+        $IncludeExplicitRules = $true
+        $IncludeInheritedRules = $true
+        $AccountType = [System.Security.Principal.SecurityIdentifier]
+        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+        Resolve-Ace
+
+        This uses .Net Core as the source of the access list
+        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
+        [System.Security.AccessControl.AccessControlSections]::Owner -bor
+        [System.Security.AccessControl.AccessControlSections]::Group
+        $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
+        $IncludeExplicitRules = $true
+        $IncludeInheritedRules = $true
+        $AccountType = [System.Security.Principal.NTAccount]
+        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+        Resolve-Ace
+
+        This uses .Net Core as the source of the access list
+        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
+        [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
+        $AuthRules | Resolve-Ace
+
+        Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
+        Only works in Windows PowerShell
+        Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
+        This method is removed in modern versions of .Net Core
+
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+        $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
+
+        The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
+        It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
+
+        .NOTES
+        Dependencies:
+            Get-DirectoryEntry
+            Add-SidInfo
+            Get-TrustedDomainSidNameMap
+            Find-AdsiProvider
+
+        if ($FolderPath.Length -gt 255) {
+            $FolderPath = "\\?\$FolderPath"
+        }
+    #>
+    [OutputType([PSCustomObject])]
+    param (
+
+        # Authorization Rule Collection of Access Control Entries from Discretionary Access Control Lists
+        [Parameter(
+            ValueFromPipeline
+        )]
+        [PSObject[]]$InputObject,
+
+        <#
+        Dictionary to cache known servers to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
+
+    )
+
+    process {
+
+        $ACEPropertyNames = (Get-Member -InputObject $InputObject[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+        ForEach ($ThisACE in $InputObject) {
+
+            $IdentityReference = $ThisACE.IdentityReference.ToString()
+
+            if ([string]::IsNullOrEmpty($IdentityReference)) {
+                continue
+            }
+
+            $ThisServerDns = $null
+            $DomainNetBios = $null
+
+            # Remove the PsProvider prefix from the path string
+            if (-not [string]::IsNullOrEmpty($ThisACE.SourceAccessList.Path)) {
+                $LiteralPath = $ThisACE.SourceAccessList.Path -replace [regex]::escape("$($ThisACE.SourceAccessList.PsProvider)::"), ''
+            } else {
+                $LiteralPath = $LiteralPath -replace [regex]::escape("$($ThisACE.SourceAccessList.PsProvider)::"), ''
+            }
+
+            switch -Wildcard ($IdentityReference) {
+                "S-1-*" {
+                    # IdentityReference is a SID (Revision 1)
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t'$IdentityReference'.LastIndexOf('-')"
+                    $IndexOfLastHyphen = $IdentityReference.LastIndexOf("-")
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t'$IdentityReference'.Substring(0, $IndexOfLastHyphen)"
+                    $DomainSid = $IdentityReference.Substring(0, $IndexOfLastHyphen)
+                    if ($DomainSid) {
+                        $DomainCacheResult = $DomainsBySID[$DomainSid]
+                        if ($DomainCacheResult) {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain SID cache hit for '$DomainSid'"
+                            $ThisServerDns = $DomainCacheResult.Dns
+                            $DomainNetBios = $DomainCacheResult.Netbios
+                        } else {
+                            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain SID cache miss for '$DomainSid'"
+                        }
+                    }
+                }
+                "NT SERVICE\*" {
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                }
+                "BUILTIN\*" {
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                }
+                "NT AUTHORITY\*" {
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                }
+                default {
+                    $DomainNetBios = ($IdentityReference -split '\\')[0]
+                    if ($DomainNetBios) {
+                        $ThisServerDns = $DomainsByNetbios[$DomainNetBios].Dns #Doesn't work for BUILTIN, etc.
+                    }
+                    if (-not $ThisServerDns) {
+                        $ThisServerDn = ConvertTo-DistinguishedName -Domain $DomainNetBios -DomainsByNetbios $DomainsByNetbios
+                        $ThisServerDns = ConvertTo-Fqdn -DistinguishedName $ThisServerDn -DomainsByNetbios $DomainsByNetbios
+                    }
+                }
+            }
+
+            if (-not $ThisServerDns) {
+                # Bug: I think this will report incorrectly for a remote domain not in the cache (trust broken or something)
+                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+            }
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# '$IdentityReference' has a domain DNS name of '$ThisServerDns'"
+
+            if (-not $DomainNetBios) {
+                $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
+                if ($DomainCacheResult) {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain FQDN cache hit for '$ThisServerDns'"
+                    $DomainNetBios = $DomainCacheResult.Netbios
+                } else {
+                    Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# Domain FQDN cache miss for '$ThisServerDns'"
+                }
+            }
+
+            if (-not $DomainNetBios) {
+                $DomainNetBios = ConvertTo-LDAPDomainNetBIOS -DomainFQDN $ThisServerDns -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -AdsiServersByDns $AdsiServersByDns -DomainsByNetbios $DomainsByNetbios
+            }
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# '$IdentityReference' has a domain NetBIOS name of '$DomainNetBios'"
+
+            $GetAdsiServerParams = @{
+                AdsiServer             = $ThisServerDns
+                AdsiServersByDns       = $AdsiServersByDns
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+            }
+            $AdsiServer = Get-AdsiServer @GetAdsiServerParams
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`t# '$IdentityReference' has an ADSI server of '$($AdsiServer.AdsiProvider)://$($AdsiServer.ServerName)'"
+
+            $ResolveIdentityReferenceParams = @{
+                IdentityReference      = $IdentityReference
+                ServerName             = $ThisServerDns
+                AdsiServer             = $AdsiServer
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+                DirectoryEntryCache    = $DirectoryEntryCache
+                DomainsBySID           = $DomainsBySID
+                DomainsByNetbios       = $DomainsByNetbios
+                AdsiServersByDns       = $AdsiServersByDns
+                DomainsByFqdn          = $DomainsByFqdn
+            }
+            Write-Debug -Message "  $(Get-Date -Format s)`t$(hostname)`tResolve-Ace`tResolve-IdentityReference -IdentityReference '$IdentityReference'..."
+            $ResolvedIdentityReference = Resolve-IdentityReference @ResolveIdentityReferenceParams
+
+            # not sure if I should add a param to offer DNS instead of NetBIOS
+
+            $ObjectProperties = @{
+                AdsiProvider              = $AdsiServer.AdsiProvider
+                AdsiServer                = $AdsiServer.ServerName
+                IdentityReferenceSID      = $ResolvedIdentityReference.SIDString
+                IdentityReferenceName     = $ResolvedIdentityReference.IdentityReferenceUnresolved
+                IdentityReferenceResolved = $ResolvedIdentityReference.IdentityReferenceNetBios
+            }
+            ForEach ($ThisProperty in $ACEPropertyNames) {
+                $ObjectProperties[$ThisProperty] = $ThisACE.$ThisProperty
+            }
+            [PSCustomObject]$ObjectProperties
+
+        }
+
+    }
+
+}
+
+function Resolve-Ace4 {
+    <#
+        .SYNOPSIS
+        Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
+        .DESCRIPTION
+        Based on the IdentityReference proprety of each Access Control Entry:
+        Resolve SID to NT account name and vise-versa
+        Resolve well-known SIDs
+        Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+        Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
+        .INPUTS
+        [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
+        .OUTPUTS
+        [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
+        .EXAMPLE
+        Get-Acl |
+        Expand-Acl |
+        Resolve-Ace
+
+        Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
+        This works in either Windows Powershell or in Powershell
+        Get-Acl does not support long paths (>256 characters)
+        That was why I originally used the .Net Framework method
+        .EXAMPLE
+        Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
+        Resolve-Ace
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+        $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
+        $IncludeExplicitRules = $true
+        $IncludeInheritedRules = $true
+        $AccountType = [System.Security.Principal.SecurityIdentifier]
+        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+        Resolve-Ace
+
+        This uses .Net Core as the source of the access list
+        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
+        [System.Security.AccessControl.AccessControlSections]::Owner -bor
+        [System.Security.AccessControl.AccessControlSections]::Group
+        $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
+        $IncludeExplicitRules = $true
+        $IncludeInheritedRules = $true
+        $AccountType = [System.Security.Principal.NTAccount]
+        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+        Resolve-Ace
+
+        This uses .Net Core as the source of the access list
+        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
+        [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
+        $AuthRules | Resolve-Ace
+
+        Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
+        Only works in Windows PowerShell
+        Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
+        This method is removed in modern versions of .Net Core
+
+        .EXAMPLE
+        [System.String]$FolderPath = 'C:\Test'
+        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+        $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
+
+        The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
+        It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
+
+        .NOTES
+        Dependencies:
+            Get-DirectoryEntry
+            Add-SidInfo
+            Get-TrustedDomainSidNameMap
+            Find-AdsiProvider
+
+        if ($FolderPath.Length -gt 255) {
+            $FolderPath = "\\?\$FolderPath"
+        }
+    #>
+    [OutputType([PSCustomObject])]
+    param (
+
+        # Authorization Rule Collection of Access Control Entries from Discretionary Access Control Lists
+        [Parameter(
+            ValueFromPipeline
+        )]
+        [PSObject[]]$InputObject,
+
+        <#
+        Dictionary to cache known servers to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
+
+    )
+    return $InputObject
+}
 
 function Resolve-IdentityReference {
     <#
@@ -2797,7 +3176,7 @@ function Resolve-IdentityReference {
             # The SID of the domain is everything up to (but not including) the last hyphen
             $DomainSid = $IdentityReference.Substring(0, $IdentityReference.LastIndexOf("-"))
 
-            # Search the cache of domains (TrustedDomainSidNameMap)
+            # Search the cache of domains, first by SID, then by NetBIOS name
             $DomainCacheResult = $DomainsBySID[$DomainSid]
             if (-not $DomainCacheResult) {
                 $split = $UnresolvedIdentityReference -split '\\'
@@ -3842,7 +4221,7 @@ function Get-FolderAce {
             $Sections
         ) } 2>$null
 
-    if (-not $DirectorySecurity) {
+    if (-not $DirectorySecurity.Access) {
         Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t# Found no ACL for '$LiteralPath'"
         return
     }
@@ -3856,7 +4235,7 @@ function Get-FolderAce {
 
     Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetAccessRules(`$$IncludeExplicitRules, `$$IncludeInherited, [$AccountType])"
     $AccessRules = $DirectorySecurity.GetAccessRules($IncludeExplicitRules, $IncludeInherited, $AccountType)
-    if (-not $AccessRules) {
+    if ($AccessRules.Count -lt 1) {
         Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t# Found no matching access rules"
         return
     }
@@ -4337,36 +4716,36 @@ function Add-PsCommand {
                 'Function' {
 
                     if ($Force) {
-                        Write-LogMsg @LogParams -Text "   # Adding command '$Command' of type '$($CommandInfo.CommandType)'"
+                        Write-LogMsg @LogParams -Text " # Adding command '$Command' of type '$($CommandInfo.CommandType)' (treating it as a command instead of a Function because -Force was used)"
                         # If the type is All, Application, Cmdlet, Configuration, Filter, or Script then run the command as-is
-                        Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddStatement().AddCommand('$Command')"
+                        Write-LogMsg @LogParams -Text "`$PowershellInterface.AddStatement().AddCommand('$Command')"
                         $null = $ThisPowershell.AddStatement().AddCommand($Command)
                     } else {
                         # Add the definitions of the function
                         # BUG: Look at the definition of Get-Member for example, it is not in a ScriptModule so its definition is not PowerShell code
                         [string]$ThisFunction = "function $($CommandInfo.CommandInfo.Name) {`r`n$($CommandInfo.CommandInfo.Definition)`r`n}"
-                        Write-LogMsg @LogParams -Text "  # Adding Script (the Definition of a Function, `$CommandInfo.CommandInfo.Definition not expanded below for brevity)"
-                        Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddScript('function $($CommandInfo.CommandInfo.Name) { `$CommandInfo.CommandInfo.Definition }')"
-                        #Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddScript('function $($CommandInfo.CommandInfo.Name) { $($CommandInfo.CommandInfo.Definition) }')"
+                        Write-LogMsg @LogParams -Text " # Adding Script (the Definition of a Function, `$CommandInfo.CommandInfo.Definition not expanded below for brevity)"
+                        ##Write-LogMsg @LogParams -Text "`$PowershellInterface.AddScript('function $($CommandInfo.CommandInfo.Name) { `$CommandInfo.CommandInfo.Definition }')"
+                        Write-LogMsg @LogParams -Text "`$PowershellInterface.AddScript('$ThisFunction')"
                         $null = $ThisPowershell.AddScript($ThisFunction)
                     }
                 }
                 'ExternalScript' {
-                    Write-LogMsg @LogParams -Text "   # Adding Script (the ScriptBlock of an ExternalScript, `$CommandInfo.ScriptBlock not expanded below for brevity)"
-                    Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddScript(`"`$(`$CommandInfo.ScriptBlock)`") # "
-                    #Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddScript('$($CommandInfo.ScriptBlock)')"
+                    Write-LogMsg @LogParams -Text " # Adding Script (the ScriptBlock of an ExternalScript, `$CommandInfo.ScriptBlock not expanded below for brevity)"
+                    ##Write-LogMsg @LogParams -Text "`$PowershellInterface.AddScript(`"`$(`$CommandInfo.ScriptBlock)`") # "
+                    Write-LogMsg @LogParams -Text "`$PowershellInterface.AddScript('$($CommandInfo.ScriptBlock)')"
                     $null = $ThisPowershell.AddScript($CommandInfo.ScriptBlock)
                 }
                 'ScriptBlock' {
-                    Write-LogMsg @LogParams -Text "   # Adding Script (a ScriptBlock, not expanded below for brevity)"
-                    Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddScript(`"`$Command`")
-                    #Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddScript('$Command')"
+                    Write-LogMsg @LogParams -Text " # Adding Script (a ScriptBlock, not expanded below for brevity)"
+                    ##Write-LogMsg @LogParams -Text "`$PowershellInterface.AddScript(`"`$Command`")
+                    Write-LogMsg @LogParams -Text "`$PowershellInterface.AddScript('$Command')"
                     $null = $ThisPowershell.AddScript($Command)
                 }
                 default {
-                    Write-LogMsg @LogParams -Text "  # Adding command '$Command' of type '$($CommandInfo.CommandType)'"
+                    Write-LogMsg @LogParams -Text " # Adding command '$Command' of type '$($CommandInfo.CommandType)'"
                     # If the type is All, Application, Cmdlet, Configuration, Filter, or Script then run the command as-is
-                    Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddStatement().AddCommand('$Command')"
+                    Write-LogMsg @LogParams -Text "`$PowershellInterface.AddStatement().AddCommand('$Command')"
                     $null = $ThisPowershell.AddStatement().AddCommand($Command)
                 }
 
@@ -4422,17 +4801,17 @@ function Add-PsModule {
 
             switch ($ThisModule.ModuleType) {
                 'Binary' {
-                    Write-LogMsg @LogParams -Text "  `$InitialSessionState.ImportPSModule('$($ThisModule.Name)')"
+                    Write-LogMsg @LogParams -Text "`$InitialSessionState.ImportPSModule('$($ThisModule.Name)')"
                     $InitialSessionState.ImportPSModule($ThisModule.Name)
                 }
                 'Script' {
                     $ModulePath = Split-Path -Path $ThisModule.Path -Parent
-                    Write-LogMsg @LogParams -Text "  `$InitialSessionState.ImportPSModulesFromPath('$ModulePath')"
+                    Write-LogMsg @LogParams -Text "`$InitialSessionState.ImportPSModulesFromPath('$ModulePath')"
                     $InitialSessionState.ImportPSModulesFromPath($ModulePath)
                 }
                 'Manifest' {
                     $ModulePath = Split-Path -Path $ThisModule.Path -Parent
-                    Write-LogMsg @LogParams -Text "  `$InitialSessionState.ImportPSModulesFromPath('$ModulePath')"
+                    Write-LogMsg @LogParams -Text "`$InitialSessionState.ImportPSModulesFromPath('$ModulePath')"
                     $InitialSessionState.ImportPSModulesFromPath($ModulePath)
                 }
                 default {
@@ -4654,7 +5033,7 @@ function Get-PsCommandInfo {
             $ModuleInfo = Get-Module -Name $CommandInfo.Source -ListAvailable -ErrorAction SilentlyContinue
         } else {
             if ($CommandInfo.Source) {
-                Write-LogMsg @LogParams -Text "  Get-Module -Name '$($CommandInfo.Source)'"
+                Write-LogMsg @LogParams -Text "Get-Module -Name '$($CommandInfo.Source)'"
                 $ModuleInfo = Get-Module -Name $CommandInfo.Source -ErrorAction SilentlyContinue
             }
         }
@@ -4667,7 +5046,7 @@ function Get-PsCommandInfo {
         $SourceModuleName = $CommandInfo.Source
     }
 
-    Write-LogMsg @LogParams -Text "  $Command is a $CommandType"
+    Write-LogMsg @LogParams -Text " # $Command is a $CommandType"
     [pscustomobject]@{
         CommandInfo            = $CommandInfo
         ModuleInfo             = $ModuleInfo
@@ -4751,7 +5130,7 @@ function Open-Thread {
 
         [int64]$CurrentObjectIndex = 0
         $ThreadCount = @($InputObject).Count
-        Write-LogMsg @LogParams -Text "  # Received $(($CommandInfo | Measure-Object).Count) PsCommandInfos from Split-Thread for '$Command'"
+        Write-LogMsg @LogParams -Text " # Received $(($CommandInfo | Measure-Object).Count) PsCommandInfos from Split-Thread for '$Command'"
 
         if ($CommandInfo) {
 
@@ -4764,7 +5143,7 @@ function Open-Thread {
             }
 
             # Build the param block of the script. Along the way, add any necessary parameters and switches
-            # Avoided using AppendJoin for slight performance and code readability penalty due to lack of support in PS 5.1
+            # Avoided using AppendJoin. It would provide slight performance and code readability but lacks support in PS 5.1
             $ScriptDefinition = [System.Text.StringBuilder]::new()
             $null = $ScriptDefinition.AppendLine('param (')
             If ([string]::IsNullOrEmpty($InputParameter)) {
@@ -4785,16 +5164,23 @@ function Open-Thread {
                 $null = $CommandStringForScriptDefinition.Append(" -$ThisSwitch")
             }
             $null = $ScriptDefinition.AppendLine("`r`n)`r`n")
+
+            # Define the command in the script ($Command)
             Convert-FromPsCommandInfoToString -CommandInfo $CommandInfo -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname |
             ForEach-Object {
                 $null = $ScriptDefinition.AppendLine("`r`n$_")
             }
             $null = $ScriptDefinition.AppendLine()
+
+            # Call the function in the script
+            Write-LogMsg @LogParams -Text " # Command string is $($CommandStringForScriptDefinition.ToString())"
             $CommandStringForScriptDefinition |
             ForEach-Object {
                 $null = $ScriptDefinition.AppendLine("`r`n$_")
             }
             $null = $ScriptDefinition.AppendLine()
+
+            # Convert the script to a single string
             $ScriptString = $ScriptDefinition.ToString()
 
             # Remove blank lines
@@ -4803,6 +5189,7 @@ function Open-Thread {
             #    $ScriptString = $ScriptString -replace "`r`n`r`n", "`r`n"
             #}
 
+            # Convert the script to a single scriptblock
             $ScriptBlock = [scriptblock]::Create($ScriptString)
         }
 
@@ -4819,20 +5206,20 @@ function Open-Thread {
                 [string]$ObjectString = $Object.ToString()
             }
 
-            Write-LogMsg @LogParams -Text "  `$PowershellInterface = [powershell]::Create() # for '$Command' on '$ObjectString'"
+            Write-LogMsg @LogParams -Text "`$PowershellInterface = [powershell]::Create() # for '$Command' on '$ObjectString'"
             $PowershellInterface = [powershell]::Create()
 
-            Write-LogMsg @LogParams -Text "  `$PowershellInterface.RunspacePool = `$RunspacePool # for '$Command' on '$ObjectString'"
+            Write-LogMsg @LogParams -Text "`$PowershellInterface.RunspacePool = `$RunspacePool # for '$Command' on '$ObjectString'"
             $PowershellInterface.RunspacePool = $RunspacePool
 
             # Do I need this one?  What commands would be in there?
-            Write-LogMsg @LogParams -Text "  `$PowershellInterface.Commands.Clear() # for '$Command' on '$ObjectString'"
+            Write-LogMsg @LogParams -Text "`$PowershellInterface.Commands.Clear() # for '$Command' on '$ObjectString'"
             $null = $PowershellInterface.Commands.Clear()
 
             if ($ScriptBlock) {
-                $null = Add-PsCommand -Command $ScriptBlock -PowershellInterface $PowershellInterface -Force -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+                $null = Add-PsCommand -Command $ScriptBlock -PowershellInterface $PowershellInterface -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
             } else {
-                $null = Add-PsCommand -Command $Command -PowershellInterface $PowershellInterface -Force -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+                $null = Add-PsCommand -Command $Command -CommandInfo $CommandInfo -PowershellInterface $PowershellInterface -Force -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
             }
 
             # Prepare to pass $InputObject into the runspace as a parameter not an argument
@@ -4841,14 +5228,14 @@ function Open-Thread {
                 $InputParameter = 'PsRunspaceArgument1'
             }
 
-            Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddParameter('$InputParameter', '$ObjectString') # for '$Command' on '$ObjectString'"
+            Write-LogMsg @LogParams -Text "`$PowershellInterface.AddParameter('$InputParameter', '$ObjectString') # for '$Command' on '$ObjectString'"
             $null = $PowershellInterface.AddParameter($InputParameter, $Object)
             <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = "-$InputParameter '$ObjectString'"
 
 
             $AdditionalParameters = @()
             $AdditionalParameters = ForEach ($Key in $AddParam.Keys) {
-                Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddParameter('$Key', '$($AddParam.$key)') # for '$Command' on '$ObjectString'"
+                Write-LogMsg @LogParams -Text "`$PowershellInterface.AddParameter('$Key', '$($AddParam.$key)') # for '$Command' on '$ObjectString'"
                 $null = $PowershellInterface.AddParameter($Key, $AddParam.$key)
                 <#NormallyCommentThisForPerformanceOptimization#>"-$Key '$($AddParam.$key)'"
             }
@@ -4856,7 +5243,7 @@ function Open-Thread {
 
             $Switches = @()
             $Switches = ForEach ($Switch in $AddSwitch) {
-                Write-LogMsg @LogParams -Text "  `$PowershellInterface.AddParameter('$Switch') # for '$Command' on '$ObjectString'"
+                Write-LogMsg @LogParams -Text "`$PowershellInterface.AddParameter('$Switch') # for '$Command' on '$ObjectString'"
                 $null = $PowershellInterface.AddParameter($Switch)
                 <#NormallyCommentThisForPerformanceOptimization#>"-$Switch"
             }
@@ -4870,7 +5257,7 @@ function Open-Thread {
             }
             Write-Progress @Progress
 
-            Write-LogMsg @LogParams -Text "  `$Handle = `$PowershellInterface.BeginInvoke() # for '$Command' on '$ObjectString'"
+            Write-LogMsg @LogParams -Text "`$Handle = `$PowershellInterface.BeginInvoke() # for '$Command' on '$ObjectString'"
             $Handle = $PowershellInterface.BeginInvoke()
 
             [PSCustomObject]@{
@@ -4988,41 +5375,45 @@ function Split-Thread {
             ThisHostname = $TodaysHostname
         }
 
-        Write-LogMsg @LogParams -Text "  # Entered begin block for '$Command'"
+        Write-LogMsg @LogParams -Text " # Entered begin block for '$Command'"
 
-        Write-LogMsg @LogParams -Text "  `$InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault() # for '$Command'"
+        Write-LogMsg @LogParams -Text "`$InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault() # for '$Command'"
         $InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
 
         # Import the source module containing the specified Command in each thread
 
         $OriginalCommandInfo = Get-PsCommandInfo -Command $Command -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
-        Write-LogMsg @LogParams -Text "  # Found 1 original PsCommandInfo for '$Command'"
+        Write-LogMsg @LogParams -Text " # Found 1 original PsCommandInfo for '$Command'"
 
         $CommandInfo = Expand-PsCommandInfo -PsCommandInfo $OriginalCommandInfo -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
-        Write-LogMsg @LogParams -Text "  # Found $(($CommandInfo | Measure-Object).Count) nested PsCommandInfos for '$Command' ($($CommandInfo.CommandInfo.Name -join ','))"
+        Write-LogMsg @LogParams -Text " # Found $(($CommandInfo | Measure-Object).Count) nested PsCommandInfos for '$Command' ($($CommandInfo.CommandInfo.Name -join ','))"
 
         # Prepare our collection of PowerShell modules to import in each thread
         # This will include any modules specified by name with the -AddModule parameter
         $ModulesToAdd = [System.Collections.Generic.List[System.Management.Automation.PSModuleInfo]]::new()
         ForEach ($Module in $AddModule) {
-            Write-LogMsg @LogParams -Text "  Get-Module -Name '$Module'"
+            Write-LogMsg @LogParams -Text "Get-Module -Name '$Module'"
             $ModuleObj = Get-Module -Name $Module -ErrorAction SilentlyContinue
             $null = $ModulesToAdd.Add($ModuleObj)
         }
 
         # This will also include any modules identified by tokenizing the -Command parameter or its definition, and recursing through all nested command tokens
         $CommandInfo.ModuleInfo |
-        Sort-Object -Property Name -Unique |
         ForEach-Object {
             $null = $ModulesToAdd.Add($_)
         }
+        $ModulesToAdd = $ModulesToAdd |
+        Sort-Object -Property Name -Unique
 
-        $CommandInfo = $CommandInfo |
+        $CommandsToAdd = $CommandInfo |
         Where-Object -FilterScript {
-            $ModulesToAdd.Name -notcontains $_.ModuleInfo.Name -and
+            (
+                -not $_.ModuleInfo.Name -or
+                $ModulesToAdd.Name -notcontains $_.ModuleInfo.Name
+            ) -and
             $_.CommandType -ne 'Cmdlet'
         }
-        Write-LogMsg @LogParams -Text "  # Found $(($CommandInfo | Measure-Object).Count) remaining PsCommandInfos to define for '$Command' (not in modules: $($CommandInfo.CommandInfo.Name -join ','))"
+        Write-LogMsg @LogParams -Text " # Found $(($CommandsToAdd | Measure-Object).Count) remaining PsCommandInfos to define for '$Command' (not in modules: $($CommandsToAdd.CommandInfo.Name -join ','))"
 
         if ($ModulesToAdd.Count -gt 0) {
             $null = Add-PsModule -InitialSessionState $InitialSessionState -ModuleInfo $ModulesToAdd -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
@@ -5041,9 +5432,9 @@ function Split-Thread {
             $InitialSessionState.Variables.Add($VariableEntry)
         }
 
-        Write-LogMsg @LogParams -Text "  `$RunspacePool = [runspacefactory]::CreateRunspacePool(1, $Threads, `$InitialSessionState, `$Host) # for '$Command'"
+        Write-LogMsg @LogParams -Text "`$RunspacePool = [runspacefactory]::CreateRunspacePool(1, $Threads, `$InitialSessionState, `$Host) # for '$Command'"
         $RunspacePool = [runspacefactory]::CreateRunspacePool(1, $Threads, $InitialSessionState, $Host)
-        Write-LogMsg @LogParams -Text "  `$RunspacePool.Open() # for '$Command'"
+        Write-LogMsg @LogParams -Text "`$RunspacePool.Open() # for '$Command'"
         $RunspacePool.Open()
 
         $Global:TimedOut = $false
@@ -5058,7 +5449,7 @@ function Split-Thread {
         } else {
             $ObjectString = $InputObject.ToString()
         }
-        Write-LogMsg @LogParams -Text "  # Entered process block for '$Command' on '$ObjectString'"
+        Write-LogMsg @LogParams -Text " # Entered process block for '$Command' on '$ObjectString'"
 
         # Add all the input objects from the pipeline to a single collection; allows progress bars later
         ForEach ($ThisObject in $InputObject) {
@@ -5067,8 +5458,8 @@ function Split-Thread {
 
     }
     end {
-        Write-LogMsg @LogParams -Text "  # Entered end block for '$Command'"
-        Write-LogMsg @LogParams -Text "  # Sending $(($CommandInfo | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
+        Write-LogMsg @LogParams -Text " # Entered end block for '$Command'"
+        Write-LogMsg @LogParams -Text " # Sending $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
         $ThreadParameters = @{
             Command              = $Command
             InputParameter       = $InputParameter
@@ -5076,24 +5467,24 @@ function Split-Thread {
             AddParam             = $AddParam
             AddSwitch            = $AddSwitch
             ObjectStringProperty = $ObjectStringProperty
-            CommandInfo          = $CommandInfo
+            CommandInfo          = $CommandsToAdd
             RunspacePool         = $RunspacePool
             DebugOutputStream    = $DebugOutputStream
         }
         $AllThreads = Open-Thread @ThreadParameters
-        Write-LogMsg @LogParams -Text "  # Received $(($AllThreads | Measure-Object).Count) threads from Open-Thread for $Command"
+        Write-LogMsg @LogParams -Text " # Received $(($AllThreads | Measure-Object).Count) threads from Open-Thread for $Command"
         Wait-Thread -Thread $AllThreads -Threads $Threads -SleepTimer $SleepTimer -Timeout $Timeout -Dispose -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
         $VerbosePreference = 'Continue'
 
         if ($Global:TimedOut -eq $false) {
 
-            Write-LogMsg @LogParams -Text "  [System.Management.Automation.Runspaces.RunspacePool]::Close()"
+            Write-LogMsg @LogParams -Text "[System.Management.Automation.Runspaces.RunspacePool]::Close()"
             $null = $RunspacePool.Close()
-            Write-LogMsg @LogParams -Text "  [System.Management.Automation.Runspaces.RunspacePool]::Close() completed"
+            Write-LogMsg @LogParams -Text " # [System.Management.Automation.Runspaces.RunspacePool]::Close() completed"
 
-            Write-LogMsg @LogParams -Text "  [System.Management.Automation.Runspaces.RunspacePool]::Dispose()"
+            Write-LogMsg @LogParams -Text "[System.Management.Automation.Runspaces.RunspacePool]::Dispose()"
             $null = $RunspacePool.Dispose()
-            Write-LogMsg @LogParams -Text "  [System.Management.Automation.Runspaces.RunspacePool]::Dispose() completed"
+            Write-LogMsg @LogParams -Text " # [System.Management.Automation.Runspaces.RunspacePool]::Dispose() completed"
 
         }
 
@@ -5173,7 +5564,7 @@ function Wait-Thread {
             # If the threads do not have handles, there is nothing to wait for, so output the thread as-is.
             # Otherwise wait for the handle to indicate completion (or a timeout to be reached)
             if ($ThisThread.Handle -eq $false) {
-                Write-LogMsg @LogParams -Text "  `$PowerShellInterface.Streams.ClearStreams() # for '$CommandString' on '$($ThisThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text "`$PowerShellInterface.Streams.ClearStreams() # for '$CommandString' on '$($ThisThread.ObjectString)'"
                 $null = $ThisThread.PowerShellInterface.Streams.ClearStreams()
                 $ThisThread
             } else {
@@ -5189,7 +5580,7 @@ function Wait-Thread {
         # If the threads have handles, we can check to see if they are complete.
         While (@($AllThreads | Where-Object -FilterScript { $null -ne $_.Handle }).Count -gt 0) {
 
-            Write-LogMsg @LogParams -Text "  Start-Sleep -Milliseconds `$SleepTimer # for '$CommandString'"
+            Write-LogMsg @LogParams -Text "Start-Sleep -Milliseconds `$SleepTimer # for '$CommandString'"
             Start-Sleep -Milliseconds $SleepTimer
 
             if ($RunspacePool) { $AvailableRunspaces = $RunspacePool.GetAvailableRunspaces() }
@@ -5211,10 +5602,10 @@ function Wait-Thread {
 
             $ActiveThreadCountString = "$($Threads - $AvailableRunspaces) of $Threads are active"
 
-            Write-LogMsg @LogParams -Text "  # $ActiveThreadCountString for '$CommandString'"
-            Write-LogMsg @LogParams -Text "  # $($CompletedThreads.Count) completed threads for '$CommandString'"
-            Write-LogMsg @LogParams -Text "  # $($CleanedUpThreads.Count) cleaned up threads for '$CommandString'"
-            Write-LogMsg @LogParams -Text "  # $($IncompleteThreads.Count) incomplete threads for '$CommandString'"
+            Write-LogMsg @LogParams -Text " # $ActiveThreadCountString for '$CommandString'"
+            Write-LogMsg @LogParams -Text " # $($CompletedThreads.Count) completed threads for '$CommandString'"
+            Write-LogMsg @LogParams -Text " # $($CleanedUpThreads.Count) cleaned up threads for '$CommandString'"
+            Write-LogMsg @LogParams -Text " # $($IncompleteThreads.Count) incomplete threads for '$CommandString'"
 
             $RemainingString = "$($IncompleteThreads.ObjectString)"
             If ($RemainingString.Length -gt 60) {
@@ -5231,11 +5622,11 @@ function Wait-Thread {
             ForEach ($CompletedThread in $CompletedThreads) {
 
                 # TODO: Debug these counts, something seems off, they vary wildly with Test-Multithreading.ps1 but I would expect consistency (same number of Warnings per thread)
-                Write-LogMsg @LogParams -Text "  # $($CompletedThread.PowerShellInterface.Streams.Progress.Count) Progress messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
-                Write-LogMsg @LogParams -Text "  # $($CompletedThread.PowerShellInterface.Streams.Information.Count) Information messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
-                Write-LogMsg @LogParams -Text "  # $($CompletedThread.PowerShellInterface.Streams.Verbose.Count) Verbose messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
-                Write-LogMsg @LogParams -Text "  # $($CompletedThread.PowerShellInterface.Streams.Debug.Count) Debug messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
-                Write-LogMsg @LogParams -Text "  # $($CompletedThread.PowerShellInterface.Streams.Warning.Count) Warning messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text " # $($CompletedThread.PowerShellInterface.Streams.Progress.Count) Progress messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text " # $($CompletedThread.PowerShellInterface.Streams.Information.Count) Information messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text " # $($CompletedThread.PowerShellInterface.Streams.Verbose.Count) Verbose messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text " # $($CompletedThread.PowerShellInterface.Streams.Debug.Count) Debug messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text " # $($CompletedThread.PowerShellInterface.Streams.Warning.Count) Warning messages for '$CommandString' on '$($CompletedThread.ObjectString)'"
 
                 # Because $Host was used to create the RunspacePool, any output to $Host (which includes Write-Host and Write-Information and Write-Progress) has already been displayed
                 #$CompletedThread.PowerShellInterface.Streams.Progress | ForEach-Object {Write-Progress "$_"}
@@ -5244,26 +5635,26 @@ function Wait-Thread {
                 #$CompletedThread.PowerShellInterface.Streams.Debug | ForEach-Object { Write-Debug "$_" }
                 #$CompletedThread.PowerShellInterface.Streams.Warning | ForEach-Object { Write-Warning "$_" }
 
-                Write-LogMsg @LogParams -Text "  `$PowerShellInterface.Streams.ClearStreams() # for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text "`$PowerShellInterface.Streams.ClearStreams() # for '$CommandString' on '$($CompletedThread.ObjectString)'"
                 $null = $CompletedThread.PowerShellInterface.Streams.ClearStreams()
 
-                Write-LogMsg @LogParams -Text "  `$PowerShellInterface.EndInvoke(`$Handle) # for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                Write-LogMsg @LogParams -Text "`$PowerShellInterface.EndInvoke(`$Handle) # for '$CommandString' on '$($CompletedThread.ObjectString)'"
                 $ThreadOutput = $CompletedThread.PowerShellInterface.EndInvoke($CompletedThread.Handle)
 
+                if (@($ThreadOutput).Count -gt 0) {
+                    Write-LogMsg @LogParams -Text " # Output (count of $(@($ThreadOutput).Count)) received from thread $($CompletedThread.Index): $($CompletedThread.ObjectString)"
+                } else {
+                    Write-LogMsg @LogParams -Text " # Null result for thread $($CompletedThread.Index) ($($CompletedThread.ObjectString))"
+                }
+
                 if ($Dispose -eq $true) {
-                    <#NormallyCommentThisForPerformanceOptimization#>## if (($ThreadOutput | Measure-Object).Count -gt 0) {
-                    <#NormallyCommentThisForPerformanceOptimization#>## Write-LogMsg @LogParams -Text "  # Output (count of $($ThreadOutput.Count)) received from thread $($CompletedThread.Index): $($CompletedThread.ObjectString)"
-                    <#NormallyCommentThisForPerformanceOptimization#>## }
-                    <#NormallyCommentThisForPerformanceOptimization#>## else {
-                    <#NormallyCommentThisForPerformanceOptimization#>## Write-LogMsg @LogParams -Text "  # Null result for thread $($CompletedThread.Index) ($($CompletedThread.ObjectString))"
-                    <#NormallyCommentThisForPerformanceOptimization#>## }
                     $ThreadOutput
-                    Write-LogMsg @LogParams -Text "  `$PowerShellInterface.Dispose() # for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                    Write-LogMsg @LogParams -Text "`$PowerShellInterface.Dispose() # for '$CommandString' on '$($CompletedThread.ObjectString)'"
                     $null = $CompletedThread.PowerShellInterface.Dispose()
                     $CompletedThread.PowerShellInterface = $null
                     $CompletedThread.Handle = $null
                 } else {
-                    Write-LogMsg @LogParams -Text "  # Thread $($CompletedThread.Index) is finished opening for '$CommandString' on '$($CompletedThread.ObjectString)'"
+                    Write-LogMsg @LogParams -Text " # Thread $($CompletedThread.Index) is finished opening for '$CommandString' on '$($CompletedThread.ObjectString)'"
                     $CompletedThread.Handle = $null
                     $CompletedThread
                 }
@@ -5297,7 +5688,7 @@ function Wait-Thread {
 
         $StopWatch.Stop()
 
-        Write-LogMsg @LogParams -Text "  # Finished waiting for threads"
+        Write-LogMsg @LogParams -Text " # Finished waiting for threads"
         Write-Progress -Activity 'Completed' -Completed
 
     }
@@ -6611,6 +7002,7 @@ if ($ThreadCount -eq 1) {
         Command        = 'Get-AdsiServer'
         InputObject    = $UniqueServerNames
         InputParameter = 'AdsiServer'
+        TodaysHostname = $ThisHostname
         AddParam       = @{
             AdsiServersByDns       = $AdsiServersByDns
             Win32AccountsBySID     = $Win32AccountsBySID
@@ -6637,14 +7029,16 @@ if ($ThreadCount -eq 1) {
     ForEach-Object {
         $ResolveAceParams['InputObject'] = $_
         Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tResolve-Ace -InputObject $($_.IdentityReference)"
-        Resolve-Ace @ResolveAceParams
+        Resolve-Ace3 @ResolveAceParams
     }
 } else {
     $ResolveAceParams = @{
-        Command              = 'Resolve-Ace'
+        Command              = 'Resolve-Ace3'
         InputObject          = $Permissions
         InputParameter       = 'InputObject'
         ObjectStringProperty = 'IdentityReference'
+        TodaysHostname       = $ThisHostname
+        DebugOutputStream    = 'Debug'
         AddParam             = @{
             AdsiServersByDns       = $AdsiServersByDns
             DirectoryEntryCache    = $DirectoryEntryCache
@@ -6655,7 +7049,7 @@ if ($ThreadCount -eq 1) {
             DomainsByFqdn          = $DomainsByFqdn
         }
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions"
+    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
     $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
 }
 
@@ -6699,6 +7093,7 @@ if ($ThreadCount -eq 1) {
         Command              = 'Expand-IdentityReference'
         InputObject          = $GroupedIdentities
         InputParameter       = 'AccessControlEntry'
+        TodaysHostname       = $ThisHostname
         AddParam             = @{
             DirectoryEntryCache    = $DirectoryEntryCache
             IdentityReferenceCache = $IdentityReferenceCache
@@ -6730,6 +7125,7 @@ if ($ThreadCount -eq 1) {
         InputParameter       = 'SecurityPrincipal'
         Timeout              = 1200
         ObjectStringProperty = 'Name'
+        TodaysHostname       = $ThisHostname
     }
     Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
     $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
@@ -6750,6 +7146,7 @@ if ($ThreadCount -eq 1) {
         Command        = 'Expand-AccountPermission'
         InputObject    = $FormattedSecurityPrincipals
         InputParameter = 'AccountPermission'
+        TodaysHostname = $ThisHostname
     }
     Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExpand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
     $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
