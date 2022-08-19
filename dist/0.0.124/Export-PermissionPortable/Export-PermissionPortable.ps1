@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.123
+.VERSION 0.0.124
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,13 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Integrate bugfix in Permission module
+Using hostname.exe instead of environment var due to maintaining configured capitalization of the hostname
 
 .PRIVATEDATA
 
 #> 
-
-
 
 
 
@@ -106,9 +104,11 @@ Integrate bugfix in Permission module
         - WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
         - WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
         - WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
-    - Bug - Logic Flaw for Owner.
-        - Currently we search folders for non-inherited access rules, then we manually add a FullControl access rule for the Owner.
-        - This misses folders with only inherited access rules but a different owner.
+    - Feature - Add parameter to support reporting ACL Owners.
+        - Currently we search folders for non-inherited access rules, then we manually add a simulated FullControl access rule for the Owner since that is their effective access
+        - This misses folders with only inherited access rules but a different owner
+        - Solving this will have a significant performance impact since every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
+        - This is why it will be an optional parameter.
     - Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
         - The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
     - Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
@@ -4585,7 +4585,7 @@ function Write-LogMsg {
 
     )
 
-    $Timestamp = Get-Date -Format s
+    $Timestamp = Get-Date -Format 'yyyy-MM-ddThh:mm:ss.ffff'
     $OutputToPipeline = $false
     $PSCallStack = Get-PSCallStack
 
@@ -7082,11 +7082,7 @@ $DedupedUserPermissions = $null
 $FolderPermissions = $null
 
 
-if ($env:COMPUTERNAME) {
-    $ThisHostname = $env:COMPUTERNAME
-} else {
-    $ThisHostname = HOSTNAME.EXE
-}
+$ThisHostname = HOSTNAME.EXE
 $WhoAmI = whoami.exe
 $LogParams = @{
     ThisHostname = $ThisHostname
@@ -7443,7 +7439,7 @@ if ($OpenReportAtEnd) {
 }
 
 $LogFile = "$LogDir\Export-Permission.log"
-$Global:LogMessages.Values |
+$LogMsgCache.Values |
 Sort-Object -Property Timestamp |
 Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
 
