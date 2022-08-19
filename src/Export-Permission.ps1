@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.122
+.VERSION 0.0.123
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Improved logging support via a single thread-safe hashtable to cache all log messages
+Integrate bugfix in Permission module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Improved logging support via a single thread-safe hashtable to cache all log mes
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -516,7 +517,7 @@ if ($ThreadCount -eq 1) {
         InputParameter       = 'InputObject'
         ObjectStringProperty = 'IdentityReference'
         TodaysHostname       = $ThisHostname
-        DebugOutputStream    = 'Debug'
+        #DebugOutputStream    = 'Debug'
         WhoAmI               = $WhoAmI
         LogMsgCache          = $LogMsgCache
         AddParam             = @{

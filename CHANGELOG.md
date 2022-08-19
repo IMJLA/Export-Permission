@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.123] - 2022-08-19 - Integrate bugfix in Permission module
+
 ## [0.0.122] - 2022-08-19 - Improved logging support via a single thread-safe hashtable to cache all log messages
 
 ## [0.0.121] - 2022-08-17 - Had to create Resolve-Ace3 (identical clone of Resolve-Ace) for no known reason to solve an error, makes no sense

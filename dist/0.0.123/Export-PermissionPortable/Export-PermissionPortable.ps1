@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.122
+.VERSION 0.0.123
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Improved logging support via a single thread-safe hashtable to cache all log messages
+Integrate bugfix in Permission module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -6817,7 +6818,7 @@ function Get-FolderAccessList {
         Get-FolderAce -LiteralPath $ThisFolder -IncludeInherited
         if ($Subfolders) {
             $GetFolderAce = @{
-                Command           = Get-FolderAce
+                Command           = 'Get-FolderAce'
                 InputObject       = $Subfolders
                 InputParameter    = 'LiteralPath'
                 DebugOutputStream = $DebugOutputStream
@@ -7213,7 +7214,7 @@ if ($ThreadCount -eq 1) {
         InputParameter       = 'InputObject'
         ObjectStringProperty = 'IdentityReference'
         TodaysHostname       = $ThisHostname
-        DebugOutputStream    = 'Debug'
+        #DebugOutputStream    = 'Debug'
         WhoAmI               = $WhoAmI
         LogMsgCache          = $LogMsgCache
         AddParam             = @{
