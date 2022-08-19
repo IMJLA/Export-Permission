@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.120
+help version: 0.0.121
 locale: en-US
 Module Name:
 online version:
@@ -255,7 +255,7 @@ Add a warning that they are permissions from the DFS namespace server and could 
 ## PARAMETERS
 
 ### -ExcludeAccount
-Regular expressions matching names of Users or Groups to exclude from the HTML report
+Regular expressions matching names of security principals to exclude from the HTML report
 
 ```yaml
 Type: System.String[]
@@ -479,7 +479,7 @@ Accept wildcard characters: False
 ```
 
 ### -ThreadCount
-{{ Fill ThreadCount Description }}
+Number of asynchronous threads to use
 
 ```yaml
 Type: System.Int32

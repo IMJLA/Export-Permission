@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.121
+.VERSION 0.0.122
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Had to create Resolve-Ace3 (identical clone of Resolve-Ace) for no known reason to solve an error, makes no sense
+Improved logging support via a single thread-safe hashtable to cache all log messages
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -272,7 +273,7 @@ param (
     # Path to the item whose permissions to export
     [string]$TargetPath = 'C:\Test',
 
-    # Regular expressions matching names of Users or Groups to exclude from the HTML report
+    # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount,
 
     # Exclude empty groups from the HTML report
@@ -322,6 +323,7 @@ param (
     #>
     [scriptblock]$GroupNamingConvention = { $true },
 
+    # Number of asynchronous threads to use
     [int]$ThreadCount = 4,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
@@ -4573,13 +4575,17 @@ function Write-LogMsg {
         [bool]$PassThru = $false,
 
         # Hostname to use in the log messages and/or output object
-        [string]$ThisHostname = (HOSTNAME.EXE)
+        [string]$ThisHostname = (HOSTNAME.EXE),
+
+        # Hostname to use in the log messages and/or output object
+        [string]$WhoAmI = (whoami.EXE),
+
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     $Timestamp = Get-Date -Format s
     $OutputToPipeline = $false
-    $WhoAmI = whoami.exe
     $PSCallStack = Get-PSCallStack
 
     if ($AddPrefix) {
@@ -4620,7 +4626,7 @@ function Write-LogMsg {
     [string]$Guid = [guid]::NewGuid()
     [string]$Key = "$Timestamp$Guid"
 
-    $Global:LogMessages[$Key] = [pscustomobject]@{
+    $LogMsgCache[$Key] = [pscustomobject]@{
         Timestamp = $Timestamp
         Hostname  = $ThisHostname
         WhoAmI    = $WhoAmI
@@ -4686,19 +4692,35 @@ function Add-PsCommand {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     begin {
 
-        if ($CommandInfo -eq $null) {
-            $CommandInfo = Get-PsCommandInfo -Command $Command
+        $LogParams = @{
+            LogMsgCache  = $LogMsgCache
+            ThisHostname = $TodaysHostname
+            Type         = $DebugOutputStream
+            WhoAmI       = $WhoAmI
         }
 
-        $LogParams = @{
-            Type         = $DebugOutputStream
-            ThisHostname = $TodaysHostname
+        $CommandInfoParams = @{
+            DebugOutputStream = $DebugOutputStream
+            TodaysHostname    = $TodaysHostname
+            WhoAmI            = $WhoAmI
+            LogMsgCache       = $LogMsgCache
+        }
+
+        if ($CommandInfo -eq $null) {
+            $CommandInfo = Get-PsCommandInfo @CommandInfoParams -Command $Command
         }
 
     }
@@ -4710,8 +4732,8 @@ function Add-PsCommand {
 
                 'Alias' {
                     # Resolve the alias to its command and start from the beginning with that command.
-                    $CommandInfo = Get-PsCommandInfo -Command $CommandInfo.CommandInfo.Definition -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
-                    $null = Add-PsCommand -Command $CommandInfo.CommandInfo.Definition -CommandInfo $CommandInfo -PowershellInterface $ThisPowerShell -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+                    $CommandInfo = Get-PsCommandInfo @CommandInfoParams -Command $CommandInfo.CommandInfo.Definition
+                    $null = Add-PsCommand @CommandInfoParams -Command $CommandInfo.CommandInfo.Definition -CommandInfo $CommandInfo -PowershellInterface $ThisPowerShell
                 }
                 'Function' {
 
@@ -4782,15 +4804,24 @@ function Add-PsModule {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     begin {
 
         $LogParams = @{
-            Type         = $DebugOutputStream
+            LogMsgCache  = $LogMsgCache
             ThisHostname = $TodaysHostname
+            Type         = $DebugOutputStream
+            WhoAmI       = $WhoAmI
         }
 
     }
@@ -4836,9 +4867,25 @@ function Convert-FromPsCommandInfoToString {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
+    begin {
+        $CommandInfoParams = @{
+            DebugOutputStream = $DebugOutputStream
+            TodaysHostname    = $TodaysHostname
+            WhoAmI            = $WhoAmI
+            LogMsgCache       = $LogMsgCache
+        }
+    }
+
     process {
         ForEach ($ThisCmd in $CommandInfo) {
 
@@ -4846,8 +4893,8 @@ function Convert-FromPsCommandInfoToString {
 
                 'Alias' {
                     # Resolve the alias to its command and start from the beginning with that command
-                    $ThisCmd = Get-PsCommandInfo -Command $ThisCmd.CommandInfo.Definition -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
-                    Convert-FromPsCommandInfoToString -CommandInfo $ThisCmd -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+                    $ThisCmd = Get-PsCommandInfo @CommandInfoParams -Command $ThisCmd.CommandInfo.Definition
+                    Convert-FromPsCommandInfoToString @CommandInfoParams -CommandInfo $ThisCmd
                 }
                 'Function' {
                     "function $($ThisCmd.CommandInfo.Name) {`r`n$($ThisCmd.CommandInfo.Definition)`r`n}"
@@ -4885,8 +4932,22 @@ function Expand-PsCommandInfo {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
     )
+
+    $CommandInfoParams = @{
+        DebugOutputStream = $DebugOutputStream
+        TodaysHostname    = $TodaysHostname
+        WhoAmI            = $WhoAmI
+        LogMsgCache       = $LogMsgCache
+    }
 
     # Add the first object to the cache
     if (-not $PsCommandInfo.CommandInfo.Name) {
@@ -4924,14 +4985,14 @@ function Expand-PsCommandInfo {
     ForEach ($ThisCommandToken in $CommandTokens) {
         if (
             -not $Cache[$ThisCommandToken.Value] -and
-            $ThisCommandToken.Value -notmatch '[\.\\]' # This excludes any file paths since they are not PowerShell commands with tokenizable definitions (they contain \ or .)
+            $ThisCommandToken.Value -notmatch '[\.\\]' # Exclude any file paths since they are not PowerShell commands with tokenizable definitions (they contain \ or .)
         ) {
-            $TokenCommandInfo = Get-PsCommandInfo -Command $ThisCommandToken.Value -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+            $TokenCommandInfo = Get-PsCommandInfo @CommandInfoParams -Command $ThisCommandToken.Value
             $Cache[$ThisCommandToken.Value] = $TokenCommandInfo
 
             # Suppress the output of the Expand-PsCommandInfo function because we will instead be using the updated cache contents
             # This way the results are already deduplicated for us by the hashtable
-            $null = Expand-PsCommandInfo -PsCommandInfo $TokenCommandInfo -Cache $Cache -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+            $null = Expand-PsCommandInfo @CommandInfoParams -PsCommandInfo $TokenCommandInfo -Cache $Cache
         }
     }
 
@@ -5015,13 +5076,22 @@ function Get-PsCommandInfo {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     $LogParams = @{
-        Type         = $DebugOutputStream
+        LogMsgCache  = $LogMsgCache
         ThisHostname = $TodaysHostname
+        Type         = $DebugOutputStream
+        WhoAmI       = $WhoAmI
     }
 
     if ($Command.GetType().FullName -eq 'System.Management.Automation.ScriptBlock') {
@@ -5116,16 +5186,31 @@ function Open-Thread {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     begin {
 
-
         $LogParams = @{
-            Type         = $DebugOutputStream
+            LogMsgCache  = $LogMsgCache
             ThisHostname = $TodaysHostname
+            Type         = $DebugOutputStream
+            WhoAmI       = $WhoAmI
+        }
+
+        $CommandInfoParams = @{
+            DebugOutputStream = $DebugOutputStream
+            TodaysHostname    = $TodaysHostname
+            WhoAmI            = $WhoAmI
+            LogMsgCache       = $LogMsgCache
         }
 
         [int64]$CurrentObjectIndex = 0
@@ -5166,7 +5251,7 @@ function Open-Thread {
             $null = $ScriptDefinition.AppendLine("`r`n)`r`n")
 
             # Define the command in the script ($Command)
-            Convert-FromPsCommandInfoToString -CommandInfo $CommandInfo -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname |
+            Convert-FromPsCommandInfoToString @CommandInfoParams -CommandInfo $CommandInfo |
             ForEach-Object {
                 $null = $ScriptDefinition.AppendLine("`r`n$_")
             }
@@ -5217,9 +5302,9 @@ function Open-Thread {
             $null = $PowershellInterface.Commands.Clear()
 
             if ($ScriptBlock) {
-                $null = Add-PsCommand -Command $ScriptBlock -PowershellInterface $PowershellInterface -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+                $null = Add-PsCommand @CommandInfoParams -Command $ScriptBlock -PowershellInterface $PowershellInterface
             } else {
-                $null = Add-PsCommand -Command $Command -CommandInfo $CommandInfo -PowershellInterface $PowershellInterface -Force -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+                $null = Add-PsCommand @CommandInfoParams -Command $Command -CommandInfo $CommandInfo -PowershellInterface $PowershellInterface -Force
             }
 
             # Prepare to pass $InputObject into the runspace as a parameter not an argument
@@ -5364,17 +5449,32 @@ function Split-Thread {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     begin {
 
         $LogParams = @{
-            Type         = $DebugOutputStream
+            LogMsgCache  = $LogMsgCache
             ThisHostname = $TodaysHostname
+            Type         = $DebugOutputStream
+            WhoAmI       = $WhoAmI
         }
 
+        $CommandInfoParams = @{
+            DebugOutputStream = $DebugOutputStream
+            TodaysHostname    = $TodaysHostname
+            WhoAmI            = $WhoAmI
+            LogMsgCache       = $LogMsgCache
+        }
         Write-LogMsg @LogParams -Text " # Entered begin block for '$Command'"
 
         Write-LogMsg @LogParams -Text "`$InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault() # for '$Command'"
@@ -5382,10 +5482,10 @@ function Split-Thread {
 
         # Import the source module containing the specified Command in each thread
 
-        $OriginalCommandInfo = Get-PsCommandInfo -Command $Command -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+        $OriginalCommandInfo = Get-PsCommandInfo @CommandInfoParams -Command $Command
         Write-LogMsg @LogParams -Text " # Found 1 original PsCommandInfo for '$Command'"
 
-        $CommandInfo = Expand-PsCommandInfo -PsCommandInfo $OriginalCommandInfo -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+        $CommandInfo = Expand-PsCommandInfo @CommandInfoParams -PsCommandInfo $OriginalCommandInfo
         Write-LogMsg @LogParams -Text " # Found $(($CommandInfo | Measure-Object).Count) nested PsCommandInfos for '$Command' ($($CommandInfo.CommandInfo.Name -join ','))"
 
         # Prepare our collection of PowerShell modules to import in each thread
@@ -5416,7 +5516,7 @@ function Split-Thread {
         Write-LogMsg @LogParams -Text " # Found $(($CommandsToAdd | Measure-Object).Count) remaining PsCommandInfos to define for '$Command' (not in modules: $($CommandsToAdd.CommandInfo.Name -join ','))"
 
         if ($ModulesToAdd.Count -gt 0) {
-            $null = Add-PsModule -InitialSessionState $InitialSessionState -ModuleInfo $ModulesToAdd -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+            $null = Add-PsModule -InitialSessionState $InitialSessionState -ModuleInfo $ModulesToAdd @CommandInfoParams
         }
 
         # Set the preference variables for PowerShell output streams in each thread to match the current preferences
@@ -5470,10 +5570,24 @@ function Split-Thread {
             CommandInfo          = $CommandsToAdd
             RunspacePool         = $RunspacePool
             DebugOutputStream    = $DebugOutputStream
+            WhoAmI               = $WhoAmI
+            LogMsgCache          = $LogMsgCache
         }
         $AllThreads = Open-Thread @ThreadParameters
         Write-LogMsg @LogParams -Text " # Received $(($AllThreads | Measure-Object).Count) threads from Open-Thread for $Command"
-        Wait-Thread -Thread $AllThreads -Threads $Threads -SleepTimer $SleepTimer -Timeout $Timeout -Dispose -DebugOutputStream $DebugOutputStream -TodaysHostname $TodaysHostname
+
+        $ThreadParameters = @{
+            Thread            = $AllThreads
+            Threads           = $Threads
+            SleepTimer        = $SleepTimer
+            Timeout           = $Timeout
+            Dispose           = $true
+            DebugOutputStream = $DebugOutputStream
+            TodaysHostname    = $TodaysHostname
+            WhoAmI            = $WhoAmI
+            LogMsgCache       = $LogMsgCache
+        }
+        Wait-Thread @ThreadParameters
         $VerbosePreference = 'Continue'
 
         if ($Global:TimedOut -eq $false) {
@@ -5533,11 +5647,25 @@ function Wait-Thread {
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
-        [string]$TodaysHostname = (HOSTNAME.EXE)
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     begin {
+
+        $LogParams = @{
+            LogMsgCache  = $LogMsgCache
+            ThisHostname = $TodaysHostname
+            Type         = $DebugOutputStream
+            WhoAmI       = $WhoAmI
+        }
 
         $StopWatch = [System.Diagnostics.Stopwatch]::new()
         $StopWatch.Start()
@@ -5549,11 +5677,6 @@ function Wait-Thread {
         $RunspacePool = $FirstThread.PowershellInterface.RunspacePool
 
         $CommandString = $FirstThread.Command
-
-        $LogParams = @{
-            Type         = $DebugOutputStream
-            ThisHostname = $TodaysHostname
-        }
 
     }
 
@@ -6652,16 +6775,57 @@ ForEach ($ThisFile in $CSharpFiles) {
 
 function Get-FolderAccessList {
     param (
+
+        # Path to the item whose permissions to export
         $FolderTargets,
-        $LevelsOfSubfolders
+
+        <#
+        How many levels of subfolder to enumerate
+
+            Set to 0 to ignore all subfolders
+
+            Set to -1 (default) to recurse infinitely
+
+            Set to any whole number to enumerate that many levels
+        #>
+        $LevelsOfSubfolders,
+
+        # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
+        [string]$DebugOutputStream = 'Silent',
+
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$TodaysHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
+
     )
+    $LogParams = @{
+        LogMsgCache  = $LogMsgCache
+        ThisHostname = $TodaysHostname
+        Type         = $DebugOutputStream
+        WhoAmI       = $WhoAmI
+    }
+
     ForEach ($ThisFolder in $FolderTargets) {
         $Subfolders = $null
         $Subfolders = Get-Subfolder -TargetPath $ThisFolder -FolderRecursionDepth $LevelsOfSubfolders -ErrorAction Continue
-        Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tExport-Permission`tGet-FolderAccessList`tFolders (including parent): $($Subfolders.Count + 1)"
+        Write-LogMsg @LogParams -Text "Folders (including parent): $($Subfolders.Count + 1)"
         Get-FolderAce -LiteralPath $ThisFolder -IncludeInherited
         if ($Subfolders) {
-            Split-Thread -Command Get-FolderAce -InputObject $Subfolders -InputParameter LiteralPath
+            $GetFolderAce = @{
+                Command           = Get-FolderAce
+                InputObject       = $Subfolders
+                InputParameter    = 'LiteralPath'
+                DebugOutputStream = $DebugOutputStream
+                TodaysHostname    = $TodaysHostname
+                WhoAmI            = $WhoAmI
+                LogMsgCache       = $LogMsgCache
+            }
+            Split-Thread @GetFolderAce
         }
     }
 }
@@ -6903,11 +7067,12 @@ Write-Information $TranscriptFile
 $DirectoryEntryCache = [hashtable]::Synchronized(@{})
 $IdentityReferenceCache = [hashtable]::Synchronized(@{})
 $AdsiServersByDns = [hashtable]::Synchronized(@{})
-$Win32AccountsBySID = ([hashtable]::Synchronized(@{}))
-$Win32AccountsByCaption = ([hashtable]::Synchronized(@{}))
-$DomainsBySID = ([hashtable]::Synchronized(@{}))
-$DomainsByNetbios = ([hashtable]::Synchronized(@{}))
-$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
+$Win32AccountsBySID = [hashtable]::Synchronized(@{})
+$Win32AccountsByCaption = [hashtable]::Synchronized(@{})
+$DomainsBySID = [hashtable]::Synchronized(@{})
+$DomainsByNetbios = [hashtable]::Synchronized(@{})
+$DomainsByFqdn = [hashtable]::Synchronized(@{})
+$LogMsgCache = [hashtable]::Synchronized(@{})
 $Permissions = $null
 $FolderTargets = $null
 $SecurityPrincipals = $null
@@ -6915,22 +7080,30 @@ $FormattedSecurityPrincipals = $null
 $DedupedUserPermissions = $null
 $FolderPermissions = $null
 
+
 if ($env:COMPUTERNAME) {
     $ThisHostname = $env:COMPUTERNAME
 } else {
     $ThisHostname = HOSTNAME.EXE
 }
+$WhoAmI = whoami.exe
+$LogParams = @{
+    ThisHostname = $ThisHostname
+    Type         = 'Debug'
+    LogMsgCache  = $LogMsgCache
+    WhoAmI       = $WhoAmI
+}
 
 #----------------[ Main Execution ]---------------
 
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
+Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
 $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
+Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
 $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderTarget -FolderPath '$TargetPath'"
+Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$TargetPath'"
 $FolderTargets = Get-FolderTarget -FolderPath $TargetPath
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
-$Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels
+Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
+$Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels -TodaysHostname $ThisHostname -WhoAmI $WhoAmI -LogMsgCache $LogMsgCache
 
 # If $TargetPath was on a local disk such as C:\
 # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
@@ -6939,7 +7112,7 @@ $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfo
 # As a workaround here we will instead get the folder ACL for the original $TargetPath
 # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
 if ($null -eq $Permissions) {
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderAccessList -FolderTargets '$TargetPath' -LevelsOfSubfolders $SubfolderLevels"
+    Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$TargetPath' -LevelsOfSubfolders $SubfolderLevels"
     $Permissions = Get-FolderAccessList -FolderTargets $TargetPath -LevelsOfSubfolders $SubfolderLevels
 }
 
@@ -6965,7 +7138,7 @@ ForEach-Object { Find-ServerNameInPath -LiteralPath $_ }
 # Populate two caches of known domains
 # The first cache is keyed by SID
 # The second cache is keyed by NETBIOS name
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-TrustedDomainSidNameMap"
+Write-LogMsg @LogParams -Text "Get-TrustedDomainSidNameMap"
 $null = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySID -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
 
 # Add the discovered domains to our list of known ADSI server names we can query
@@ -6990,7 +7163,7 @@ if ($ThreadCount -eq 1) {
     $UniqueServerNames |
     ForEach-Object {
         $GetAdsiServerParams['AdsiServer'] = $_
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-AdsiServer -AdsiServer '$_'"
+        Write-LogMsg @LogParams -Text "Get-AdsiServer -AdsiServer '$_'"
         $null = Get-AdsiServer @GetAdsiServerParams
     }
 } else {
@@ -7003,13 +7176,15 @@ if ($ThreadCount -eq 1) {
         InputObject    = $UniqueServerNames
         InputParameter = 'AdsiServer'
         TodaysHostname = $ThisHostname
+        WhoAmI         = $WhoAmI
+        LogMsgCache    = $LogMsgCache
         AddParam       = @{
             AdsiServersByDns       = $AdsiServersByDns
             Win32AccountsBySID     = $Win32AccountsBySID
             Win32AccountsByCaption = $Win32AccountsByCaption
         }
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
+    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
     $null = Split-Thread @GetAdsiServerParams
 }
 
@@ -7028,7 +7203,7 @@ if ($ThreadCount -eq 1) {
     $PermissionsWithResolvedIdentityReferences = $Permissions |
     ForEach-Object {
         $ResolveAceParams['InputObject'] = $_
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tResolve-Ace -InputObject $($_.IdentityReference)"
+        Write-LogMsg @LogParams -Text "Resolve-Ace -InputObject $($_.IdentityReference)"
         Resolve-Ace3 @ResolveAceParams
     }
 } else {
@@ -7039,6 +7214,8 @@ if ($ThreadCount -eq 1) {
         ObjectStringProperty = 'IdentityReference'
         TodaysHostname       = $ThisHostname
         DebugOutputStream    = 'Debug'
+        WhoAmI               = $WhoAmI
+        LogMsgCache          = $LogMsgCache
         AddParam             = @{
             AdsiServersByDns       = $AdsiServersByDns
             DirectoryEntryCache    = $DirectoryEntryCache
@@ -7049,7 +7226,7 @@ if ($ThreadCount -eq 1) {
             DomainsByFqdn          = $DomainsByFqdn
         }
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
+    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
     $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
 }
 
@@ -7085,7 +7262,7 @@ if ($ThreadCount -eq 1) {
     $SecurityPrincipals = $GroupedIdentities |
     ForEach-Object {
         $ExpandIdentityReferenceParams['AccessControlEntry'] = $_
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExpand-IdentityReference -AccessControlEntry $($_.Name)"
+        Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($_.Name)"
         Expand-IdentityReference @ExpandIdentityReferenceParams
     }
 } else {
@@ -7094,6 +7271,8 @@ if ($ThreadCount -eq 1) {
         InputObject          = $GroupedIdentities
         InputParameter       = 'AccessControlEntry'
         TodaysHostname       = $ThisHostname
+        WhoAmI               = $WhoAmI
+        LogMsgCache          = $LogMsgCache
         AddParam             = @{
             DirectoryEntryCache    = $DirectoryEntryCache
             IdentityReferenceCache = $IdentityReferenceCache
@@ -7105,7 +7284,7 @@ if ($ThreadCount -eq 1) {
     if ($NoGroupMembers) {
         $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
+    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
     $SecurityPrincipals = Split-Thread @ExpandIdentityReferenceParams
 }
 
@@ -7115,7 +7294,7 @@ if ($ThreadCount -eq 1) {
 if ($ThreadCount -eq 1) {
     $FormattedSecurityPrincipals = $SecurityPrincipals |
     ForEach-Object {
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tFormat-SecurityPrincipal -SecurityPrincipal $($_.Name)"
+        Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($_.Name)"
         Format-SecurityPrincipal -SecurityPrincipal $_
     }
 } else {
@@ -7126,15 +7305,17 @@ if ($ThreadCount -eq 1) {
         Timeout              = 1200
         ObjectStringProperty = 'Name'
         TodaysHostname       = $ThisHostname
+        WhoAmI               = $WhoAmI
+        LogMsgCache          = $LogMsgCache
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSplit-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
+    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
     $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
 }
 
 if ($ThreadCount -eq 1) {
     $ExpandedAccountPermissions = $FormattedSecurityPrincipals |
     ForEach-Object {
-        Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExpand-AccountPermission -AccountPermission $($_.Name)"
+        Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($_.Name)"
         Expand-AccountPermission -AccountPermission $_
     }
 } else {
@@ -7143,12 +7324,13 @@ if ($ThreadCount -eq 1) {
     # This operation is a bunch simple type conversions, no queries are being performed
     # That makes it fast enough that it is not worth multi-threading
     $ExpandAccountPermissionParams = @{
-        Command        = 'Expand-AccountPermission'
-        InputObject    = $FormattedSecurityPrincipals
-        InputParameter = 'AccountPermission'
-        TodaysHostname = $ThisHostname
+        Command              = 'Expand-AccountPermission'
+        InputObject          = $FormattedSecurityPrincipals
+        InputParameter       = 'AccountPermission'
+        TodaysHostname       = $ThisHostname
+        ObjectStringProperty = 'Name'
     }
-    Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExpand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
+    Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
     $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
 }
 
@@ -7156,9 +7338,9 @@ if ($ThreadCount -eq 1) {
 #TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
 $CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
 
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`t`$ExpandedAccountPermissions |"
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`t`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tExport-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
+Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
+Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
+Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
 $ExpandedAccountPermissions |
 Select-Object -Property @{
     Label      = 'SourceAclPath'
@@ -7173,16 +7355,16 @@ Group-Object -Property User |
 Sort-Object -Property Name
 
 # Ensure accounts only appear once on the report if they exist in multiple domains
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tRemove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
+Write-LogMsg @LogParams -Text "Remove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
 $DedupedUserPermissions = Remove-DuplicatesAcrossIgnoredDomains -UserPermission $Accounts -DomainToIgnore $IgnoreDomain
 
 # Group the user permissions back into folder permissions for the report
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tFormat-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
+Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
 $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
 Group-Object -Property Folder |
 Sort-Object -Property Name
 
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSelect-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
+Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
 $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
 ConvertTo-Html -Fragment |
 New-BootstrapTable
@@ -7193,18 +7375,18 @@ $GetFolderPermissionsBlock = @{
     ExcludeEmptyGroups = $ExcludeEmptyGroups
     IgnoreDomain       = $IgnoreDomain
 }
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-FolderPermissionsBlock @GetFolderPermissionsBlock"
+Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
 $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
 
 ##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
 ### Convert-ToHtml will not expand in-line HTML, so we had to use semicolons as placeholders and will now replace them with line breaks.
 ##$HtmlFolderPermissions = $HtmlFolderPermissions -replace ' ; ','<br>'
 
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-BootstrapAlert -Class Dark -Text '$TargetPath'"
+Write-LogMsg @LogParams -Text "New-BootstrapAlert -Class Dark -Text '$TargetPath'"
 $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPath) $ReportDescription"
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-HtmlFolderList -FolderTableHeader `$FolderTableHeader -HtmlTableOfFolders `$HtmlTableOfFolders"
+Write-LogMsg @LogParams -Text "Get-HtmlFolderList -FolderTableHeader `$FolderTableHeader -HtmlTableOfFolders `$HtmlTableOfFolders"
 $FolderList = Get-HtmlFolderList -FolderTableHeader $FolderTableHeader -HtmlTableOfFolders $HtmlTableOfFolders
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
+Write-LogMsg @LogParams -Text "Get-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
 [string]$Body = Get-HtmlBody -FolderList $FolderList -HtmlFolderPermissions $HtmlFolderPermissions
 
 $ReportParameters = @{
@@ -7212,7 +7394,7 @@ $ReportParameters = @{
     Description = $ReportDescription
     Body        = $Body
 }
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-BootstrapReport @ReportParameters"
+Write-LogMsg @LogParams -Text "New-BootstrapReport @ReportParameters"
 $Report = New-BootstrapReport @ReportParameters
 
 # Save the Html report
@@ -7229,11 +7411,11 @@ $NtfsIssueParams = @{
     UserPermissions       = $Accounts
     GroupNamingConvention = $GroupNamingConvention
 }
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tNew-NtfsAclIssueReport @NtfsIssueParams"
+Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
 $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
 # Format the information as a custom XML sensor for Paessler PRTG Network Monitor
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tGet-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
+Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
 $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
 
 # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
@@ -7251,13 +7433,18 @@ $PrtgSensorParams = @{
     PrtgSensorPort     = $PrtgSensorPort
     PrtgSensorToken    = $PrtgSensorToken
 }
-Write-Debug "  $(Get-Date -Format s)`t$ThisHostname`tExport-Permission`tSend-PrtgXmlSensorOutput @PrtgSensorParams"
+Write-LogMsg @LogParams -Text "Send-PrtgXmlSensorOutput @PrtgSensorParams"
 Send-PrtgXmlSensorOutput @PrtgSensorParams
 
 # Open the HTML report file (useful only interactively)
 if ($OpenReportAtEnd) {
     Invoke-Item $ReportFile
 }
+
+$LogFile = "$LogDir\Export-Permission.log"
+$Global:LogMessages.Values |
+Sort-Object -Property Timestamp |
+Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
 
 Stop-Transcript  *>$null
 

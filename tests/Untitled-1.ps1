@@ -1,5 +1,6 @@
 
 
+
 ## This one works
 #$TestPermission = $Permissions | Where-Object -FilterScript { $_.IdentityReference -eq 'S-1-5-32-544' }
 
