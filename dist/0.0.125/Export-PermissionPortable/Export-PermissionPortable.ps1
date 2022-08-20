@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.124
+.VERSION 0.0.125
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Using hostname.exe instead of environment var due to maintaining configured capitalization of the hostname
+Now the pipeline support should actually halfway work
 
 .PRIVATEDATA
 
@@ -58,7 +58,7 @@ Using hostname.exe instead of environment var due to maintaining configured capi
     - Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 
     Supports these scenarios:
-    - local file paths (resolves them to their UNC paths using the administrative shares, so that the computer name is shown in the reports)
+    - local file paths (resolved to UNC paths using the administrative shares, so the computer name is shown in the reports)
     - UNC file paths
     - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
@@ -74,14 +74,14 @@ Using hostname.exe instead of environment var due to maintaining configured capi
     - Exports the permissions to a .csv file
     - Uses ADSI to get information about the accounts and groups listed in the permissions
     - Exports information about the accounts and groups to a .csv file
-    - Uses ADSI to recursively retrieve the members of nested groups
-        - For a significant performance improvement, the entire chain of group memberships is not retrieved
-        - Nested group members are retrieved, but nested groups themselves are not (only the group directly listed in the permissions)
+    - Uses ADSI to recursively retrieve group members
+        - The entire chain of group memberships is not retrieved (for performance reasons)
+        - This means nested group members are retrieved, but nested groups themselves are not
     - Exports information about all accounts with access to a .csv file
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
-    None. Pipeline input is not accepted.
+    [System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
@@ -95,11 +95,10 @@ Using hostname.exe instead of environment var due to maintaining configured capi
 
     ToDo:
     - Expand-IdentityReference should not call Search-Directory when the account name is an unresolved SID
-    - Investigate - FileInfo or DirectoryInfo rather than string for target folder input param.  Will a string auto-cast to these types if sent as input? I think it will.  Add Test-Path input validation script too.
-    - Investigate - Looks like we are filtering out ignored domains in 2 places?  redundant?  Why is the IgnoreDomain syntax regex with slashes required? (works but should not be required, that makes no sense)
-    - Investigate - What happens if an ACE contains a SID that is in an object's SID history?
     - Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.  Add debug output suffix "# For $ComputerName" so debug is easier to read
-    - Consider combining PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
+    - Investigate - Are we filtering out ignored domains in 2 places?  redundant?  Why is the IgnoreDomain syntax regex with slashes required? (works but should not be required, that makes no sense)
+    - Investigate - What happens if an ACE contains a SID that is in an object's SID history?
+    - Investigate - Combine PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
     - Consider implementing universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER
         - WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
         - WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
@@ -127,8 +126,11 @@ Using hostname.exe instead of environment var due to maintaining configured capi
     - Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
     - Feature - Support ACLs from Registry or AD objects
     - Feature - Parameter to retrieve entire group membership chain
-    - Feature - Parameter to retrieve entire directory of known directories, cache in memory. Faster?
+    - Feature - Parameter to retrieve entire directory of known directories, cache in memory. Faster?  Threshold of n identityreferences where it makes sense?
     - Feature - Implement Send-MailKitMessage module
+    - Feature - Normalize hostname and username capitalization; for example whoami output is all lowercase even if hostname and username are not
+    - Feature - DNS names should all end in ., NetBIOS names should not.
+    - Feature - Use DNS wherever possible.  Use FQDNs wherever possible.  Except a -NetBIOS switch to use NetBIOS for brevity in HTML?
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
@@ -271,8 +273,10 @@ Using hostname.exe instead of environment var due to maintaining configured capi
 #>
 param (
 
-    # Path to the item whose permissions to export
-    [string]$TargetPath = 'C:\Test',
+    # Path to the NTFS folder whose permissions to export
+    [Parameter(ValueFromPipeline)]
+    [ValidateScript({ Test-Path $_ })]
+    [System.IO.DirectoryInfo[]]$TargetPath = 'C:\Test',
 
     # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount,
@@ -287,7 +291,7 @@ param (
     #>
     [string[]]$IgnoreDomain,
 
-    # Path to save the logs and reports generated by this script
+    # Path to the folder to save the logs and reports generated by this script
     [string]$LogDir = "$env:AppData\Export-Permission\Logs",
 
     # Do not get group members (only report the groups themselves)
@@ -360,7 +364,9 @@ param (
 
 )
 
-#----------------[ Functions ]------------------
+begin {
+
+    #----------------[ Functions ]------------------
 
 # Definition of Module 'Adsi' is below
 
@@ -7058,395 +7064,416 @@ ForEach ($ThisFile in $CSharpFiles) {
 
 #----------------[ Logging ]----------------
 
-$LogDir = New-DatedSubfolder -Root $LogDir
-$TranscriptFile = "$LogDir\Transcript.log"
-Start-Transcript $TranscriptFile *>$null
-Write-Information $TranscriptFile
+    $LogDir = New-DatedSubfolder -Root $LogDir
+    $TranscriptFile = "$LogDir\Transcript.log"
+    Start-Transcript $TranscriptFile *>$null
+    Write-Information $TranscriptFile
 
-#----------------[ Declarations ]----------------
+    #----------------[ Declarations ]----------------
 
-$DirectoryEntryCache = [hashtable]::Synchronized(@{})
-$IdentityReferenceCache = [hashtable]::Synchronized(@{})
-$AdsiServersByDns = [hashtable]::Synchronized(@{})
-$Win32AccountsBySID = [hashtable]::Synchronized(@{})
-$Win32AccountsByCaption = [hashtable]::Synchronized(@{})
-$DomainsBySID = [hashtable]::Synchronized(@{})
-$DomainsByNetbios = [hashtable]::Synchronized(@{})
-$DomainsByFqdn = [hashtable]::Synchronized(@{})
-$LogMsgCache = [hashtable]::Synchronized(@{})
-$Permissions = $null
-$FolderTargets = $null
-$SecurityPrincipals = $null
-$FormattedSecurityPrincipals = $null
-$DedupedUserPermissions = $null
-$FolderPermissions = $null
+    $DirectoryEntryCache = [hashtable]::Synchronized(@{})
+    $IdentityReferenceCache = [hashtable]::Synchronized(@{})
+    $AdsiServersByDns = [hashtable]::Synchronized(@{})
+    $Win32AccountsBySID = [hashtable]::Synchronized(@{})
+    $Win32AccountsByCaption = [hashtable]::Synchronized(@{})
+    $DomainsBySID = [hashtable]::Synchronized(@{})
+    $DomainsByNetbios = [hashtable]::Synchronized(@{})
+    $DomainsByFqdn = [hashtable]::Synchronized(@{})
+    $LogMsgCache = [hashtable]::Synchronized(@{})
+    $Permissions = $null
+    $FolderTargets = $null
+    $SecurityPrincipals = $null
+    $FormattedSecurityPrincipals = $null
+    $DedupedUserPermissions = $null
+    $FolderPermissions = $null
 
+    $ThisHostname = HOSTNAME.EXE
+    $WhoAmI = whoami.exe
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = 'Debug'
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
 
-$ThisHostname = HOSTNAME.EXE
-$WhoAmI = whoami.exe
-$LogParams = @{
-    ThisHostname = $ThisHostname
-    Type         = 'Debug'
-    LogMsgCache  = $LogMsgCache
-    WhoAmI       = $WhoAmI
+    $AclParams = @{
+        LevelsOfSubfolders = $SubfolderLevels
+        TodaysHostname     = $ThisHostname
+        WhoAmI             = $WhoAmI
+        LogMsgCache        = $LogMsgCache
+    }
+
+    Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
+    $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
+    Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
+    $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
+
 }
 
 #----------------[ Main Execution ]---------------
 
-Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
-$ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
-Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
-$FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
-Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$TargetPath'"
-$FolderTargets = Get-FolderTarget -FolderPath $TargetPath
-Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
-$Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels -TodaysHostname $ThisHostname -WhoAmI $WhoAmI -LogMsgCache $LogMsgCache
+process {
 
-# If $TargetPath was on a local disk such as C:\
-# The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
-# Unfortunately if it is the root of that local disk, Get-FolderAccessList's dependency Get-Item is unable to retrieve a DirectoryInfo object for the root of the share
-# (error: "Could not find item")
-# As a workaround here we will instead get the folder ACL for the original $TargetPath
-# But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
-if ($null -eq $Permissions) {
-    Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$TargetPath' -LevelsOfSubfolders $SubfolderLevels"
-    $Permissions = Get-FolderAccessList -FolderTargets $TargetPath -LevelsOfSubfolders $SubfolderLevels
-}
+    ForEach ($ThisTargetPath in $TargetPath) {
 
-# Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
-$CsvFilePath = "$LogDir\1-AccessControlEntries.csv"
+        Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$TargetPath'"
+        $FolderTargets = Get-FolderTarget -FolderPath $TargetPath
+        Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
+        $Permissions = Get-FolderAccessList @AclParams -FolderTargets $FolderTargets
 
-$Permissions |
-Select-Object -Property @{
-    Label      = 'Path'
-    Expression = { $_.SourceAccessList.Path }
-}, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags |
-Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
-
-Write-Information $CsvFilePath
-
-# Identify unique directory servers to populate into the AdsiServersByDns cache
-# This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
-# This prevents repetitive queries to the same directory servers
-[string[]]$UniqueServerNames = $Permissions.SourceAccessList.Path |
-Sort-Object -Unique |
-ForEach-Object { Find-ServerNameInPath -LiteralPath $_ }
-
-# Populate two caches of known domains
-# The first cache is keyed by SID
-# The second cache is keyed by NETBIOS name
-Write-LogMsg @LogParams -Text "Get-TrustedDomainSidNameMap"
-$null = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySID -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
-
-# Add the discovered domains to our list of known ADSI server names we can query
-$DomainsByNetbios.Keys | ForEach-Object {
-    $UniqueServerNames += $DomainsByNetbios[$_].Dns
-}
-
-$UniqueServerNames = $UniqueServerNames |
-Sort-Object -Unique
-
-if ($ThreadCount -eq 1) {
-    # Populate the AdsiServersByDns cache of known ADSI servers
-    # Populate two caches of known Win32_Account instances
-    # The first cache is keyed on SID (e.g. S-1-5-2)
-    # The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
-
-    $GetAdsiServerParams = @{
-        AdsiServersByDns       = $AdsiServersByDns
-        Win32AccountsBySID     = $Win32AccountsBySID
-        Win32AccountsByCaption = $Win32AccountsByCaption
-    }
-    $UniqueServerNames |
-    ForEach-Object {
-        $GetAdsiServerParams['AdsiServer'] = $_
-        Write-LogMsg @LogParams -Text "Get-AdsiServer -AdsiServer '$_'"
-        $null = Get-AdsiServer @GetAdsiServerParams
-    }
-} else {
-    # Populate the AdsiServersByDns cache of known ADSI servers
-    # Populate two caches of known Win32_Account instances
-    # The first cache is keyed on SID (e.g. S-1-5-2)
-    # The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
-    $GetAdsiServerParams = @{
-        Command        = 'Get-AdsiServer'
-        InputObject    = $UniqueServerNames
-        InputParameter = 'AdsiServer'
-        TodaysHostname = $ThisHostname
-        WhoAmI         = $WhoAmI
-        LogMsgCache    = $LogMsgCache
-        AddParam       = @{
-            AdsiServersByDns       = $AdsiServersByDns
-            Win32AccountsBySID     = $Win32AccountsBySID
-            Win32AccountsByCaption = $Win32AccountsByCaption
+        # If $TargetPath was on a local disk such as C:\
+        # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
+        # Unfortunately if it is the root of that local disk, Get-FolderAccessList's dependency Get-Item is unable to retrieve a DirectoryInfo object for the root of the share
+        # (error: "Could not find item")
+        # As a workaround here we will instead get the folder ACL for the original $TargetPath
+        # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
+        if ($null -eq $Permissions) {
+            Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$TargetPath' -LevelsOfSubfolders $SubfolderLevels"
+            $Permissions = Get-FolderAccessList @AclParams -FolderTargets $TargetPath
         }
-    }
-    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
-    $null = Split-Thread @GetAdsiServerParams
-}
 
-# Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
-# The resolved name includes the domain name (or local computer name for local accounts)
-if ($ThreadCount -eq 1) {
-    $ResolveAceParams = @{
-        AdsiServersByDns       = $AdsiServersByDns
-        DirectoryEntryCache    = $DirectoryEntryCache
-        Win32AccountsBySID     = $Win32AccountsBySID
-        Win32AccountsByCaption = $Win32AccountsByCaption
-        DomainsBySID           = $DomainsBySID
-        DomainsByNetbios       = $DomainsByNetbios
-        DomainsByFqdn          = $DomainsByFqdn
-    }
-    $PermissionsWithResolvedIdentityReferences = $Permissions |
-    ForEach-Object {
-        $ResolveAceParams['InputObject'] = $_
-        Write-LogMsg @LogParams -Text "Resolve-Ace -InputObject $($_.IdentityReference)"
-        Resolve-Ace3 @ResolveAceParams
-    }
-} else {
-    $ResolveAceParams = @{
-        Command              = 'Resolve-Ace3'
-        InputObject          = $Permissions
-        InputParameter       = 'InputObject'
-        ObjectStringProperty = 'IdentityReference'
-        TodaysHostname       = $ThisHostname
-        #DebugOutputStream    = 'Debug'
-        WhoAmI               = $WhoAmI
-        LogMsgCache          = $LogMsgCache
-        AddParam             = @{
-            AdsiServersByDns       = $AdsiServersByDns
-            DirectoryEntryCache    = $DirectoryEntryCache
-            Win32AccountsBySID     = $Win32AccountsBySID
-            Win32AccountsByCaption = $Win32AccountsByCaption
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsByFqdn          = $DomainsByFqdn
+        # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
+        $CsvFilePath = "$LogDir\1-AccessControlEntries.csv"
+
+        $Permissions |
+        Select-Object -Property @{
+            Label      = 'Path'
+            Expression = { $_.SourceAccessList.Path }
+        }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags |
+        Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
+
+        Write-Information $CsvFilePath
+
+        # Identify unique directory servers to populate into the AdsiServersByDns cache
+        # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
+        # This prevents repetitive queries to the same directory servers
+        [string[]]$UniqueServerNames = $Permissions.SourceAccessList.Path |
+        Sort-Object -Unique |
+        ForEach-Object { Find-ServerNameInPath -LiteralPath $_ }
+
+        # Populate two caches of known domains
+        # The first cache is keyed by SID
+        # The second cache is keyed by NETBIOS name
+        Write-LogMsg @LogParams -Text "Get-TrustedDomainSidNameMap"
+        $null = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySID -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
+
+        # Add the discovered domains to our list of known ADSI server names we can query
+        $DomainsByNetbios.Keys | ForEach-Object {
+            $UniqueServerNames += $DomainsByNetbios[$_].Dns
         }
-    }
-    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
-    $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
-}
 
-# Save a CSV report of the resolved identity references
-$CsvFilePath = "$LogDir\2-AccessControlEntriesWithResolvedIdentityReferences.csv"
+        $UniqueServerNames = $UniqueServerNames |
+        Sort-Object -Unique
 
-$PermissionsWithResolvedIdentityReferences |
-Select-Object -Property @{
-    Label      = 'Path'
-    Expression = { $_.SourceAccessList.Path }
-}, * |
-Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
+        if ($ThreadCount -eq 1) {
+            # Populate the AdsiServersByDns cache of known ADSI servers
+            # Populate two caches of known Win32_Account instances
+            # The first cache is keyed on SID (e.g. S-1-5-2)
+            # The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
 
-Write-Information $CsvFilePath
-
-# Group the Access Control Entries by their resolved identity references
-# This avoids repeat ADSI lookups for the same security principal
-$GroupedIdentities = $PermissionsWithResolvedIdentityReferences |
-Group-Object -Property IdentityReferenceResolved
-
-# Use ADSI to collect more information about each resolved identity reference
-
-if ($ThreadCount -eq 1) {
-    $ExpandIdentityReferenceParams = @{
-        DirectoryEntryCache    = $DirectoryEntryCache
-        IdentityReferenceCache = $IdentityReferenceCache
-        DomainsBySID           = $DomainsBySID
-        DomainsByNetbios       = $DomainsByNetbios
-    }
-    if ($NoGroupMembers) {
-        $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
-    }
-    $SecurityPrincipals = $GroupedIdentities |
-    ForEach-Object {
-        $ExpandIdentityReferenceParams['AccessControlEntry'] = $_
-        Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($_.Name)"
-        Expand-IdentityReference @ExpandIdentityReferenceParams
-    }
-} else {
-    $ExpandIdentityReferenceParams = @{
-        Command              = 'Expand-IdentityReference'
-        InputObject          = $GroupedIdentities
-        InputParameter       = 'AccessControlEntry'
-        TodaysHostname       = $ThisHostname
-        WhoAmI               = $WhoAmI
-        LogMsgCache          = $LogMsgCache
-        AddParam             = @{
-            DirectoryEntryCache    = $DirectoryEntryCache
-            IdentityReferenceCache = $IdentityReferenceCache
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
+            $GetAdsiServerParams = @{
+                AdsiServersByDns       = $AdsiServersByDns
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+            }
+            $UniqueServerNames |
+            ForEach-Object {
+                $GetAdsiServerParams['AdsiServer'] = $_
+                Write-LogMsg @LogParams -Text "Get-AdsiServer -AdsiServer '$_'"
+                $null = Get-AdsiServer @GetAdsiServerParams
+            }
+        } else {
+            # Populate the AdsiServersByDns cache of known ADSI servers
+            # Populate two caches of known Win32_Account instances
+            # The first cache is keyed on SID (e.g. S-1-5-2)
+            # The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
+            $GetAdsiServerParams = @{
+                Command        = 'Get-AdsiServer'
+                InputObject    = $UniqueServerNames
+                InputParameter = 'AdsiServer'
+                TodaysHostname = $ThisHostname
+                WhoAmI         = $WhoAmI
+                LogMsgCache    = $LogMsgCache
+                AddParam       = @{
+                    AdsiServersByDns       = $AdsiServersByDns
+                    Win32AccountsBySID     = $Win32AccountsBySID
+                    Win32AccountsByCaption = $Win32AccountsByCaption
+                }
+            }
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
+            $null = Split-Thread @GetAdsiServerParams
         }
-        ObjectStringProperty = 'Name'
+
+        # Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
+        # The resolved name includes the domain name (or local computer name for local accounts)
+        if ($ThreadCount -eq 1) {
+            $ResolveAceParams = @{
+                AdsiServersByDns       = $AdsiServersByDns
+                DirectoryEntryCache    = $DirectoryEntryCache
+                Win32AccountsBySID     = $Win32AccountsBySID
+                Win32AccountsByCaption = $Win32AccountsByCaption
+                DomainsBySID           = $DomainsBySID
+                DomainsByNetbios       = $DomainsByNetbios
+                DomainsByFqdn          = $DomainsByFqdn
+            }
+            $PermissionsWithResolvedIdentityReferences = $Permissions |
+            ForEach-Object {
+                $ResolveAceParams['InputObject'] = $_
+                Write-LogMsg @LogParams -Text "Resolve-Ace -InputObject $($_.IdentityReference)"
+                Resolve-Ace3 @ResolveAceParams
+            }
+        } else {
+            $ResolveAceParams = @{
+                Command              = 'Resolve-Ace3'
+                InputObject          = $Permissions
+                InputParameter       = 'InputObject'
+                ObjectStringProperty = 'IdentityReference'
+                TodaysHostname       = $ThisHostname
+                #DebugOutputStream    = 'Debug'
+                WhoAmI               = $WhoAmI
+                LogMsgCache          = $LogMsgCache
+                AddParam             = @{
+                    AdsiServersByDns       = $AdsiServersByDns
+                    DirectoryEntryCache    = $DirectoryEntryCache
+                    Win32AccountsBySID     = $Win32AccountsBySID
+                    Win32AccountsByCaption = $Win32AccountsByCaption
+                    DomainsBySID           = $DomainsBySID
+                    DomainsByNetbios       = $DomainsByNetbios
+                    DomainsByFqdn          = $DomainsByFqdn
+                }
+            }
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
+            $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
+        }
+
+        # Save a CSV report of the resolved identity references
+        $CsvFilePath = "$LogDir\2-AccessControlEntriesWithResolvedIdentityReferences.csv"
+
+        $PermissionsWithResolvedIdentityReferences |
+        Select-Object -Property @{
+            Label      = 'Path'
+            Expression = { $_.SourceAccessList.Path }
+        }, * |
+        Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
+
+        Write-Information $CsvFilePath
+
+        # Group the Access Control Entries by their resolved identity references
+        # This avoids repeat ADSI lookups for the same security principal
+        $GroupedIdentities = $PermissionsWithResolvedIdentityReferences |
+        Group-Object -Property IdentityReferenceResolved
+
+        # Use ADSI to collect more information about each resolved identity reference
+
+        if ($ThreadCount -eq 1) {
+            $ExpandIdentityReferenceParams = @{
+                DirectoryEntryCache    = $DirectoryEntryCache
+                IdentityReferenceCache = $IdentityReferenceCache
+                DomainsBySID           = $DomainsBySID
+                DomainsByNetbios       = $DomainsByNetbios
+            }
+            if ($NoGroupMembers) {
+                $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
+            }
+            $SecurityPrincipals = $GroupedIdentities |
+            ForEach-Object {
+                $ExpandIdentityReferenceParams['AccessControlEntry'] = $_
+                Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($_.Name)"
+                Expand-IdentityReference @ExpandIdentityReferenceParams
+            }
+        } else {
+            $ExpandIdentityReferenceParams = @{
+                Command              = 'Expand-IdentityReference'
+                InputObject          = $GroupedIdentities
+                InputParameter       = 'AccessControlEntry'
+                TodaysHostname       = $ThisHostname
+                WhoAmI               = $WhoAmI
+                LogMsgCache          = $LogMsgCache
+                AddParam             = @{
+                    DirectoryEntryCache    = $DirectoryEntryCache
+                    IdentityReferenceCache = $IdentityReferenceCache
+                    DomainsBySID           = $DomainsBySID
+                    DomainsByNetbios       = $DomainsByNetbios
+                }
+                ObjectStringProperty = 'Name'
+            }
+            if ($NoGroupMembers) {
+                $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
+            }
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
+            $SecurityPrincipals = Split-Thread @ExpandIdentityReferenceParams
+        }
+
+        # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
+        # Filter out groups (their members have already been retrieved)
+
+        if ($ThreadCount -eq 1) {
+            $FormattedSecurityPrincipals = $SecurityPrincipals |
+            ForEach-Object {
+                Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($_.Name)"
+                Format-SecurityPrincipal -SecurityPrincipal $_
+            }
+        } else {
+            $FormatSecurityPrincipalParams = @{
+                Command              = 'Format-SecurityPrincipal'
+                InputObject          = $SecurityPrincipals
+                InputParameter       = 'SecurityPrincipal'
+                Timeout              = 1200
+                ObjectStringProperty = 'Name'
+                TodaysHostname       = $ThisHostname
+                WhoAmI               = $WhoAmI
+                LogMsgCache          = $LogMsgCache
+            }
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
+            $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
+        }
+
+        if ($ThreadCount -eq 1) {
+            $ExpandedAccountPermissions = $FormattedSecurityPrincipals |
+            ForEach-Object {
+                Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($_.Name)"
+                Expand-AccountPermission -AccountPermission $_
+            }
+        } else {
+            # Expand the collection of security principals from Format-SecurityPrincipal
+            # back into a collection of access control entries (one per ACE per principal)
+            # This operation is a bunch simple type conversions, no queries are being performed
+            # That makes it fast enough that it is not worth multi-threading
+            $ExpandAccountPermissionParams = @{
+                Command              = 'Expand-AccountPermission'
+                InputObject          = $FormattedSecurityPrincipals
+                InputParameter       = 'AccountPermission'
+                TodaysHostname       = $ThisHostname
+                ObjectStringProperty = 'Name'
+            }
+            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
+            $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
+        }
+
+        # Save a CSV report of the expanded account permissions
+        #TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
+        $CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
+
+        Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
+        Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
+        Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
+        $ExpandedAccountPermissions |
+        Select-Object -Property @{
+            Label      = 'SourceAclPath'
+            Expression = { $_.ACESourceAccessList.Path }
+        }, * |
+        Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
+
+        Write-Information $CsvFilePath
+
+        $Accounts = $FormattedSecurityPrincipals |
+        Group-Object -Property User |
+        Sort-Object -Property Name
+
+        # Ensure accounts only appear once on the report if they exist in multiple domains
+        Write-LogMsg @LogParams -Text "Remove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
+        $DedupedUserPermissions = Remove-DuplicatesAcrossIgnoredDomains -UserPermission $Accounts -DomainToIgnore $IgnoreDomain
+
+        # Group the user permissions back into folder permissions for the report
+        Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
+        $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
+        Group-Object -Property Folder |
+        Sort-Object -Property Name
+
+        Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
+        $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
+        ConvertTo-Html -Fragment |
+        New-BootstrapTable
+
+        $GetFolderPermissionsBlock = @{
+            FolderPermissions  = $FolderPermissions
+            ExcludeAccount     = $ExcludeAccount
+            ExcludeEmptyGroups = $ExcludeEmptyGroups
+            IgnoreDomain       = $IgnoreDomain
+        }
+        Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
+        $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
+
+        ##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
+        ### Convert-ToHtml will not expand in-line HTML, so we had to use semicolons as placeholders and will now replace them with line breaks.
+        ##$HtmlFolderPermissions = $HtmlFolderPermissions -replace ' ; ','<br>'
+
+        Write-LogMsg @LogParams -Text "New-BootstrapAlert -Class Dark -Text '$TargetPath'"
+        $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPath) $ReportDescription"
+        Write-LogMsg @LogParams -Text "Get-HtmlFolderList -FolderTableHeader `$FolderTableHeader -HtmlTableOfFolders `$HtmlTableOfFolders"
+        $FolderList = Get-HtmlFolderList -FolderTableHeader $FolderTableHeader -HtmlTableOfFolders $HtmlTableOfFolders
+        Write-LogMsg @LogParams -Text "Get-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
+        [string]$Body = Get-HtmlBody -FolderList $FolderList -HtmlFolderPermissions $HtmlFolderPermissions
+
+        $ReportParameters = @{
+            Title       = $Title
+            Description = $ReportDescription
+            Body        = $Body
+        }
+        Write-LogMsg @LogParams -Text "New-BootstrapReport @ReportParameters"
+        $Report = New-BootstrapReport @ReportParameters
+
+        # Save the Html report
+        $ReportFile = "$LogDir\FolderPermissionsReport.html"
+        $Report | Set-Content -LiteralPath $ReportFile
+
+        # Output the name of the report file to the Information stream
+        Write-Information $ReportFile
+
+        # Report common issues with NTFS permissions (formatted as XML for PRTG)
+        # TODO: Users with ownership
+        $NtfsIssueParams = @{
+            FolderPermissions     = $FolderPermissions
+            UserPermissions       = $Accounts
+            GroupNamingConvention = $GroupNamingConvention
+        }
+        Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
+        $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
+
+        # Format the information as a custom XML sensor for Paessler PRTG Network Monitor
+        Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
+        $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
+
+        # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
+        $XmlFile = "$LogDir\PrtgSensorResult.xml"
+        $XMLOutput | Set-Content -LiteralPath $XmlFile
+
+        # Output the name of the report file to the Information stream
+        Write-Information $XmlFile
+
+        # Send the XML to a PRTG Custom XML Push sensor for tracking
+        $PrtgSensorParams = @{
+            XmlOutput          = $XMLOutput
+            PrtgProbe          = $PrtgProbe
+            PrtgSensorProtocol = $PrtgSensorProtocol
+            PrtgSensorPort     = $PrtgSensorPort
+            PrtgSensorToken    = $PrtgSensorToken
+        }
+        Write-LogMsg @LogParams -Text "Send-PrtgXmlSensorOutput @PrtgSensorParams"
+        Send-PrtgXmlSensorOutput @PrtgSensorParams
+
+        # Open the HTML report file (useful only interactively)
+        if ($OpenReportAtEnd) {
+            Invoke-Item $ReportFile
+        }
+
     }
-    if ($NoGroupMembers) {
-        $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
-    }
-    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
-    $SecurityPrincipals = Split-Thread @ExpandIdentityReferenceParams
+
 }
 
-# Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
-# Filter out groups (their members have already been retrieved)
+end {
 
-if ($ThreadCount -eq 1) {
-    $FormattedSecurityPrincipals = $SecurityPrincipals |
-    ForEach-Object {
-        Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($_.Name)"
-        Format-SecurityPrincipal -SecurityPrincipal $_
-    }
-} else {
-    $FormatSecurityPrincipalParams = @{
-        Command              = 'Format-SecurityPrincipal'
-        InputObject          = $SecurityPrincipals
-        InputParameter       = 'SecurityPrincipal'
-        Timeout              = 1200
-        ObjectStringProperty = 'Name'
-        TodaysHostname       = $ThisHostname
-        WhoAmI               = $WhoAmI
-        LogMsgCache          = $LogMsgCache
-    }
-    Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
-    $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
+    $LogFile = "$LogDir\Export-Permission.log"
+    $LogMsgCache.Values |
+    Sort-Object -Property Timestamp |
+    Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
+
+    Stop-Transcript  *>$null
+
+    # Output the XML so the script can be directly used as a PRTG sensor
+    # Caution: This use may be a problem for a PRTG probe because of how long the script can run on large folders/domains
+    # Recommendation: Specify the appropriate parameters to run this as a PRTG push sensor instead
+    return $XMLOutput
+
 }
-
-if ($ThreadCount -eq 1) {
-    $ExpandedAccountPermissions = $FormattedSecurityPrincipals |
-    ForEach-Object {
-        Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($_.Name)"
-        Expand-AccountPermission -AccountPermission $_
-    }
-} else {
-    # Expand the collection of security principals from Format-SecurityPrincipal
-    # back into a collection of access control entries (one per ACE per principal)
-    # This operation is a bunch simple type conversions, no queries are being performed
-    # That makes it fast enough that it is not worth multi-threading
-    $ExpandAccountPermissionParams = @{
-        Command              = 'Expand-AccountPermission'
-        InputObject          = $FormattedSecurityPrincipals
-        InputParameter       = 'AccountPermission'
-        TodaysHostname       = $ThisHostname
-        ObjectStringProperty = 'Name'
-    }
-    Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
-    $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
-}
-
-# Save a CSV report of the expanded account permissions
-#TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-$CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
-
-Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
-Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
-Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
-$ExpandedAccountPermissions |
-Select-Object -Property @{
-    Label      = 'SourceAclPath'
-    Expression = { $_.ACESourceAccessList.Path }
-}, * |
-Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
-
-Write-Information $CsvFilePath
-
-$Accounts = $FormattedSecurityPrincipals |
-Group-Object -Property User |
-Sort-Object -Property Name
-
-# Ensure accounts only appear once on the report if they exist in multiple domains
-Write-LogMsg @LogParams -Text "Remove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
-$DedupedUserPermissions = Remove-DuplicatesAcrossIgnoredDomains -UserPermission $Accounts -DomainToIgnore $IgnoreDomain
-
-# Group the user permissions back into folder permissions for the report
-Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
-$FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
-Group-Object -Property Folder |
-Sort-Object -Property Name
-
-Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
-$HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
-ConvertTo-Html -Fragment |
-New-BootstrapTable
-
-$GetFolderPermissionsBlock = @{
-    FolderPermissions  = $FolderPermissions
-    ExcludeAccount     = $ExcludeAccount
-    ExcludeEmptyGroups = $ExcludeEmptyGroups
-    IgnoreDomain       = $IgnoreDomain
-}
-Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
-$HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
-
-##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
-### Convert-ToHtml will not expand in-line HTML, so we had to use semicolons as placeholders and will now replace them with line breaks.
-##$HtmlFolderPermissions = $HtmlFolderPermissions -replace ' ; ','<br>'
-
-Write-LogMsg @LogParams -Text "New-BootstrapAlert -Class Dark -Text '$TargetPath'"
-$ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPath) $ReportDescription"
-Write-LogMsg @LogParams -Text "Get-HtmlFolderList -FolderTableHeader `$FolderTableHeader -HtmlTableOfFolders `$HtmlTableOfFolders"
-$FolderList = Get-HtmlFolderList -FolderTableHeader $FolderTableHeader -HtmlTableOfFolders $HtmlTableOfFolders
-Write-LogMsg @LogParams -Text "Get-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
-[string]$Body = Get-HtmlBody -FolderList $FolderList -HtmlFolderPermissions $HtmlFolderPermissions
-
-$ReportParameters = @{
-    Title       = $Title
-    Description = $ReportDescription
-    Body        = $Body
-}
-Write-LogMsg @LogParams -Text "New-BootstrapReport @ReportParameters"
-$Report = New-BootstrapReport @ReportParameters
-
-# Save the Html report
-$ReportFile = "$LogDir\FolderPermissionsReport.html"
-$Report | Set-Content -LiteralPath $ReportFile
-
-# Output the name of the report file to the Information stream
-Write-Information $ReportFile
-
-# Report common issues with NTFS permissions (formatted as XML for PRTG)
-# TODO: Users with ownership
-$NtfsIssueParams = @{
-    FolderPermissions     = $FolderPermissions
-    UserPermissions       = $Accounts
-    GroupNamingConvention = $GroupNamingConvention
-}
-Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
-$NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
-
-# Format the information as a custom XML sensor for Paessler PRTG Network Monitor
-Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
-$XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
-
-# Save the result of the custom XML sensor for Paessler PRTG Network Monitor
-$XmlFile = "$LogDir\PrtgSensorResult.xml"
-$XMLOutput | Set-Content -LiteralPath $XmlFile
-
-# Output the name of the report file to the Information stream
-Write-Information $XmlFile
-
-# Send the XML to a PRTG Custom XML Push sensor for tracking
-$PrtgSensorParams = @{
-    XmlOutput          = $XMLOutput
-    PrtgProbe          = $PrtgProbe
-    PrtgSensorProtocol = $PrtgSensorProtocol
-    PrtgSensorPort     = $PrtgSensorPort
-    PrtgSensorToken    = $PrtgSensorToken
-}
-Write-LogMsg @LogParams -Text "Send-PrtgXmlSensorOutput @PrtgSensorParams"
-Send-PrtgXmlSensorOutput @PrtgSensorParams
-
-# Open the HTML report file (useful only interactively)
-if ($OpenReportAtEnd) {
-    Invoke-Item $ReportFile
-}
-
-$LogFile = "$LogDir\Export-Permission.log"
-$LogMsgCache.Values |
-Sort-Object -Property Timestamp |
-Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
-
-Stop-Transcript  *>$null
-
-# Output the XML so the script can be directly used as a PRTG sensor
-# Caution: This use may be a problem for a PRTG probe because of how long the script can run on large folders/domains
-# Recommendation: Specify the appropriate parameters to run this as a PRTG push sensor instead
-return $XMLOutput
 

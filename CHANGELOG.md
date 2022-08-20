@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.125] - 2022-08-20 - Now the pipeline support should actually halfway work
+
 ## [0.0.124] - 2022-08-19 - Using hostname.exe instead of environment var due to maintaining configured capitalization of the hostname
 
 ## [0.0.123] - 2022-08-19 - Integrate bugfix in Permission module
