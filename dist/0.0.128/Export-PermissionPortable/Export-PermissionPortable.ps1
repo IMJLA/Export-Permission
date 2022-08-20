@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.127
+.VERSION 0.0.128
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Changed some integers to unsigned integers where appropriate
+Added blank lines for readability
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -7157,6 +7158,7 @@ process {
         # Identify server names from the item paths
         # Add the discovered server names to our list of known ADSI server names we can query to populate the AdsiServersByDns cache
         $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
+
         $Permissions.SourceAccessList.Path |
         ForEach-Object {
             $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $_))
@@ -7194,11 +7196,13 @@ process {
                 Win32AccountsBySID     = $Win32AccountsBySID
                 Win32AccountsByCaption = $Win32AccountsByCaption
             }
+
             $UniqueServerNames |
             ForEach-Object {
                 Write-LogMsg @LogParams -Text "Get-AdsiServer -AdsiServer '$_'"
                 $null = Get-AdsiServer @GetAdsiServerParams -AdsiServer $_
             }
+
         } else {
             $GetAdsiServerParams = @{
                 Command        = 'Get-AdsiServer'
@@ -7229,12 +7233,14 @@ process {
                 DomainsByNetbios       = $DomainsByNetbios
                 DomainsByFqdn          = $DomainsByFqdn
             }
+
             $PermissionsWithResolvedIdentityReferences = $Permissions |
             ForEach-Object {
                 $ResolveAceParams['InputObject'] = $_
                 Write-LogMsg @LogParams -Text "Resolve-Ace -InputObject $($_.IdentityReference)"
                 Resolve-Ace3 @ResolveAceParams
             }
+
         } else {
             $ResolveAceParams = @{
                 Command              = 'Resolve-Ace3'
@@ -7293,6 +7299,7 @@ process {
                 Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($_.Name)"
                 Expand-IdentityReference @ExpandIdentityReferenceParams
             }
+
         } else {
             $ExpandIdentityReferenceParams = @{
                 Command              = 'Expand-IdentityReference'
@@ -7319,11 +7326,13 @@ process {
         # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
         # Filter out groups (their members have already been retrieved)
         if ($ThreadCount -eq 1) {
+
             $FormattedSecurityPrincipals = $SecurityPrincipals |
             ForEach-Object {
                 Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($_.Name)"
                 Format-SecurityPrincipal -SecurityPrincipal $_
             }
+
         } else {
             $FormatSecurityPrincipalParams = @{
                 Command              = 'Format-SecurityPrincipal'
@@ -7342,11 +7351,13 @@ process {
         # Expand the collection of security principals from Format-SecurityPrincipal
         # back into a collection of access control entries (one per ACE per principal)
         if ($ThreadCount -eq 1) {
+
             $ExpandedAccountPermissions = $FormattedSecurityPrincipals |
             ForEach-Object {
                 Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($_.Name)"
                 Expand-AccountPermission -AccountPermission $_
             }
+
         } else {
             $ExpandAccountPermissionParams = @{
                 Command              = 'Expand-AccountPermission'
@@ -7366,6 +7377,7 @@ process {
         Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
         Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
         Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
+
         $ExpandedAccountPermissions |
         Select-Object -Property @{
             Label      = 'SourceAclPath'
@@ -7385,6 +7397,7 @@ process {
 
         # Group the user permissions back into folder permissions for the report
         Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
+
         $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
         Group-Object -Property Folder |
         Sort-Object -Property Name
@@ -7476,6 +7489,7 @@ process {
 end {
 
     $LogFile = "$LogDir\Export-Permission.log"
+
     $LogMsgCache.Values |
     Sort-Object -Property Timestamp |
     Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
