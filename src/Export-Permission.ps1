@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.129
+.VERSION 0.0.130
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-removed bug list from metadata, migrated to GitHub Issues
+Moved ToDo list to GitHub Issues
 
 .PRIVATEDATA
 
@@ -59,10 +59,10 @@ removed bug list from metadata, migrated to GitHub Issues
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
 
     Does not support these scenarios:
-    - Mapped network drives (TODO feature; for now use UNC paths)
-    - ACL Owners or Groups (TODO feature; for now only the DACL is reported)
-    - File permissions (TODO feature; for now only folder permissions are reported)
-    - Share permissions (TODO feature; for now only NTFS permissions are reported)
+    - Mapped network drives (ToDo enhancement; for now use UNC paths)
+    - ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)
+    - File permissions (ToDo enhancement; for now only folder permissions are reported)
+    - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
     Behavior:
     - Gets all permissions for the target folder
@@ -90,45 +90,7 @@ removed bug list from metadata, migrated to GitHub Issues
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
     ToDo:
-    - Feature - DNS names should all end in ., NetBIOS names should not.
-    - Feature - Use DNS wherever possible.  Use FQDNs wherever possible.
-    - Feature - Normalize hostname and username capitalization; for example whoami output is all lowercase even if hostname and username are not
-    - Feature - Implement universally the ADsPath format: WinNT://WORKGROUP/SERVER/USER
-        Default:
-            - WinNT://ad.contoso.com./Administrator for a domain account on a domain-joined server
-            - WinNT://Server123.ad.contoso.com./Administrator for a local account on a domain-joined server
-            - WinNT://WORKGROUP/Server123./Administrator for a local account on a workgroup server (not joined to an AD domain)
-        [switch]$NetBIOS parameter to use NetBIOS for brevity in HTML
-            - WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
-            - WinNT://CONTOSO/Server123/Administrator for a local account on a domain-joined server
-            - WinNT://WORKGROUP/Server123/Administrator for a local account on a workgroup server (not joined to an AD domain)
-        Implementing this should solve Issue #7 on GitHub https://github.com/IMJLA/Export-Permission/issues/7
-    - Feature - [switch]$IncludeOwner parameter to support reporting ACL Owners.
-        - Currently we search folders for non-inherited access rules,
-        - To those access rules, we add a simulated FullControl access rule for the Owner to show their effective access
-        - This misses folders with only inherited access rules but a different owner
-        - Solving this will have a significant performance impact
-        - Every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
-        - This is why it will be an optional parameter.
-    - Feature - Resolve mapped network drives to UNC paths
-    - Feature - List any excluded accounts at the end
-    - Feature - Remove usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
-    - Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
-    - Feature - This script does NOT account for share permissions. Only NTFS permissions are considered.
-    - Feature - Support ACLs from Registry or AD objects
-    - Feature - [string[]$Properties parameter to specify properties to include in report
-    - Feature - Implement Send-MailKitMessage module
-    - Feature - [hashtable]$AdsiCredential parameter, key is Adsi server name, value is PSCredential
-    - Feature - [switch]$IncludeGroupChain parameter to retrieve entire group membership chain
-    - Feature - [switch]$CacheEntireDirectories parameter to retrieve entire directory of known directories, cache in memory. Faster?  Threshold of n identityreferences where it makes sense?  When using option to retrieve entire group tree?
-    - Consider - Combine PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
-    - Consider - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
-        - When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
-        - New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
-        - Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
-        - Want to fix it myself and submit a PR
-        - Until then, workaround is to include markdown syntax in PowerShell comment-based help
-        - That is why there are so many extra blank lines and unordered lists in the commented metadata in this script
+        Follow this link for list of ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
@@ -670,7 +632,7 @@ process {
         }
 
         # Save a CSV report of the expanded account permissions
-        #TODO: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
+        #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
         $CsvFilePath = "$LogDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
 
         Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
@@ -745,7 +707,7 @@ process {
         Write-Information $ReportFile
 
         # Report common issues with NTFS permissions (formatted as XML for PRTG)
-        # TODO: Users with ownership
+        # ToDo: Users with ownership
         $NtfsIssueParams = @{
             FolderPermissions     = $FolderPermissions
             UserPermissions       = $Accounts
