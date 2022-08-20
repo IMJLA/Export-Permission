@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.133] - 2022-08-20 - Fixed tests
+
 ## [0.0.132] - 2022-08-20 - Updated test
 
 ## [0.0.131] - 2022-08-20 - Test build in test-branch

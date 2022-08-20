@@ -12,8 +12,8 @@ BeforeDiscovery {
     $ParentAcl = Get-Acl -Path $ParentFolderPath
     $ChildAcl = Get-Acl -Path $ChildFolderPath
 
-    $ParentAcl.SetOwner('Administrators')
-    $ChildAcl.SetOwner('Guests')
+    $ParentAcl.SetOwner([System.Security.Principal.NTAccount]::new("BUILTIN", "Administrators"))
+    $ChildAcl.SetOwner([System.Security.Principal.NTAccount]::new("BUILTIN", "Guests"))
 
     Set-Acl -Path $ParentFolderPath -AclObject $ParentAcl
     Set-Acl -Path $ChildFolderPath -AclObject $ChildAcl
