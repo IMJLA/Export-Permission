@@ -39,7 +39,7 @@
     <command:syntax>
       <command:syntaxItem>
         <maml:name>Export-Permission.ps1</maml:name>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="Path">
           <maml:name>TargetPath</maml:name>
           <maml:description>
             <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
@@ -391,7 +391,7 @@
         </dev:type>
         <dev:defaultValue>-1</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="Path">
         <maml:name>TargetPath</maml:name>
         <maml:description>
           <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
@@ -431,7 +431,15 @@
     <command:inputTypes>
       <command:inputType>
         <dev:type>
-          <maml:name>[System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.</maml:name>
+          <maml:name>[System.IO.DirectoryInfo[]] TargetPath parameter</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>Strings can be passed to this parameter and will be automatically recast to DirectoryInfo objects</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -454,7 +462,7 @@
         <maml:para>This code has limited or no tests</maml:para>
         <maml:para>It was designed for presenting reports to non-technical management or administrative staff</maml:para>
         <maml:para>It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses</maml:para>
-        <maml:para>ToDo:     Follow this link for list of ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:para>
+        <maml:para>ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>

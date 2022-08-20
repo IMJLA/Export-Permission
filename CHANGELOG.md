@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.131] - 2022-08-20 - Test build in test-branch
+
 ## [0.0.130] - 2022-08-20 - Moved ToDo list to GitHub Issues
 
 ## [0.0.129] - 2022-08-20 - removed bug list from metadata, migrated to GitHub Issues

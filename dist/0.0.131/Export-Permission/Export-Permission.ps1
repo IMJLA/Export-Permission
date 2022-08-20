@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.130
+.VERSION 0.0.131
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Moved ToDo list to GitHub Issues
+Test build in test-branch
 
 .PRIVATEDATA
 
@@ -77,7 +77,9 @@ Moved ToDo list to GitHub Issues
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
-    [System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.
+    [System.IO.DirectoryInfo[]] TargetPath parameter
+
+    Strings can be passed to this parameter and will be automatically recast to DirectoryInfo objects
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
@@ -89,8 +91,7 @@ Moved ToDo list to GitHub Issues
 
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
-    ToDo:
-        Follow this link for list of ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
+    ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
@@ -234,6 +235,7 @@ Moved ToDo list to GitHub Issues
 param (
 
     # Path to the NTFS folder whose permissions to export
+    [Alias('Path')]
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath = 'C:\Test',
@@ -421,6 +423,7 @@ process {
         $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
 
         $Permissions.SourceAccessList.Path |
+        Sort-Object -Unique |
         ForEach-Object {
             $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $_))
         }

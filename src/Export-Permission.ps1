@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.130
+.VERSION 0.0.131
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission
+.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Moved ToDo list to GitHub Issues
+Test build in test-branch
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module Adsi
 #Requires -Module SimplePrtg
@@ -39,6 +39,7 @@ Moved ToDo list to GitHub Issues
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 <#
 .SYNOPSIS

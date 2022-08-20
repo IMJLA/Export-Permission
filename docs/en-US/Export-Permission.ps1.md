@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.129
+help version: 0.0.130
 locale: en-US
 Module Name:
 online version:
@@ -470,7 +470,7 @@ Path to the NTFS folder whose permissions to export
 ```yaml
 Type: System.IO.DirectoryInfo[]
 Parameter Sets: (All)
-Aliases:
+Aliases: Path
 
 Required: False
 Position: 1
@@ -514,7 +514,8 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
-### [System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.
+### [System.IO.DirectoryInfo[]] TargetPath parameter
+### Strings can be passed to this parameter and will be automatically recast to DirectoryInfo objects
 ## OUTPUTS
 
 ### [System.String] XML PRTG sensor output
@@ -527,8 +528,7 @@ It was designed for presenting reports to non-technical management or administra
 
 It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
-ToDo:
-    Follow this link for list of ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
+ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
 
 ## RELATED LINKS
 
