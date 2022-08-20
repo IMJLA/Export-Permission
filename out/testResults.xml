@@ -1,360 +1,360 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="73" errors="0" failures="1" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2022-08-20" time="16:04:41">
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="73" errors="0" failures="1" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2022-08-20" time="16:08:52">
   <environment nunit-version="2.5.8.0" cwd="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission" machine-name="JLA-LOFTHTPC" user="Owner" platform="Microsoft Windows 10 Pro|C:\WINDOWS|\Device\Harddisk0\Partition2" clr-version="Unknown" user-domain="JLA-LoftHTPC" os-version="10.0.19044" />
   <culture-info current-culture="en-US" current-uiculture="en-US" />
-  <test-suite type="TestFixture" name="Pester" executed="True" result="Failure" success="False" time="2.0642" asserts="0" description="Pester">
+  <test-suite type="TestFixture" name="Pester" executed="True" result="Failure" success="False" time="1.9353" asserts="0" description="Pester">
     <results>
-      <test-suite type="TestFixture" name="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\SourceCode.tests.ps1" executed="True" result="Failure" success="False" time="2.0298" asserts="0" description="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\SourceCode.tests.ps1">
+      <test-suite type="TestFixture" name="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\SourceCode.tests.ps1" executed="True" result="Failure" success="False" time="1.9154" asserts="0" description="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\SourceCode.tests.ps1">
         <results>
-          <test-suite type="TestFixture" name="PowerShell script file info for 'Export-Permission'" executed="True" result="Success" success="True" time="0.1802" asserts="0" description="PowerShell script file info for 'Export-Permission'">
+          <test-suite type="TestFixture" name="PowerShell script file info for 'Export-Permission'" executed="True" result="Success" success="True" time="0.1158" asserts="0" description="PowerShell script file info for 'Export-Permission'">
             <results>
-              <test-case description=" Specify a valid version" name="PowerShell script file info for 'Export-Permission'. Specify a valid version" time="0.0178" asserts="0" success="True" result="Success" executed="True" />
-              <test-case description=" Specify an author" name="PowerShell script file info for 'Export-Permission'. Specify an author" time="0.008" asserts="0" success="True" result="Success" executed="True" />
-              <test-case description=" Specify a valid guid" name="PowerShell script file info for 'Export-Permission'. Specify a valid guid" time="0.0167" asserts="0" success="True" result="Success" executed="True" />
-              <test-case description=" Specify a copyright" name="PowerShell script file info for 'Export-Permission'. Specify a copyright" time="0.0742" asserts="0" success="True" result="Success" executed="True" />
-              <test-case description=" Specify a company name" name="PowerShell script file info for 'Export-Permission'. Specify a company name" time="0.0189" asserts="0" success="True" result="Success" executed="True" />
-              <test-case description=" Specify a valid license URI" name="PowerShell script file info for 'Export-Permission'. Specify a valid license URI" time="0.0124" asserts="0" success="True" result="Success" executed="True" />
-              <test-case description=" Specify a valid project URI" name="PowerShell script file info for 'Export-Permission'. Specify a valid project URI" time="0.0192" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify a valid version" name="PowerShell script file info for 'Export-Permission'. Specify a valid version" time="0.0124" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify an author" name="PowerShell script file info for 'Export-Permission'. Specify an author" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify a valid guid" name="PowerShell script file info for 'Export-Permission'. Specify a valid guid" time="0.0088" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify a copyright" name="PowerShell script file info for 'Export-Permission'. Specify a copyright" time="0.0133" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify a company name" name="PowerShell script file info for 'Export-Permission'. Specify a company name" time="0.0156" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify a valid license URI" name="PowerShell script file info for 'Export-Permission'. Specify a valid license URI" time="0.0102" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description=" Specify a valid project URI" name="PowerShell script file info for 'Export-Permission'. Specify a valid project URI" time="0.0223" asserts="0" success="True" result="Success" executed="True" />
             </results>
           </test-suite>
-          <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'" executed="True" result="Failure" success="False" time="1.6422" asserts="0" description="help for 'Export-Permission.ps1'">
+          <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'" executed="True" result="Failure" success="False" time="1.559" asserts="0" description="help for 'Export-Permission.ps1'">
             <results>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'" executed="True" result="Success" success="True" time="0.1478" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'" executed="True" result="Success" success="True" time="0.208" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.016" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0103" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'.has a description" time="0.016" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'.has a description" time="0.0103" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0174" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0199" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'.has the correct [mandatory] value" time="0.0174" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'.has the correct [mandatory] value" time="0.0199" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0116" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0092" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'.has the correct parameter type" time="0.0116" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeAccount'.has the correct parameter type" time="0.0092" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'" executed="True" result="Success" success="True" time="0.2594" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'" executed="True" result="Success" success="True" time="0.2644" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0572" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0135" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'.has a description" time="0.0572" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'.has a description" time="0.0135" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0106" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0145" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'.has the correct [mandatory] value" time="0.0106" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'.has the correct [mandatory] value" time="0.0145" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0212" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0119" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'.has the correct parameter type" time="0.0212" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'ExcludeEmptyGroups'.has the correct parameter type" time="0.0119" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'" executed="True" result="Success" success="True" time="0.3125" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'" executed="True" result="Success" success="True" time="0.3202" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0154" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0134" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'.has a description" time="0.0154" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'.has a description" time="0.0134" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0103" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.013" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'.has the correct [mandatory] value" time="0.0103" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'.has the correct [mandatory] value" time="0.013" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0163" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0088" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'.has the correct parameter type" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'GroupNamingConvention'.has the correct parameter type" time="0.0088" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'" executed="True" result="Success" success="True" time="0.3624" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'" executed="True" result="Success" success="True" time="0.3774" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0163" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0118" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'.has a description" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0103" asserts="0" description="has the correct [mandatory] value">
-                    <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'.has the correct [mandatory] value" time="0.0103" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0151" asserts="0" description="has the correct parameter type">
-                    <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'.has the correct parameter type" time="0.0151" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'" executed="True" result="Success" success="True" time="0.4175" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0113" asserts="0" description="has a description">
-                    <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'.has a description" time="0.0113" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0167" asserts="0" description="has the correct [mandatory] value">
-                    <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'.has the correct [mandatory] value" time="0.0167" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0135" asserts="0" description="has the correct parameter type">
-                    <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'.has the correct parameter type" time="0.0135" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'" executed="True" result="Success" success="True" time="0.5233" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0538" asserts="0" description="has a description">
-                    <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'.has a description" time="0.0538" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0235" asserts="0" description="has the correct [mandatory] value">
-                    <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'.has the correct [mandatory] value" time="0.0235" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0095" asserts="0" description="has the correct parameter type">
-                    <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'.has the correct parameter type" time="0.0095" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'" executed="True" result="Success" success="True" time="0.5829" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0111" asserts="0" description="has a description">
-                    <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'.has a description" time="0.0111" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0177" asserts="0" description="has the correct [mandatory] value">
-                    <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'.has the correct [mandatory] value" time="0.0177" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0125" asserts="0" description="has the correct parameter type">
-                    <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'.has the correct parameter type" time="0.0125" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'" executed="True" result="Success" success="True" time="0.6457" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0138" asserts="0" description="has a description">
-                    <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'.has a description" time="0.0138" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0176" asserts="0" description="has the correct [mandatory] value">
-                    <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'.has the correct [mandatory] value" time="0.0176" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.011" asserts="0" description="has the correct parameter type">
-                    <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'.has the correct parameter type" time="0.011" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'" executed="True" result="Success" success="True" time="0.7212" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0233" asserts="0" description="has a description">
-                    <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'.has a description" time="0.0233" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'.has a description" time="0.0118" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                   <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0149" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'.has the correct [mandatory] value" time="0.0149" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'.has the correct [mandatory] value" time="0.0149" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0214" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0099" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'.has the correct parameter type" time="0.0214" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'IgnoreDomain'.has the correct parameter type" time="0.0099" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'" executed="True" result="Success" success="True" time="0.8233" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'" executed="True" result="Success" success="True" time="0.4634" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0389" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0457" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'.has a description" time="0.0389" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'.has a description" time="0.0457" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0226" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0123" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'.has the correct [mandatory] value" time="0.0226" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'.has the correct [mandatory] value" time="0.0123" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0162" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0166" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'.has the correct parameter type" time="0.0162" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'LogDir'.has the correct parameter type" time="0.0166" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'" executed="True" result="Success" success="True" time="0.8802" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'" executed="True" result="Success" success="True" time="0.5217" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0163" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0166" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'.has a description" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'.has a description" time="0.0166" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0102" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0128" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'.has the correct [mandatory] value" time="0.0102" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'.has the correct [mandatory] value" time="0.0128" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0171" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0163" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'.has the correct parameter type" time="0.0171" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'NoGroupMembers'.has the correct parameter type" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'" executed="True" result="Success" success="True" time="0.9493" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'" executed="True" result="Success" success="True" time="0.5779" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0189" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.018" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'.has a description" time="0.0189" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'.has a description" time="0.018" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0163" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0121" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'.has the correct [mandatory] value" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'.has the correct [mandatory] value" time="0.0121" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0162" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0154" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'.has the correct parameter type" time="0.0162" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'OpenReportAtEnd'.has the correct parameter type" time="0.0154" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'" executed="True" result="Success" success="True" time="1.0266" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'" executed="True" result="Success" success="True" time="0.6432" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0225" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0218" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'.has a description" time="0.0225" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'.has a description" time="0.0218" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0103" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0157" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'.has the correct [mandatory] value" time="0.0103" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'.has the correct [mandatory] value" time="0.0157" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0314" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.016" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'.has the correct parameter type" time="0.0314" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'" executed="True" result="Success" success="True" time="1.1156" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0359" asserts="0" description="has a description">
-                    <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'.has a description" time="0.0359" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0179" asserts="0" description="has the correct [mandatory] value">
-                    <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'.has the correct [mandatory] value" time="0.0179" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0157" asserts="0" description="has the correct parameter type">
-                    <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'.has the correct parameter type" time="0.0157" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgProbe'.has the correct parameter type" time="0.016" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'" executed="True" result="Success" success="True" time="1.1714" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'Title'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'" executed="True" result="Success" success="True" time="0.7485" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'">
                 <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0153" asserts="0" description="has a description">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0563" asserts="0" description="has a description">
                     <results>
-                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'.has a description" time="0.0153" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'.has a description" time="0.0563" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0143" asserts="0" description="has the correct [mandatory] value">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0091" asserts="0" description="has the correct [mandatory] value">
                     <results>
-                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'.has the correct [mandatory] value" time="0.0143" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'.has the correct [mandatory] value" time="0.0091" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0117" asserts="0" description="has the correct parameter type">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.017" asserts="0" description="has the correct parameter type">
                     <results>
-                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'.has the correct parameter type" time="0.0117" asserts="0" success="True" result="Success" executed="True" />
-                    </results>
-                  </test-suite>
-                </results>
-              </test-suite>
-              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help" executed="True" result="Success" success="True" time="1.4447" asserts="0" description="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help">
-                <results>
-                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: &lt;helpParameter.Name&gt;" executed="True" result="Success" success="True" time="0.2546" asserts="0" description=" Parameter found in the Help docs also exists in the code: &lt;helpParameter.Name&gt;">
-                    <results>
-                      <test-case description=" Parameter found in the Help docs also exists in the code: ExcludeAccount" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: ExcludeAccount" time="0.0144" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: ExcludeEmptyGroups" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: ExcludeEmptyGroups" time="0.0167" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: GroupNamingConvention" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: GroupNamingConvention" time="0.0112" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: IgnoreDomain" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: IgnoreDomain" time="0.0151" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: LogDir" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: LogDir" time="0.0092" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: NoGroupMembers" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: NoGroupMembers" time="0.0171" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: OpenReportAtEnd" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: OpenReportAtEnd" time="0.0105" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgProbe" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgProbe" time="0.0338" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgSensorPort" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgSensorPort" time="0.0341" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgSensorProtocol" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgSensorProtocol" time="0.0224" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgSensorToken" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgSensorToken" time="0.0097" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: SubfolderLevels" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: SubfolderLevels" time="0.02" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: TargetPath" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: TargetPath" time="0.01" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: ThreadCount" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: ThreadCount" time="0.0174" asserts="0" success="True" result="Success" executed="True" />
-                      <test-case description=" Parameter found in the Help docs also exists in the code: Title" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: Title" time="0.013" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorPort'.has the correct parameter type" time="0.017" asserts="0" success="True" result="Success" executed="True" />
                     </results>
                   </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Exists" executed="True" result="Success" success="True" time="0.0202" asserts="0" description=" Exists">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'" executed="True" result="Success" success="True" time="0.8115" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'">
                 <results>
-                  <test-case description=" Exists" name="help for 'Export-Permission.ps1'. Exists" time="0.0202" asserts="0" success="True" result="Success" executed="True" />
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0117" asserts="0" description="has a description">
+                    <results>
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'.has a description" time="0.0117" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0149" asserts="0" description="has the correct [mandatory] value">
+                    <results>
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'.has the correct [mandatory] value" time="0.0149" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0177" asserts="0" description="has the correct parameter type">
+                    <results>
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorProtocol'.has the correct parameter type" time="0.0177" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Is not auto-generated, or for a conceptual help article" executed="True" result="Success" success="True" time="0.0099" asserts="0" description=" Is not auto-generated, or for a conceptual help article">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'" executed="True" result="Success" success="True" time="0.8761" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'">
                 <results>
-                  <test-case description=" Is not auto-generated, or for a conceptual help article" name="help for 'Export-Permission.ps1'. Is not auto-generated, or for a conceptual help article" time="0.0099" asserts="0" success="True" result="Success" executed="True" />
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0148" asserts="0" description="has a description">
+                    <results>
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'.has a description" time="0.0148" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0193" asserts="0" description="has the correct [mandatory] value">
+                    <results>
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'.has the correct [mandatory] value" time="0.0193" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0134" asserts="0" description="has the correct parameter type">
+                    <results>
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'PrtgSensorToken'.has the correct parameter type" time="0.0134" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has a description" executed="True" result="Success" success="True" time="0.0162" asserts="0" description=" Has a description">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'" executed="True" result="Success" success="True" time="0.9508" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'">
                 <results>
-                  <test-case description=" Has a description" name="help for 'Export-Permission.ps1'. Has a description" time="0.0162" asserts="0" success="True" result="Success" executed="True" />
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0131" asserts="0" description="has a description">
+                    <results>
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'.has a description" time="0.0131" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0184" asserts="0" description="has the correct [mandatory] value">
+                    <results>
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'.has the correct [mandatory] value" time="0.0184" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0105" asserts="0" description="has the correct parameter type">
+                    <results>
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'SubfolderLevels'.has the correct parameter type" time="0.0105" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has example code" executed="True" result="Success" success="True" time="0.0101" asserts="0" description=" Has example code">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'" executed="True" result="Success" success="True" time="1.0431" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'">
                 <results>
-                  <test-case description=" Has example code" name="help for 'Export-Permission.ps1'. Has example code" time="0.0101" asserts="0" success="True" result="Success" executed="True" />
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0401" asserts="0" description="has a description">
+                    <results>
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'.has a description" time="0.0401" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0142" asserts="0" description="has the correct [mandatory] value">
+                    <results>
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'.has the correct [mandatory] value" time="0.0142" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0122" asserts="0" description="has the correct parameter type">
+                    <results>
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'TargetPath'.has the correct parameter type" time="0.0122" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has example help" executed="True" result="Success" success="True" time="0.0134" asserts="0" description=" Has example help">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'" executed="True" result="Success" success="True" time="1.098" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'">
                 <results>
-                  <test-case description=" Has example help" name="help for 'Export-Permission.ps1'. Has example help" time="0.0134" asserts="0" success="True" result="Success" executed="True" />
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0105" asserts="0" description="has a description">
+                    <results>
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'.has a description" time="0.0105" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.0091" asserts="0" description="has the correct [mandatory] value">
+                    <results>
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'.has the correct [mandatory] value" time="0.0091" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0181" asserts="0" description="has the correct parameter type">
+                    <results>
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'ThreadCount'.has the correct parameter type" time="0.0181" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
                 </results>
               </test-suite>
-              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has a valid link URL '&lt;commandHelp.relatedLinks.navigationLink.uri&gt;'" executed="True" result="Failure" success="False" time="0.015" asserts="0" description=" Has a valid link URL '&lt;commandHelp.relatedLinks.navigationLink.uri&gt;'">
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'" executed="True" result="Success" success="True" time="1.1559" asserts="0" description="help for 'Export-Permission.ps1'.- Help for parameter 'Title'">
                 <results>
-                  <test-case description=" Has a valid link URL ''" name="help for 'Export-Permission.ps1'. Has a valid link URL ''" time="0.015" asserts="0" success="False" result="Failure" executed="True">
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has a description" executed="True" result="Success" success="True" time="0.0152" asserts="0" description="has a description">
+                    <results>
+                      <test-case description="has a description" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'.has a description" time="0.0152" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct [mandatory] value" executed="True" result="Success" success="True" time="0.011" asserts="0" description="has the correct [mandatory] value">
+                    <results>
+                      <test-case description="has the correct [mandatory] value" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'.has the correct [mandatory] value" time="0.011" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Help for parameter '&lt;_.commandParameter.Name&gt;'.has the correct parameter type" executed="True" result="Success" success="True" time="0.0168" asserts="0" description="has the correct parameter type">
+                    <results>
+                      <test-case description="has the correct parameter type" name="help for 'Export-Permission.ps1'.- Help for parameter 'Title'.has the correct parameter type" time="0.0168" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                </results>
+              </test-suite>
+              <test-suite type="TestFixture" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help" executed="True" result="Success" success="True" time="1.4304" asserts="0" description="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help">
+                <results>
+                  <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: &lt;helpParameter.Name&gt;" executed="True" result="Success" success="True" time="0.257" asserts="0" description=" Parameter found in the Help docs also exists in the code: &lt;helpParameter.Name&gt;">
+                    <results>
+                      <test-case description=" Parameter found in the Help docs also exists in the code: ExcludeAccount" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: ExcludeAccount" time="0.0208" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: ExcludeEmptyGroups" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: ExcludeEmptyGroups" time="0.0102" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: GroupNamingConvention" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: GroupNamingConvention" time="0.0181" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: IgnoreDomain" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: IgnoreDomain" time="0.0274" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: LogDir" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: LogDir" time="0.0484" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: NoGroupMembers" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: NoGroupMembers" time="0.0093" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: OpenReportAtEnd" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: OpenReportAtEnd" time="0.0207" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgProbe" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgProbe" time="0.0107" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgSensorPort" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgSensorPort" time="0.0092" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgSensorProtocol" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgSensorProtocol" time="0.0139" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: PrtgSensorToken" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: PrtgSensorToken" time="0.0139" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: SubfolderLevels" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: SubfolderLevels" time="0.011" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: TargetPath" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: TargetPath" time="0.0163" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: ThreadCount" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: ThreadCount" time="0.0093" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description=" Parameter found in the Help docs also exists in the code: Title" name="help for 'Export-Permission.ps1'.- Extraneous Parameters in Help. Parameter found in the Help docs also exists in the code: Title" time="0.0179" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                </results>
+              </test-suite>
+              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Exists" executed="True" result="Success" success="True" time="0.0212" asserts="0" description=" Exists">
+                <results>
+                  <test-case description=" Exists" name="help for 'Export-Permission.ps1'. Exists" time="0.0212" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Is not auto-generated, or for a conceptual help article" executed="True" result="Success" success="True" time="0.0124" asserts="0" description=" Is not auto-generated, or for a conceptual help article">
+                <results>
+                  <test-case description=" Is not auto-generated, or for a conceptual help article" name="help for 'Export-Permission.ps1'. Is not auto-generated, or for a conceptual help article" time="0.0124" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has a description" executed="True" result="Success" success="True" time="0.0169" asserts="0" description=" Has a description">
+                <results>
+                  <test-case description=" Has a description" name="help for 'Export-Permission.ps1'. Has a description" time="0.0169" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has example code" executed="True" result="Success" success="True" time="0.0085" asserts="0" description=" Has example code">
+                <results>
+                  <test-case description=" Has example code" name="help for 'Export-Permission.ps1'. Has example code" time="0.0085" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has example help" executed="True" result="Success" success="True" time="0.0135" asserts="0" description=" Has example help">
+                <results>
+                  <test-case description=" Has example help" name="help for 'Export-Permission.ps1'. Has example help" time="0.0135" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="ParameterizedTest" name="help for '&lt;_.Name&gt;'. Has a valid link URL '&lt;commandHelp.relatedLinks.navigationLink.uri&gt;'" executed="True" result="Failure" success="False" time="0.0694" asserts="0" description=" Has a valid link URL '&lt;commandHelp.relatedLinks.navigationLink.uri&gt;'">
+                <results>
+                  <test-case description=" Has a valid link URL ''" name="help for 'Export-Permission.ps1'. Has a valid link URL ''" time="0.0694" asserts="0" success="False" result="Failure" executed="True">
                     <failure>
                       <message>ValidationMetadataException: The argument is null or empty. Provide an argument that is not null or empty, and then try the command again.
 ParameterBindingValidationException: Cannot validate argument on parameter 'Uri'. The argument is null or empty. Provide an argument that is not null or empty, and then try the command again.</message>

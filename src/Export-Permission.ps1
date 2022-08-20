@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.131
+.VERSION 0.0.132
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Test build in test-branch
+Updated test
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Test build in test-branch
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
