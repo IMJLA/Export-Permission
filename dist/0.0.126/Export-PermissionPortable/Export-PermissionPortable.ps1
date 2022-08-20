@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.125
+.VERSION 0.0.126
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Now the pipeline support should actually halfway work
+Minor script cleanup
 
 .PRIVATEDATA
 
@@ -64,9 +64,10 @@ Now the pipeline support should actually halfway work
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
 
     Does not support these scenarios:
-    - Mapped network drives (TODO feature)
-    - ACL Owners or Groups (only the DACL is reported)
-    - File share permissions (only NTFS permissions are reported)
+    - File permissions (only folder permissions are reported)
+    - Share permissions (only NTFS permissions are reported)
+    - Mapped network drives (TODO feature, for now use UNC paths)
+    - ACL Owners or Groups (TODO feature, for now only the DACL is reported)
 
     Behavior:
     - Gets all permissions for the target folder
@@ -104,9 +105,11 @@ Now the pipeline support should actually halfway work
         - WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
         - WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
     - Feature - Add parameter to support reporting ACL Owners.
-        - Currently we search folders for non-inherited access rules, then we manually add a simulated FullControl access rule for the Owner since that is their effective access
+        - Currently we search folders for non-inherited access rules,
+        - To those access rules, we manually add a simulated FullControl access rule for the Owner to show their effective access
         - This misses folders with only inherited access rules but a different owner
-        - Solving this will have a significant performance impact since every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
+        - Solving this will have a significant performance impact
+        - Every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
         - This is why it will be an optional parameter.
     - Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
         - The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
@@ -123,7 +126,7 @@ Now the pipeline support should actually halfway work
     - Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
     - Feature - Parameter to specify properties to include in report
     - Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
-    - Feature - This script does NOT account for file share permissions. Only NTFS permissions are considered.
+    - Feature - This script does NOT account for share permissions. Only NTFS permissions are considered.
     - Feature - Support ACLs from Registry or AD objects
     - Feature - Parameter to retrieve entire group membership chain
     - Feature - Parameter to retrieve entire directory of known directories, cache in memory. Faster?  Threshold of n identityreferences where it makes sense?
@@ -7110,26 +7113,26 @@ ForEach ($ThisFile in $CSharpFiles) {
 
 }
 
-#----------------[ Main Execution ]---------------
-
 process {
+
+    #----------------[ Main Execution ]---------------
 
     ForEach ($ThisTargetPath in $TargetPath) {
 
-        Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$TargetPath'"
-        $FolderTargets = Get-FolderTarget -FolderPath $TargetPath
+        Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$ThisTargetPath'"
+        $FolderTargets = Get-FolderTarget -FolderPath $ThisTargetPath
         Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
         $Permissions = Get-FolderAccessList @AclParams -FolderTargets $FolderTargets
 
-        # If $TargetPath was on a local disk such as C:\
+        # If $ThisTargetPath was on a local disk such as C:\
         # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
-        # Unfortunately if it is the root of that local disk, Get-FolderAccessList's dependency Get-Item is unable to retrieve a DirectoryInfo object for the root of the share
+        # If $ThisTargetPath is the root of that local disk, Get-FolderAccessList's dependency Get-Item cannot retrieve a DirectoryInfo object for the root of the share
         # (error: "Could not find item")
-        # As a workaround here we will instead get the folder ACL for the original $TargetPath
+        # As a workaround here we will instead get the folder ACL for the original $ThisTargetPath
         # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
         if ($null -eq $Permissions) {
-            Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$TargetPath' -LevelsOfSubfolders $SubfolderLevels"
-            $Permissions = Get-FolderAccessList @AclParams -FolderTargets $TargetPath
+            Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$ThisTargetPath' -LevelsOfSubfolders $SubfolderLevels"
+            $Permissions = Get-FolderAccessList @AclParams -FolderTargets $ThisTargetPath
         }
 
         # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
@@ -7144,33 +7147,45 @@ process {
 
         Write-Information $CsvFilePath
 
-        # Identify unique directory servers to populate into the AdsiServersByDns cache
+        # Prepare to pre-populate the AdsiServersByDns cache
         # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
         # This prevents repetitive queries to the same directory servers
-        [string[]]$UniqueServerNames = $Permissions.SourceAccessList.Path |
-        Sort-Object -Unique |
-        ForEach-Object { Find-ServerNameInPath -LiteralPath $_ }
+
+        # Identify server names from the item paths
+        # Add the discovered server names to our list of known ADSI server names we can query to populate the AdsiServersByDns cache
+        $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
+        $Permissions.SourceAccessList.Path |
+        ForEach-Object {
+            $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $_))
+        }
 
         # Populate two caches of known domains
         # The first cache is keyed by SID
         # The second cache is keyed by NETBIOS name
         Write-LogMsg @LogParams -Text "Get-TrustedDomainSidNameMap"
-        $null = Get-TrustedDomainSidNameMap -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySID -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
+        $DomainSidNameMapParams = @{
+            DirectoryEntryCache = $DirectoryEntryCache
+            DomainsBySID        = $DomainsBySID
+            DomainsByNetbios    = $DomainsByNetbios
+            DomainsByFqdn       = $DomainsByFqdn
+        }
+        $null = Get-TrustedDomainSidNameMap @DomainSidNameMapParams
 
-        # Add the discovered domains to our list of known ADSI server names we can query
-        $DomainsByNetbios.Keys | ForEach-Object {
-            $UniqueServerNames += $DomainsByNetbios[$_].Dns
+        # Add the discovered domains to our list of known ADSI server name
+        $DomainsByNetbios.Keys |
+        ForEach-Object {
+            $null = $UniqueServerNames.Add($DomainsByNetbios[$_].Dns)
         }
 
+        # Deduplicate our list of known ADSI server names
         $UniqueServerNames = $UniqueServerNames |
         Sort-Object -Unique
 
+        # Populate the AdsiServersByDns cache of known ADSI servers
+        # Populate two caches of known Win32_Account instances
+        #   The first cache is keyed on SID (e.g. S-1-5-2)
+        #   The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
         if ($ThreadCount -eq 1) {
-            # Populate the AdsiServersByDns cache of known ADSI servers
-            # Populate two caches of known Win32_Account instances
-            # The first cache is keyed on SID (e.g. S-1-5-2)
-            # The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
-
             $GetAdsiServerParams = @{
                 AdsiServersByDns       = $AdsiServersByDns
                 Win32AccountsBySID     = $Win32AccountsBySID
@@ -7178,15 +7193,10 @@ process {
             }
             $UniqueServerNames |
             ForEach-Object {
-                $GetAdsiServerParams['AdsiServer'] = $_
                 Write-LogMsg @LogParams -Text "Get-AdsiServer -AdsiServer '$_'"
-                $null = Get-AdsiServer @GetAdsiServerParams
+                $null = Get-AdsiServer @GetAdsiServerParams -AdsiServer $_
             }
         } else {
-            # Populate the AdsiServersByDns cache of known ADSI servers
-            # Populate two caches of known Win32_Account instances
-            # The first cache is keyed on SID (e.g. S-1-5-2)
-            # The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
             $GetAdsiServerParams = @{
                 Command        = 'Get-AdsiServer'
                 InputObject    = $UniqueServerNames
@@ -7205,7 +7215,7 @@ process {
         }
 
         # Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
-        # The resolved name includes the domain name (or local computer name for local accounts)
+        # The resolved name will include the domain name (or local computer name for local accounts)
         if ($ThreadCount -eq 1) {
             $ResolveAceParams = @{
                 AdsiServersByDns       = $AdsiServersByDns
@@ -7264,7 +7274,6 @@ process {
         Group-Object -Property IdentityReferenceResolved
 
         # Use ADSI to collect more information about each resolved identity reference
-
         if ($ThreadCount -eq 1) {
             $ExpandIdentityReferenceParams = @{
                 DirectoryEntryCache    = $DirectoryEntryCache
@@ -7306,7 +7315,6 @@ process {
 
         # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
         # Filter out groups (their members have already been retrieved)
-
         if ($ThreadCount -eq 1) {
             $FormattedSecurityPrincipals = $SecurityPrincipals |
             ForEach-Object {
@@ -7328,6 +7336,8 @@ process {
             $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
         }
 
+        # Expand the collection of security principals from Format-SecurityPrincipal
+        # back into a collection of access control entries (one per ACE per principal)
         if ($ThreadCount -eq 1) {
             $ExpandedAccountPermissions = $FormattedSecurityPrincipals |
             ForEach-Object {
@@ -7335,10 +7345,6 @@ process {
                 Expand-AccountPermission -AccountPermission $_
             }
         } else {
-            # Expand the collection of security principals from Format-SecurityPrincipal
-            # back into a collection of access control entries (one per ACE per principal)
-            # This operation is a bunch simple type conversions, no queries are being performed
-            # That makes it fast enough that it is not worth multi-threading
             $ExpandAccountPermissionParams = @{
                 Command              = 'Expand-AccountPermission'
                 InputObject          = $FormattedSecurityPrincipals
@@ -7380,11 +7386,13 @@ process {
         Group-Object -Property Folder |
         Sort-Object -Property Name
 
+        # Convert the folder list to an HTML table
         Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
         $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
         ConvertTo-Html -Fragment |
         New-BootstrapTable
 
+        # Convert the folder permissions to an HTML table
         $GetFolderPermissionsBlock = @{
             FolderPermissions  = $FolderPermissions
             ExcludeAccount     = $ExcludeAccount
@@ -7395,11 +7403,12 @@ process {
         $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
 
         ##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
-        ### Convert-ToHtml will not expand in-line HTML, so we had to use semicolons as placeholders and will now replace them with line breaks.
+        ### Convert-ToHtml will not expand in-line HTML
+        ### So replace the placeholders (semicolons) with HTML line breaks now, after Convert-ToHtml has already run
         ##$HtmlFolderPermissions = $HtmlFolderPermissions -replace ' ; ','<br>'
 
-        Write-LogMsg @LogParams -Text "New-BootstrapAlert -Class Dark -Text '$TargetPath'"
-        $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPath) $ReportDescription"
+        Write-LogMsg @LogParams -Text "New-BootstrapAlert -Class Dark -Text '$ThisTargetPath'"
+        $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $ThisTargetPath) $ReportDescription"
         Write-LogMsg @LogParams -Text "Get-HtmlFolderList -FolderTableHeader `$FolderTableHeader -HtmlTableOfFolders `$HtmlTableOfFolders"
         $FolderList = Get-HtmlFolderList -FolderTableHeader $FolderTableHeader -HtmlTableOfFolders $HtmlTableOfFolders
         Write-LogMsg @LogParams -Text "Get-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
@@ -7415,7 +7424,7 @@ process {
 
         # Save the Html report
         $ReportFile = "$LogDir\FolderPermissionsReport.html"
-        $Report | Set-Content -LiteralPath $ReportFile
+        $null = Set-Content -LiteralPath $ReportFile -Value $Report
 
         # Output the name of the report file to the Information stream
         Write-Information $ReportFile
@@ -7436,7 +7445,7 @@ process {
 
         # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
         $XmlFile = "$LogDir\PrtgSensorResult.xml"
-        $XMLOutput | Set-Content -LiteralPath $XmlFile
+        $null = Set-Content -LiteralPath $XmlFile -Value $XMLOutput
 
         # Output the name of the report file to the Information stream
         Write-Information $XmlFile

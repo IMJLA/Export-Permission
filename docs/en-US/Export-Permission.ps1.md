@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.124
+help version: 0.0.125
 locale: en-US
 Module Name:
 online version:
@@ -38,9 +38,10 @@ Supports these scenarios:
 - Active Directory domain trusts, and unresolved SIDs for deleted accounts
 
 Does not support these scenarios:
-- Mapped network drives (TODO feature)
-- ACL Owners or Groups (only the DACL is reported)
-- File share permissions (only NTFS permissions are reported)
+- File permissions (only folder permissions are reported)
+- Share permissions (only NTFS permissions are reported)
+- Mapped network drives (TODO feature, for now use UNC paths)
+- ACL Owners or Groups (TODO feature, for now only the DACL is reported)
 
 Behavior:
 - Gets all permissions for the target folder
@@ -541,9 +542,11 @@ Why is the IgnoreDomain syntax regex with slashes required?
     - WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
     - WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
 - Feature - Add parameter to support reporting ACL Owners.
-    - Currently we search folders for non-inherited access rules, then we manually add a simulated FullControl access rule for the Owner since that is their effective access
+    - Currently we search folders for non-inherited access rules,
+    - To those access rules, we manually add a simulated FullControl access rule for the Owner to show their effective access
     - This misses folders with only inherited access rules but a different owner
-    - Solving this will have a significant performance impact since every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
+    - Solving this will have a significant performance impact
+    - Every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
     - This is why it will be an optional parameter.
 - Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
     - The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
@@ -561,7 +564,7 @@ Why is the IgnoreDomain syntax regex with slashes required?
 - Feature - Parameter to specify properties to include in report
 - Feature - This script does NOT account for individual file permissions. 
 Only folder permissions are considered.
-- Feature - This script does NOT account for file share permissions.
+- Feature - This script does NOT account for share permissions.
 Only NTFS permissions are considered.
 - Feature - Support ACLs from Registry or AD objects
 - Feature - Parameter to retrieve entire group membership chain
