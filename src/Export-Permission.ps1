@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.126
+.VERSION 0.0.127
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -10,7 +10,7 @@
 
 .COPYRIGHT (c) Jeremy La Camera. All rights reserved.
 
-.TAGS adsi ntfs acl
+.TAGS adsi ldap winnt ntfs acl
 
 .LICENSEURI https://github.com/IMJLA/Export-Permission/blob/main/LICENSE
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Minor script cleanup
+Changed some integers to unsigned integers where appropriate
 
 .PRIVATEDATA
 
@@ -53,9 +53,9 @@ Minor script cleanup
     - Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 
     Supports these scenarios:
-    - local file paths (resolved to UNC paths using the administrative shares, so the computer name is shown in the reports)
-    - UNC file paths
-    - DFS file paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
+    - local folder paths (resolved to UNC paths using the administrative shares, so the computer name is shown in the reports)
+    - UNC folder paths
+    - DFS folder paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
     - Active Directory domain trusts, and unresolved SIDs for deleted accounts
 
     Does not support these scenarios:
@@ -90,8 +90,6 @@ Minor script cleanup
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
     ToDo:
-    - Expand-IdentityReference should not call Search-Directory when the account name is an unresolved SID
-    - Investigate: Get-WellKnownSid repeatedly creating CIM sessions to same destination.  Add debug output suffix "# For $ComputerName" so debug is easier to read
     - Investigate - Are we filtering out ignored domains in 2 places?  redundant?  Why is the IgnoreDomain syntax regex with slashes required? (works but should not be required, that makes no sense)
     - Investigate - What happens if an ACE contains a SID that is in an object's SID history?
     - Investigate - Combine PsDfs and ConvertTo-DistinguishedName into a native C# module PsWin32Api
@@ -99,36 +97,41 @@ Minor script cleanup
         - WinNT://CONTOSO/Administrator for a domain account on a domain-joined server
         - WinNT://CONTOSO/SERVER123/Administrator for a local account on a domain-joined server
         - WinNT://WORKGROUP/SERVER123/Administrator for a local account on a workgroup server (not joined to an AD domain)
-    - Feature - Add parameter to support reporting ACL Owners.
-        - Currently we search folders for non-inherited access rules,
-        - To those access rules, we manually add a simulated FullControl access rule for the Owner to show their effective access
-        - This misses folders with only inherited access rules but a different owner
-        - Solving this will have a significant performance impact
-        - Every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
-        - This is why it will be an optional parameter.
-    - Bug - Doesn't work for AD users' default group/primary group (which is typically Domain Users).
-        - The user's default group is not listed in their memberOf attribute so I need to fix the LDAP search filter to include the primary group attribute.
+    - Bug - Doesn't work for LDAP users' default group/primary group (which is typically Domain Users).
+        - The user's default group is not listed in their memberOf attribute
+        - Need to fix the LDAP search filter to include the primary group attribute.
+    - Bug - Now starting to search Owner Access List, some Identityreferences of Owners have O: prefix (O:S-1-5-...) and we're not handling that yet
+    - Bug - Expand-IdentityReference should not call Search-Directory when the account name is an unresolved SID
+    - Bug - Get-WellKnownSid repeatedly creating CIM sessions to same destination in domain env? verify still ongoing.  Add debug output suffix "# For $ComputerName" so debug is easier to read
     - Bug - For a fake group created by New-FakeDirectoryEntry in the Adsi module, in the report its name will end up as an NT Account (CONTOSO\User123).
         - If it is a fake user, its name will correctly appear without the domain prefix (User123)
     - Bug - Fix bug in PlatyPS New-MarkdownHelp with multi-line param descriptions (?and example help maybe affected also?).
         - When provided the same comment-based help as input, Get-Help respects the line breaks but New-MarkdownHelp does not.
         - New-MarkdownHelp generates an inaccurate markdown representation by converting multiple lines to a single line.
         - Declared as wontfix https://github.com/PowerShell/platyPS/issues/314
-        - Need to fix it myself and submit a PR because that makes no sense
+        - Want to fix it myself and submit a PR
         - Until then, workaround is to include markdown syntax in PowerShell comment-based help
         - That is why there are so many extra blank lines and unordered lists in the commented metadata in this script
+    - Feature - DNS names should all end in ., NetBIOS names should not.
+    - Feature - Use DNS wherever possible.  Use FQDNs wherever possible.  Except a -NetBIOS switch to use NetBIOS for brevity in HTML?
+    - Feature - Normalize hostname and username capitalization; for example whoami output is all lowercase even if hostname and username are not
+    - Feature - [switch]$IncludeOwner parameter to support reporting ACL Owners.
+        - Currently we search folders for non-inherited access rules,
+        - To those access rules, we add a simulated FullControl access rule for the Owner to show their effective access
+        - This misses folders with only inherited access rules but a different owner
+        - Solving this will have a significant performance impact
+        - Every ACL of every subfolder will have to be retrieved (even if inheritance is enabled and permissions are identical)
+        - This is why it will be an optional parameter.
     - Feature - List any excluded accounts at the end
-    - Feature - Remove all usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
-    - Feature - Parameter to specify properties to include in report
+    - Feature - Remove usage of Add-Member to improve performance (create new pscustomobjects instead, nest original object inside)
     - Feature - This script does NOT account for individual file permissions.  Only folder permissions are considered.
     - Feature - This script does NOT account for share permissions. Only NTFS permissions are considered.
     - Feature - Support ACLs from Registry or AD objects
-    - Feature - Parameter to retrieve entire group membership chain
-    - Feature - Parameter to retrieve entire directory of known directories, cache in memory. Faster?  Threshold of n identityreferences where it makes sense?
+    - Feature - [string[]$Properties parameter to specify properties to include in report
     - Feature - Implement Send-MailKitMessage module
-    - Feature - Normalize hostname and username capitalization; for example whoami output is all lowercase even if hostname and username are not
-    - Feature - DNS names should all end in ., NetBIOS names should not.
-    - Feature - Use DNS wherever possible.  Use FQDNs wherever possible.  Except a -NetBIOS switch to use NetBIOS for brevity in HTML?
+    - Feature - [hashtable]$AdsiCredential parameter, key is Adsi server name, value is PSCredential
+    - Feature - [switch]$IncludeGroupChain parameter to retrieve entire group membership chain
+    - Feature - [switch]$CacheEntireDirectories parameter to retrieve entire directory of known directories, cache in memory. Faster?  Threshold of n identityreferences where it makes sense?  When using option to retrieve entire group tree?
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
@@ -327,7 +330,7 @@ param (
     [scriptblock]$GroupNamingConvention = { $true },
 
     # Number of asynchronous threads to use
-    [int]$ThreadCount = 4,
+    [uint]$ThreadCount = 4,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
@@ -351,7 +354,7 @@ param (
 
     the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     #>
-    [int]$PrtgSensorPort,
+    [uint]$PrtgSensorPort,
 
     <#
     If all four of the PRTG parameters are specified,

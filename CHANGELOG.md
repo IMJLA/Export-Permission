@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.127] - 2022-08-20 - Changed some integers to unsigned integers where appropriate
+
 ## [0.0.126] - 2022-08-20 - Minor script cleanup
 
 ## [0.0.125] - 2022-08-20 - Now the pipeline support should actually halfway work
