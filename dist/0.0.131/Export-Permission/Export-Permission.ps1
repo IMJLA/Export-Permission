@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.130
+.VERSION 0.0.131
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Moved ToDo list to GitHub Issues
+Fixed mistakes from git merging
 
 .PRIVATEDATA
 
@@ -89,8 +89,7 @@ Moved ToDo list to GitHub Issues
 
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
-    ToDo:
-        Follow this link for list of ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
+    ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 

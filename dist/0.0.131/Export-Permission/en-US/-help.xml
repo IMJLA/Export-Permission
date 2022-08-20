@@ -454,7 +454,7 @@
         <maml:para>This code has limited or no tests</maml:para>
         <maml:para>It was designed for presenting reports to non-technical management or administrative staff</maml:para>
         <maml:para>It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses</maml:para>
-        <maml:para>ToDo:     Follow this link for list of ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:para>
+        <maml:para>ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>
