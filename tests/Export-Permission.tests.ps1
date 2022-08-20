@@ -1,3 +1,5 @@
+#Requires -RunAsAdministrator
+
 BeforeDiscovery {
 
     if ($env:AppData) {
@@ -6,7 +8,7 @@ BeforeDiscovery {
         $ParentFolderPath = ".\TestFolder"
     }
     $ChildFolderPath = "$ParentFolderPath\Subfolder"
-    $null = Remove-Item -Path $ChildFolderPath -Recurse -ErrorAction SilentlyContinue
+    $null = Remove-Item -Path $ParentFolderPath -Recurse -ErrorAction SilentlyContinue
     $null = New-Item -ItemType Directory -Path $ChildFolderPath -ErrorAction SilentlyContinue
 
     $ParentAcl = Get-Acl -Path $ParentFolderPath
