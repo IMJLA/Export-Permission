@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.136] - 2022-08-20 - Updated psakefile to not publish unless working on main
+
 ## [0.0.135] - 2022-08-20 - Fixed mistakes from git merging
 
 ## [0.0.131] - 2022-08-20 - Fixed mistakes from git merging
