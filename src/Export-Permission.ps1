@@ -18,7 +18,7 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
+.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission
 
 .REQUIREDSCRIPTS
 
@@ -29,7 +29,7 @@ Test build to see if merge damage undone
 
 .PRIVATEDATA
 
-#> 
+#>
 
 #Requires -Module Adsi
 #Requires -Module SimplePrtg
@@ -39,10 +39,6 @@ Test build to see if merge damage undone
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
-
 
 <#
 .SYNOPSIS
@@ -80,7 +76,9 @@ Test build to see if merge damage undone
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
-    [System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.
+    [System.IO.DirectoryInfo[]] TargetPath parameter
+
+    Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
@@ -247,9 +245,11 @@ param (
     [switch]$ExcludeEmptyGroups,
 
     <#
-    Domains to ignore (they will be removed from the username)
+    Domain(s) to ignore (they will be removed from the username)
 
     Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+
+    Can also be used to remove all domains simply for brevity in the report.
     #>
     [string[]]$IgnoreDomain,
 
@@ -354,7 +354,7 @@ begin {
     $FolderTargets = $null
     $SecurityPrincipals = $null
     $FormattedSecurityPrincipals = $null
-    $DedupedUserPermissions = $null
+    $UniqueAccountPermissions = $null
     $FolderPermissions = $null
 
     $ThisHostname = HOSTNAME.EXE
@@ -655,13 +655,13 @@ process {
         Sort-Object -Property Name
 
         # Ensure accounts only appear once on the report if they exist in multiple domains
-        Write-LogMsg @LogParams -Text "Remove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
-        $DedupedUserPermissions = Remove-DuplicatesAcrossIgnoredDomains -UserPermission $Accounts -DomainToIgnore $IgnoreDomain
+        Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
+        $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
 
-        # Group the user permissions back into folder permissions for the report
-        Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
+        # Group the account permissions back into folder permissions for the report
+        Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-        $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
+        $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions |
         Group-Object -Property Folder |
         Sort-Object -Property Name
 
