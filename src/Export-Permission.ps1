@@ -676,7 +676,6 @@ process {
             FolderPermissions  = $FolderPermissions
             ExcludeAccount     = $ExcludeAccount
             ExcludeEmptyGroups = $ExcludeEmptyGroups
-            IgnoreDomain       = $IgnoreDomain
         }
         Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
         $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
