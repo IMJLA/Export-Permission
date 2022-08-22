@@ -485,6 +485,8 @@ task Publish -depends SourceControl {
     if ($PublishPSRepositoryCredential) {
         $publishParams.Credential = $PublishPSRepositoryCredential
     }
+
+    # Only publish a release if we are working on the main branch
     $CurrentBranch = git branch --show-current
     if ($NoPublish -eq $false -and $CurrentBranch -eq 'main') {
         # Publish to PSGallery

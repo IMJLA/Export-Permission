@@ -70,9 +70,9 @@
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
             <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
           </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.UInt32</command:parameterValue>
+          <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
           <dev:type>
-            <maml:name>System.UInt32</maml:name>
+            <maml:name>System.UInt16</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>0</dev:defaultValue>
@@ -105,8 +105,9 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
           <maml:name>IgnoreDomain</maml:name>
           <maml:description>
-            <maml:para>Domains to ignore (they will be removed from the username)</maml:para>
+            <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
             <maml:para>Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.</maml:para>
+            <maml:para>Can also be used to remove all domains simply for brevity in the report.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
@@ -177,9 +178,9 @@
           <maml:description>
             <maml:para>Number of asynchronous threads to use</maml:para>
           </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.UInt32</command:parameterValue>
+          <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
           <dev:type>
-            <maml:name>System.UInt32</maml:name>
+            <maml:name>System.UInt16</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>4</dev:defaultValue>
@@ -278,8 +279,9 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
         <maml:name>IgnoreDomain</maml:name>
         <maml:description>
-          <maml:para>Domains to ignore (they will be removed from the username)</maml:para>
+          <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
           <maml:para>Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.</maml:para>
+          <maml:para>Can also be used to remove all domains simply for brevity in the report.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
@@ -343,9 +345,9 @@
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
           <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
         </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.UInt32</command:parameterValue>
+        <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
         <dev:type>
-          <maml:name>System.UInt32</maml:name>
+          <maml:name>System.UInt16</maml:name>
           <maml:uri />
         </dev:type>
         <dev:defaultValue>0</dev:defaultValue>
@@ -408,9 +410,9 @@
         <maml:description>
           <maml:para>Number of asynchronous threads to use</maml:para>
         </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.UInt32</command:parameterValue>
+        <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
         <dev:type>
-          <maml:name>System.UInt32</maml:name>
+          <maml:name>System.UInt16</maml:name>
           <maml:uri />
         </dev:type>
         <dev:defaultValue>4</dev:defaultValue>
@@ -431,7 +433,15 @@
     <command:inputTypes>
       <command:inputType>
         <dev:type>
-          <maml:name>[System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.</maml:name>
+          <maml:name>[System.IO.DirectoryInfo[]] TargetPath parameter</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>

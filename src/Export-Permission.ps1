@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.137
+.VERSION 0.0.138
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission
+.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Test build to see if merge damage undone
+replaced uint with uint16 for efficiency and ps 5.1 compat
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module Adsi
 #Requires -Module SimplePrtg
@@ -39,6 +39,7 @@ Test build to see if merge damage undone
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 <#
 .SYNOPSIS
@@ -291,7 +292,7 @@ param (
     [scriptblock]$GroupNamingConvention = { $true },
 
     # Number of asynchronous threads to use
-    [uint]$ThreadCount = 4,
+    [uint16]$ThreadCount = 4,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
@@ -315,7 +316,7 @@ param (
 
     the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     #>
-    [uint]$PrtgSensorPort,
+    [uint16]$PrtgSensorPort,
 
     <#
     If all four of the PRTG parameters are specified,
@@ -587,7 +588,6 @@ process {
         }
 
         # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
-        # Filter out groups (their members have already been retrieved)
         if ($ThreadCount -eq 1) {
 
             $FormattedSecurityPrincipals = $SecurityPrincipals |
@@ -667,6 +667,7 @@ process {
 
         # Convert the folder list to an HTML table
         Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
+
         $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
         ConvertTo-Html -Fragment |
         New-BootstrapTable

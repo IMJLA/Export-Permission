@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.136
+help version: 0.0.137
 locale: en-US
 Module Name:
 online version:
@@ -18,8 +18,8 @@ Create CSV, HTML, and XML reports of permissions
 ```
 Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>] [-ExcludeEmptyGroups]
  [[-IgnoreDomain] <String[]>] [[-LogDir] <String>] [-NoGroupMembers] [[-SubfolderLevels] <Int32>]
- [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>] [[-ThreadCount] <UInt32>] [-OpenReportAtEnd]
- [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <UInt32>]
+ [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-OpenReportAtEnd]
+ [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <UInt16>]
  [[-PrtgSensorToken] <String>] [<CommonParameters>]
 ```
 
@@ -314,9 +314,11 @@ Accept wildcard characters: False
 ```
 
 ### -IgnoreDomain
-Domains to ignore (they will be removed from the username)
+Domain(s) to ignore (they will be removed from the username)
 
 Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+
+Can also be used to remove all domains simply for brevity in the report.
 
 ```yaml
 Type: System.String[]
@@ -398,7 +400,7 @@ If all four of the PRTG parameters are specified,
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
 
 ```yaml
-Type: System.UInt32
+Type: System.UInt16
 Parameter Sets: (All)
 Aliases:
 
@@ -483,7 +485,7 @@ Accept wildcard characters: False
 Number of asynchronous threads to use
 
 ```yaml
-Type: System.UInt32
+Type: System.UInt16
 Parameter Sets: (All)
 Aliases:
 
@@ -514,7 +516,8 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
-### [System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.
+### [System.IO.DirectoryInfo[]] TargetPath parameter
+### Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 ## OUTPUTS
 
 ### [System.String] XML PRTG sensor output

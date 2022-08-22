@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.137
+.VERSION 0.0.138
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,14 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Test build to see if merge damage undone
+replaced uint with uint16 for efficiency and ps 5.1 compat
 
 .PRIVATEDATA
 
 #> 
-
-
-
 
 
 
@@ -85,7 +82,9 @@ Test build to see if merge damage undone
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 .INPUTS
-    [System.IO.DirectoryInfo[]] TargetPath parameter. Strings can be passed to this parameter and will be auto-cast to DirectoryInfo.
+    [System.IO.DirectoryInfo[]] TargetPath parameter
+
+    Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 .OUTPUTS
     [System.String] XML PRTG sensor output
 .NOTES
@@ -252,9 +251,11 @@ param (
     [switch]$ExcludeEmptyGroups,
 
     <#
-    Domains to ignore (they will be removed from the username)
+    Domain(s) to ignore (they will be removed from the username)
 
     Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+
+    Can also be used to remove all domains simply for brevity in the report.
     #>
     [string[]]$IgnoreDomain,
 
@@ -296,7 +297,7 @@ param (
     [scriptblock]$GroupNamingConvention = { $true },
 
     # Number of asynchronous threads to use
-    [uint]$ThreadCount = 4,
+    [uint16]$ThreadCount = 4,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
@@ -320,7 +321,7 @@ param (
 
     the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     #>
-    [uint]$PrtgSensorPort,
+    [uint16]$PrtgSensorPort,
 
     <#
     If all four of the PRTG parameters are specified,
@@ -4430,49 +4431,6 @@ function New-NtfsAclIssueReport {
         FoldersWithCreatorOwner      = $FoldersWithCreatorOwner
     }
 }
-function Remove-DuplicatesAcrossIgnoredDomains {
-
-    param (
-
-        [Parameter(ValueFromPipeline)]
-        $UserPermission,
-
-        [string[]]$DomainToIgnore
-
-    )
-
-    begin {
-        $KnownUsers = [hashtable]::Synchronized(@{})
-    }
-    process {
-        
-        ForEach ($ThisUser in $UserPermission) {
-            
-            $ShortName = $ThisUser.Name
-            ForEach ($IgnoreThisDomain in $DomainToIgnore) {
-                $ShortName = $ShortName -replace $IgnoreThisDomain,''
-            }
-
-            if ($null -eq $KnownUsers[$ShortName]) {
-                $KnownUsers[$ShortName] = [pscustomobject]@{
-                    'Name' = $ShortName
-                    'Group' = $ThisUser.Group
-                }
-            }
-            else {
-                $KnownUsers[$ShortName] = [pscustomobject]@{
-                    'Name' = $ShortName
-                    'Group' = $KnownUsers[$ShortName].Group + $ThisUser.Group
-                }
-            }
-        }
-
-    }
-    end {
-        $KnownUsers.Values | Sort-Object -Property Name
-    }
-
-}
 <#
 # Dot source any functions
 ForEach ($ThisScript in $ScriptFiles) {
@@ -7022,6 +6980,57 @@ function Select-FolderTableProperty {
         Expression = { $_.Group.FolderInheritanceEnabled | Select-Object -First 1 }
     }
 }
+function Select-UniqueAccountPermission {
+
+    param (
+
+        # Objects output from Format-SecurityPrincipal ... | Group-Object -Property User
+        [Parameter(ValueFromPipeline)]
+        $AccountPermission,
+
+        <#
+        Domain(s) to ignore (they will be removed from the username)
+
+        Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+
+        Can also be used to remove all domains simply for brevity in the report.
+        #>
+        [string[]]$IgnoreDomain,
+
+        # Hashtable will be used to deduplicate
+        $KnownUsers = [hashtable]::Synchronized(@{})
+
+    )
+    process {
+
+        ForEach ($ThisUser in $AccountPermission) {
+
+            $ShortName = $ThisUser.Name
+            ForEach ($IgnoreThisDomain in $IgnoreDomain) {
+                $ShortName = $ShortName -replace "^$IgnoreThisDomain\\", ''
+            }
+
+            $ThisKnownUser = $null
+            $ThisKnownUser = $KnownUsers[$ShortName]
+            if ($null -eq $ThisKnownUser) {
+                $KnownUsers[$ShortName] = [pscustomobject]@{
+                    'Name'  = $ShortName
+                    'Group' = $ThisUser.Group
+                }
+            } else {
+                $KnownUsers[$ShortName] = [pscustomobject]@{
+                    'Name'  = $ShortName
+                    'Group' = $ThisKnownUser.Group + $ThisUser.Group
+                }
+            }
+        }
+
+    }
+    end {
+        $KnownUsers.Values
+    }
+
+}
 
 # Add any custom C# classes as usable (exported) types
 $CSharpFiles = Get-ChildItem -Path "$PSScriptRoot\*.cs"
@@ -7051,7 +7060,7 @@ ForEach ($ThisFile in $CSharpFiles) {
     $FolderTargets = $null
     $SecurityPrincipals = $null
     $FormattedSecurityPrincipals = $null
-    $DedupedUserPermissions = $null
+    $UniqueAccountPermissions = $null
     $FolderPermissions = $null
 
     $ThisHostname = HOSTNAME.EXE
@@ -7284,7 +7293,6 @@ process {
         }
 
         # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
-        # Filter out groups (their members have already been retrieved)
         if ($ThreadCount -eq 1) {
 
             $FormattedSecurityPrincipals = $SecurityPrincipals |
@@ -7352,18 +7360,19 @@ process {
         Sort-Object -Property Name
 
         # Ensure accounts only appear once on the report if they exist in multiple domains
-        Write-LogMsg @LogParams -Text "Remove-DuplicatesAcrossIgnoredDomains -UserPermission `$Accounts -DomainToIgnore @('$($IgnoreDomain -join "',")')"
-        $DedupedUserPermissions = Remove-DuplicatesAcrossIgnoredDomains -UserPermission $Accounts -DomainToIgnore $IgnoreDomain
+        Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
+        $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
 
-        # Group the user permissions back into folder permissions for the report
-        Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$DedupedUserPermissions | Group Folder | Sort Name"
+        # Group the account permissions back into folder permissions for the report
+        Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-        $FolderPermissions = Format-FolderPermission -UserPermission $DedupedUserPermissions |
+        $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions |
         Group-Object -Property Folder |
         Sort-Object -Property Name
 
         # Convert the folder list to an HTML table
         Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
+
         $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
         ConvertTo-Html -Fragment |
         New-BootstrapTable
@@ -7373,7 +7382,6 @@ process {
             FolderPermissions  = $FolderPermissions
             ExcludeAccount     = $ExcludeAccount
             ExcludeEmptyGroups = $ExcludeEmptyGroups
-            IgnoreDomain       = $IgnoreDomain
         }
         Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
         $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
