@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.139] - 2022-08-21 - Minor fixes to debug output
+
 ## [0.0.138] - 2022-08-21 - replaced uint with uint16 for efficiency and ps 5.1 compat
 
 ## [0.0.137] - 2022-08-20 - Test build to see if merge damage undone

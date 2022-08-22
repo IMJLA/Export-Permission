@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.138
+.VERSION 0.0.139
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-replaced uint with uint16 for efficiency and ps 5.1 compat
+Minor fixes to debug output
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ replaced uint with uint16 for efficiency and ps 5.1 compat
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -583,7 +584,7 @@ process {
             if ($NoGroupMembers) {
                 $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
             }
-            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter 'AccessControlEntry' -InputObject `$GroupedIdentities"
             $SecurityPrincipals = Split-Thread @ExpandIdentityReferenceParams
         }
 
@@ -607,7 +608,7 @@ process {
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
             }
-            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipals"
             $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
         }
 
@@ -629,7 +630,7 @@ process {
                 TodaysHostname       = $ThisHostname
                 ObjectStringProperty = 'Name'
             }
-            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-AccountPermission' -InputParameter 'AccountPermission' -InputObject `$FormattedSecurityPrincipals -ObjectStringProperty 'Name'"
             $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
         }
 

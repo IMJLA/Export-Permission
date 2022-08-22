@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.138
+.VERSION 0.0.139
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-replaced uint with uint16 for efficiency and ps 5.1 compat
+Minor fixes to debug output
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -7288,7 +7289,7 @@ process {
             if ($NoGroupMembers) {
                 $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
             }
-            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter AccessControlEntry -InputObject `$GroupedIdentities"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter 'AccessControlEntry' -InputObject `$GroupedIdentities"
             $SecurityPrincipals = Split-Thread @ExpandIdentityReferenceParams
         }
 
@@ -7312,7 +7313,7 @@ process {
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
             }
-            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter SecurityPrincipal -InputObject `$SecurityPrincipals"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipals"
             $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
         }
 
@@ -7334,7 +7335,7 @@ process {
                 TodaysHostname       = $ThisHostname
                 ObjectStringProperty = 'Name'
             }
-            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission `$FormattedSecurityPrincipals"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-AccountPermission' -InputParameter 'AccountPermission' -InputObject `$FormattedSecurityPrincipals -ObjectStringProperty 'Name'"
             $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
         }
 
