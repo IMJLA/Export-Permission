@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.140
+.VERSION 0.0.141
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission
+.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Updated module dependencies
+cache improvements
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module Adsi
 #Requires -Module SimplePrtg
@@ -39,8 +39,6 @@ Updated module dependencies
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
 
 
 <#
@@ -379,6 +377,7 @@ begin {
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
     Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
     $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
+    $TrustedDomains = Get-TrustedDomain
 
 }
 
@@ -416,42 +415,36 @@ process {
 
         Write-Information $CsvFilePath
 
-        # Prepare to pre-populate the domain caches
         # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
         # This prevents repetitive queries to the same directory servers
 
         # Identify server names from the item paths
-        # Add the discovered server names to our list of known ADSI server names we can query to populate the domain caches
         $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
+
+        $ThisFqdn = [System.Net.Dns]::GetHostByName(($ThisHostName)).HostName
+        $null = $UniqueServerNames.Add($ThisFqdn)
 
         $Permissions.SourceAccessList.Path |
         ForEach-Object {
             $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $_))
         }
 
-        # Populate two caches of known domains
+        # Populate three caches of known domains
         # The first cache is keyed by SID
         # The second cache is keyed by NETBIOS name
-        Write-LogMsg @LogParams -Text "Get-TrustedDomainSidNameMap"
-        $DomainSidNameMapParams = @{
-            DirectoryEntryCache = $DirectoryEntryCache
-            DomainsBySID        = $DomainsBySID
-            DomainsByNetbios    = $DomainsByNetbios
-            DomainsByFqdn       = $DomainsByFqdn
-        }
-        $null = Get-TrustedDomainSidNameMap @DomainSidNameMapParams
+        # The third cache is keyed by DNS name
+        # Also populate a cache of DirectoryEntry objects for any domains that have them
 
         # Add the discovered domains to our list of known ADSI server name
-        $DomainsByNetbios.Keys |
+        $TrustedDomains |
         ForEach-Object {
-            $null = $UniqueServerNames.Add($DomainsByNetbios[$_].Dns)
+            $null = $UniqueServerNames.Add($_.DomainFqdn)
         }
 
         # Deduplicate our list of known ADSI server names
         $UniqueServerNames = $UniqueServerNames |
         Sort-Object -Unique
 
-        # Populate the caches of known ADSI servers
         # Populate two caches of known Win32_Account instances
         #   The first cache is keyed on SID (e.g. S-1-5-2)
         #   The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
@@ -459,25 +452,33 @@ process {
             $GetAdsiServerParams = @{
                 Win32AccountsBySID     = $Win32AccountsBySID
                 Win32AccountsByCaption = $Win32AccountsByCaption
+                DirectoryEntryCache    = $DirectoryEntryCache
+                DomainsByFqdn          = $DomainsByFqdn
+                DomainsByNetbios       = $DomainsByNetbios
+                DomainsBySid           = $DomainsBySid
             }
 
             $UniqueServerNames |
             ForEach-Object {
-                Write-LogMsg @LogParams -Text "Get-AdsiServer -AdsiServer '$_'"
-                $null = Get-AdsiServer @GetAdsiServerParams -AdsiServer $_
+                Write-LogMsg @LogParams -Text "Get-AdsiServer -Fqdn '$_'"
+                $null = Get-AdsiServer @GetAdsiServerParams -Fqdn $_
             }
 
         } else {
             $GetAdsiServerParams = @{
                 Command        = 'Get-AdsiServer'
                 InputObject    = $UniqueServerNames
-                InputParameter = 'AdsiServer'
+                InputParameter = 'Fqdn'
                 TodaysHostname = $ThisHostname
                 WhoAmI         = $WhoAmI
                 LogMsgCache    = $LogMsgCache
                 AddParam       = @{
                     Win32AccountsBySID     = $Win32AccountsBySID
                     Win32AccountsByCaption = $Win32AccountsByCaption
+                    DirectoryEntryCache    = $DirectoryEntryCache
+                    DomainsByFqdn          = $DomainsByFqdn
+                    DomainsByNetbios       = $DomainsByNetbios
+                    DomainsBySid           = $DomainsBySid
                 }
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
@@ -550,6 +551,7 @@ process {
                 IdentityReferenceCache = $IdentityReferenceCache
                 DomainsBySID           = $DomainsBySID
                 DomainsByNetbios       = $DomainsByNetbios
+                DomainsByFqdn          = $DomainsByFqdn
             }
             if ($NoGroupMembers) {
                 $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
@@ -574,6 +576,7 @@ process {
                     IdentityReferenceCache = $IdentityReferenceCache
                     DomainsBySID           = $DomainsBySID
                     DomainsByNetbios       = $DomainsByNetbios
+                    DomainsByFqdn          = $DomainsByFqdn
                 }
                 ObjectStringProperty = 'Name'
             }
