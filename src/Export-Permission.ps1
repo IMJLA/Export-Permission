@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.142
+.VERSION 0.0.143
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate latest changes from adsi dependency module
+Actually updated the Adsi module this time
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ integrate latest changes from adsi dependency module
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.143] - 2022-08-25 - Actually updated the Adsi module this time
+
 ## [0.0.142] - 2022-08-25 - integrate latest changes from adsi dependency module
 
 ## [0.0.141] - 2022-08-25 - cache improvements
