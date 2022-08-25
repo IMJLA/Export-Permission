@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.141
+.VERSION 0.0.142
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-cache improvements
+integrate latest changes from adsi dependency module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -7081,7 +7082,7 @@ ForEach ($ThisFile in $CSharpFiles) {
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
     Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
     $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
-    $TrustedDomains = Get-TrustedDomain
+    $TrustedDomains = Get-TrustedDomain -ThisHostname $ThisHostname
 
 }
 
@@ -7160,6 +7161,8 @@ process {
                 DomainsByFqdn          = $DomainsByFqdn
                 DomainsByNetbios       = $DomainsByNetbios
                 DomainsBySid           = $DomainsBySid
+                ThisHostName           = $ThisHostName
+                ThisFqdn               = $ThisFqdn
             }
 
             $UniqueServerNames |
@@ -7183,6 +7186,8 @@ process {
                     DomainsByFqdn          = $DomainsByFqdn
                     DomainsByNetbios       = $DomainsByNetbios
                     DomainsBySid           = $DomainsBySid
+                    ThisHostName           = $ThisHostName
+                    ThisFqdn               = $ThisFqdn
                 }
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
@@ -7199,6 +7204,8 @@ process {
                 DomainsBySID           = $DomainsBySID
                 DomainsByNetbios       = $DomainsByNetbios
                 DomainsByFqdn          = $DomainsByFqdn
+                ThisHostName           = $ThisHostName
+                ThisFqdn               = $ThisFqdn
             }
 
             $PermissionsWithResolvedIdentityReferences = $Permissions |
@@ -7225,6 +7232,8 @@ process {
                     DomainsBySID           = $DomainsBySID
                     DomainsByNetbios       = $DomainsByNetbios
                     DomainsByFqdn          = $DomainsByFqdn
+                    ThisHostName           = $ThisHostName
+                    ThisFqdn               = $ThisFqdn
                 }
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
@@ -7256,6 +7265,8 @@ process {
                 DomainsBySID           = $DomainsBySID
                 DomainsByNetbios       = $DomainsByNetbios
                 DomainsByFqdn          = $DomainsByFqdn
+                ThisHostName           = $ThisHostName
+                ThisFqdn               = $ThisFqdn
             }
             if ($NoGroupMembers) {
                 $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
@@ -7281,6 +7292,8 @@ process {
                     DomainsBySID           = $DomainsBySID
                     DomainsByNetbios       = $DomainsByNetbios
                     DomainsByFqdn          = $DomainsByFqdn
+                    ThisHostName           = $ThisHostName
+                    ThisFqdn               = $ThisFqdn
                 }
                 ObjectStringProperty = 'Name'
             }
