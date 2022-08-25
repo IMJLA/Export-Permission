@@ -18,7 +18,7 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
+.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission
 
 .REQUIREDSCRIPTS
 
@@ -29,7 +29,7 @@ Updated module dependencies
 
 .PRIVATEDATA
 
-#> 
+#>
 
 #Requires -Module Adsi
 #Requires -Module SimplePrtg
@@ -346,7 +346,6 @@ begin {
 
     $DirectoryEntryCache = [hashtable]::Synchronized(@{})
     $IdentityReferenceCache = [hashtable]::Synchronized(@{})
-    $AdsiServersByDns = [hashtable]::Synchronized(@{})
     $Win32AccountsBySID = [hashtable]::Synchronized(@{})
     $Win32AccountsByCaption = [hashtable]::Synchronized(@{})
     $DomainsBySID = [hashtable]::Synchronized(@{})
@@ -417,12 +416,12 @@ process {
 
         Write-Information $CsvFilePath
 
-        # Prepare to pre-populate the AdsiServersByDns cache
+        # Prepare to pre-populate the domain caches
         # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
         # This prevents repetitive queries to the same directory servers
 
         # Identify server names from the item paths
-        # Add the discovered server names to our list of known ADSI server names we can query to populate the AdsiServersByDns cache
+        # Add the discovered server names to our list of known ADSI server names we can query to populate the domain caches
         $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
 
         $Permissions.SourceAccessList.Path |
@@ -452,13 +451,12 @@ process {
         $UniqueServerNames = $UniqueServerNames |
         Sort-Object -Unique
 
-        # Populate the AdsiServersByDns cache of known ADSI servers
+        # Populate the caches of known ADSI servers
         # Populate two caches of known Win32_Account instances
         #   The first cache is keyed on SID (e.g. S-1-5-2)
         #   The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
         if ($ThreadCount -eq 1) {
             $GetAdsiServerParams = @{
-                AdsiServersByDns       = $AdsiServersByDns
                 Win32AccountsBySID     = $Win32AccountsBySID
                 Win32AccountsByCaption = $Win32AccountsByCaption
             }
@@ -478,7 +476,6 @@ process {
                 WhoAmI         = $WhoAmI
                 LogMsgCache    = $LogMsgCache
                 AddParam       = @{
-                    AdsiServersByDns       = $AdsiServersByDns
                     Win32AccountsBySID     = $Win32AccountsBySID
                     Win32AccountsByCaption = $Win32AccountsByCaption
                 }
@@ -491,7 +488,6 @@ process {
         # The resolved name will include the domain name (or local computer name for local accounts)
         if ($ThreadCount -eq 1) {
             $ResolveAceParams = @{
-                AdsiServersByDns       = $AdsiServersByDns
                 DirectoryEntryCache    = $DirectoryEntryCache
                 Win32AccountsBySID     = $Win32AccountsBySID
                 Win32AccountsByCaption = $Win32AccountsByCaption
@@ -518,7 +514,6 @@ process {
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
                 AddParam             = @{
-                    AdsiServersByDns       = $AdsiServersByDns
                     DirectoryEntryCache    = $DirectoryEntryCache
                     Win32AccountsBySID     = $Win32AccountsBySID
                     Win32AccountsByCaption = $Win32AccountsByCaption
