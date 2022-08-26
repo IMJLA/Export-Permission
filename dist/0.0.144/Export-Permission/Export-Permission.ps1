@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.143
+.VERSION 0.0.144
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Actually updated the Adsi module this time
+improved logging using PsLogMessage integrated with Adsi module
 
 .PRIVATEDATA
 
@@ -39,8 +39,6 @@ Actually updated the Adsi module this time
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
 
 
 <#
@@ -294,7 +292,7 @@ param (
     [scriptblock]$GroupNamingConvention = { $true },
 
     # Number of asynchronous threads to use
-    [uint16]$ThreadCount = 4,
+    [uint16]$ThreadCount = 1,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
@@ -367,6 +365,11 @@ begin {
         LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
+    $LoggingParams = @{
+        ThisHostname = $ThisHostname
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
 
     $AclParams = @{
         LevelsOfSubfolders = $SubfolderLevels
@@ -379,7 +382,7 @@ begin {
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
     Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
     $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
-    $TrustedDomains = Get-TrustedDomain -ThisHostname $ThisHostname
+    $TrustedDomains = Get-TrustedDomain @LoggingParams
 
 }
 
@@ -503,6 +506,8 @@ process {
                 DomainsByFqdn          = $DomainsByFqdn
                 ThisHostName           = $ThisHostName
                 ThisFqdn               = $ThisFqdn
+                WhoAmI                 = $WhoAmI
+                LogMsgCache            = $LogMsgCache
             }
 
             $PermissionsWithResolvedIdentityReferences = $Permissions |
@@ -531,6 +536,8 @@ process {
                     DomainsByFqdn          = $DomainsByFqdn
                     ThisHostName           = $ThisHostName
                     ThisFqdn               = $ThisFqdn
+                    WhoAmI                 = $WhoAmI
+                    LogMsgCache            = $LogMsgCache
                 }
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
@@ -564,6 +571,8 @@ process {
                 DomainsByFqdn          = $DomainsByFqdn
                 ThisHostName           = $ThisHostName
                 ThisFqdn               = $ThisFqdn
+                WhoAmI                 = $WhoAmI
+                LogMsgCache            = $LogMsgCache
             }
             if ($NoGroupMembers) {
                 $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
@@ -591,6 +600,8 @@ process {
                     DomainsByFqdn          = $DomainsByFqdn
                     ThisHostName           = $ThisHostName
                     ThisFqdn               = $ThisFqdn
+                    WhoAmI                 = $WhoAmI
+                    LogMsgCache            = $LogMsgCache
                 }
                 ObjectStringProperty = 'Name'
             }
@@ -642,6 +653,10 @@ process {
                 InputParameter       = 'AccountPermission'
                 TodaysHostname       = $ThisHostname
                 ObjectStringProperty = 'Name'
+                AddParam             = @{
+                    WhoAmI      = $WhoAmI
+                    LogMsgCache = $LogMsgCache
+                }
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-AccountPermission' -InputParameter 'AccountPermission' -InputObject `$FormattedSecurityPrincipals -ObjectStringProperty 'Name'"
             $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
