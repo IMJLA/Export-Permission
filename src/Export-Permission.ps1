@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.144
+.VERSION 0.0.145
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-improved logging using PsLogMessage integrated with Adsi module
+Fixed logging for Split-Thread -Command 'Get-AdsiServer'
 
 .PRIVATEDATA
 
@@ -292,7 +292,7 @@ param (
     [scriptblock]$GroupNamingConvention = { $true },
 
     # Number of asynchronous threads to use
-    [uint16]$ThreadCount = 1,
+    [uint16]$ThreadCount = 4,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
@@ -357,31 +357,48 @@ begin {
     $UniqueAccountPermissions = $null
     $FolderPermissions = $null
 
+    # Get the hostname of the computer running the script
     $ThisHostname = HOSTNAME.EXE
+
+    # Get the NTAccount caption of the user running the script
     $WhoAmI = whoami.exe
-    $LogParams = @{
-        ThisHostname = $ThisHostname
-        Type         = 'Debug'
-        LogMsgCache  = $LogMsgCache
-        WhoAmI       = $WhoAmI
-    }
+
+    # Prepare the cache of log-related variables to pass to various functions
     $LoggingParams = @{
         ThisHostname = $ThisHostname
         LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
 
-    $AclParams = @{
-        LevelsOfSubfolders = $SubfolderLevels
-        TodaysHostname     = $ThisHostname
-        WhoAmI             = $WhoAmI
-        LogMsgCache        = $LogMsgCache
+    # Fix the capitalization in the all-lowercase output from whoami.exe
+    $WhoAmI = Get-CurrentWhoAmI @LoggingParams
+
+    # Update the cache with the corrected capitalization
+    $LoggingParams['WhoAmI'] = $WhoAmI
+
+    # Create an additional cache specifically for Write-LogMsg
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = 'Debug'
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
     }
+
+    # These 3 events already happened but we will log them now that we have the correct capitalization of the user
+    Write-LogMsg @LogParams -Text "& HOSTNAME.EXE" -Type Debug
+    Write-LogMsg @LogParams -Text "& whoami.exe" -Type Debug
+    Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI" -Type Debug
+
+    Write-LogMsg @LogParams -Text "Get-CurrentFqdn"
+    $ThisFqdn = Get-CurrentFqdn @LoggingParams
 
     Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
+
     Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels"
     $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $SubfolderLevels
+
+    Write-LogMsg @LogParams -Text "Get-TrustedDomain"
     $TrustedDomains = Get-TrustedDomain @LoggingParams
 
 }
@@ -395,7 +412,7 @@ process {
         Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$ThisTargetPath'"
         $FolderTargets = Get-FolderTarget -FolderPath $ThisTargetPath
         Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
-        $Permissions = Get-FolderAccessList @AclParams -FolderTargets $FolderTargets
+        $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels @LoggingParams
 
         # If $ThisTargetPath was on a local disk such as C:\
         # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
@@ -405,7 +422,7 @@ process {
         # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
         if ($null -eq $Permissions) {
             Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$ThisTargetPath' -LevelsOfSubfolders $SubfolderLevels"
-            $Permissions = Get-FolderAccessList @AclParams -FolderTargets $ThisTargetPath
+            $Permissions = Get-FolderAccessList -FolderTargets $ThisTargetPath -LevelsOfSubfolders $SubfolderLevels @LoggingParams
         }
 
         # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
@@ -425,8 +442,6 @@ process {
 
         # Identify server names from the item paths
         $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
-
-        $ThisFqdn = [System.Net.Dns]::GetHostByName(($ThisHostName)).HostName
         $null = $UniqueServerNames.Add($ThisFqdn)
 
         $Permissions.SourceAccessList.Path |
@@ -450,9 +465,14 @@ process {
         $UniqueServerNames = $UniqueServerNames |
         Sort-Object -Unique
 
-        # Populate two caches of known Win32_Account instances
-        #   The first cache is keyed on SID (e.g. S-1-5-2)
-        #   The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
+        # Populate five caches:
+        #   Three caches of known ADSI directory servers
+        #     The first cache is keyed on domain SID (e.g. S-1-5-2)
+        #     The second cache is keyed on domain FQDN (e.g. ad.contoso.com)
+        #     The first cache is keyed on domain NetBIOS name (e.g. CONTOSO)
+        #   Two caches of known Win32_Account instances
+        #     The first cache is keyed on SID (e.g. S-1-5-2)
+        #     The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
         if ($ThreadCount -eq 1) {
             $GetAdsiServerParams = @{
                 Win32AccountsBySID     = $Win32AccountsBySID
@@ -488,6 +508,8 @@ process {
                     DomainsBySid           = $DomainsBySid
                     ThisHostName           = $ThisHostName
                     ThisFqdn               = $ThisFqdn
+                    WhoAmI                 = $WhoAmI
+                    LogMsgCache            = $LogMsgCache
                 }
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
@@ -632,7 +654,7 @@ process {
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
             }
-            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipals"
+            Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipals -ObjectStringProperty 'Name'"
             $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
         }
 
