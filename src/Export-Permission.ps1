@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.145
+.VERSION 0.0.146
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed logging for Split-Thread -Command 'Get-AdsiServer'
+bugfix debug output for Get-AdsiServer
 
 .PRIVATEDATA
 
@@ -449,12 +449,6 @@ process {
             $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $_))
         }
 
-        # Populate three caches of known domains
-        # The first cache is keyed by SID
-        # The second cache is keyed by NETBIOS name
-        # The third cache is keyed by DNS name
-        # Also populate a cache of DirectoryEntry objects for any domains that have them
-
         # Add the discovered domains to our list of known ADSI server name
         $TrustedDomains |
         ForEach-Object {
@@ -465,7 +459,7 @@ process {
         $UniqueServerNames = $UniqueServerNames |
         Sort-Object -Unique
 
-        # Populate five caches:
+        # Populate six caches:
         #   Three caches of known ADSI directory servers
         #     The first cache is keyed on domain SID (e.g. S-1-5-2)
         #     The second cache is keyed on domain FQDN (e.g. ad.contoso.com)
@@ -473,6 +467,7 @@ process {
         #   Two caches of known Win32_Account instances
         #     The first cache is keyed on SID (e.g. S-1-5-2)
         #     The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
+        #   Also populate a cache of DirectoryEntry objects for any domains that have them
         if ($ThreadCount -eq 1) {
             $GetAdsiServerParams = @{
                 Win32AccountsBySID     = $Win32AccountsBySID
@@ -483,6 +478,8 @@ process {
                 DomainsBySid           = $DomainsBySid
                 ThisHostName           = $ThisHostName
                 ThisFqdn               = $ThisFqdn
+                WhoAmI                 = $WhoAmI
+                LogMsgCache            = $LogMsgCache
             }
 
             $UniqueServerNames |

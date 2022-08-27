@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.146] - 2022-08-27 - bugfix debug output for Get-AdsiServer
+
 ## [0.0.145] - 2022-08-27 - Fixed logging for Split-Thread -Command 'Get-AdsiServer'
 
 ## [0.0.144] - 2022-08-26 - improved logging using PsLogMessage integrated with Adsi module
