@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.148] - 2022-08-27 - Added proper UNC and mapped drive functionality
+
 ## [0.0.147] - 2022-08-27 - bug fix in psntfs for UNC folder targets
 
 ## [0.0.146] - 2022-08-27 - bugfix debug output for Get-AdsiServer

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.147
+.VERSION 0.0.148
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bug fix in psntfs for UNC folder targets
+Added proper UNC and mapped drive functionality
 
 .PRIVATEDATA
 
@@ -39,7 +39,6 @@ bug fix in psntfs for UNC folder targets
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
 
 
 <#
@@ -390,8 +389,8 @@ begin {
     Write-LogMsg @LogParams -Text "& whoami.exe"
     Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
-    Write-LogMsg @LogParams -Text "Get-CurrentFqdn"
-    $ThisFqdn = Get-CurrentFqdn @LoggingParams
+    Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn"
+    $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
 
     Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.147
+.VERSION 0.0.148
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,12 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bug fix in psntfs for UNC folder targets
+Added proper UNC and mapped drive functionality
 
 .PRIVATEDATA
 
 #> 
-
 
 
 
@@ -5325,9 +5324,14 @@ function Get-FolderTarget {
                 Where-Object -FilterScript { $_.DeviceID -eq "$($Matches.DriveLetter):" }
 
                 if ($MatchingNetworkDrive) {
-                    $MatchingNetworkDrive.ProviderName
+                    $UNC = $MatchingNetworkDrive.ProviderName
                 } else {
-                    $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
+                    $UNC = $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
+                }
+                if ($UNC) {
+                    $Server = $UNC.split('\')[2]
+                    $FQDN = ConvertTo-DnsFqdn -ComputerName $Server
+                    $UNC -replace "^\\\\$Server\\", "\\$FQDN\"
                 }
             } else {
                 # Can't use [NetApi32Dll]::NetDfsGetInfo($TargetPath) because it doesn't work if the provided path is a subfolder of a DFS folder
@@ -5571,13 +5575,15 @@ ForEach ($ThisScript in $ScriptFiles) {
 
 # Definition of Module 'PsLogMessage' is below
 
-function Get-CurrentFqdn {
+function ConvertTo-DnsFqdn {
 
-    # Output the results of a DNS lookup to the default DNS server for the current hostname
+    # Output the results of a DNS lookup to the default DNS server for the specified
 
-    # Wrapper for [System.Net.Dns]::GetHostByName([string])
+    # Wrapper for [System.Net.Dns]::GetHostByName([string]$ComputerName)
 
     param (
+
+        [string]$ComputerName,
 
         <#
         Hostname of the computer running this function.
@@ -5599,8 +5605,8 @@ function Get-CurrentFqdn {
         LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
-    Write-LogMsg @LogParams -Text "[System.Net.Dns]::GetHostByName($ThisHostName)"
-    [System.Net.Dns]::GetHostByName($ThisHostName).HostName # -replace "^$ThisHostname", "$ThisHostname" #replace does not appear to be needed, capitalization is correct from GetHostByName()
+    Write-LogMsg @LogParams -Text "[System.Net.Dns]::GetHostByName('$ComputerName')"
+    [System.Net.Dns]::GetHostByName($ComputerName).HostName # -replace "^$ThisHostname", "$ThisHostname" #replace does not appear to be needed, capitalization is correct from GetHostByName()
 
 }
 function Get-CurrentHostName {
@@ -8301,8 +8307,8 @@ ForEach ($ThisFile in $CSharpFiles) {
     Write-LogMsg @LogParams -Text "& whoami.exe"
     Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
-    Write-LogMsg @LogParams -Text "Get-CurrentFqdn"
-    $ThisFqdn = Get-CurrentFqdn @LoggingParams
+    Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn"
+    $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
 
     Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
