@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.152
+.VERSION 0.0.153
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed bug with Expand-AccountPermission in psntfs module
+Fixed bug 7 with updated psntfs module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Fixed bug with Expand-AccountPermission in psntfs module
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
