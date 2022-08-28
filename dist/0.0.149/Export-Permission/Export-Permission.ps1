@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.148
+.VERSION 0.0.149
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Added proper UNC and mapped drive functionality
+Bug fix $ExpandedAccountPermissions vs $FormattedSecurityPrincipals
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Added proper UNC and mapped drive functionality
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -690,17 +691,14 @@ process {
         Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
 
         $ExpandedAccountPermissions |
-        Select-Object -Property @{
-            Label      = 'SourceAclPath'
-            Expression = { $_.ACESourceAccessList.Path }
-        }, * |
         Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 
         Write-Information $CsvFilePath
 
-        $Accounts = $FormattedSecurityPrincipals |
-        Group-Object -Property User |
-        Sort-Object -Property Name
+        #$Accounts = $FormattedSecurityPrincipals |
+        $Accounts = $ExpandedAccountPermissions |
+        Group-Object -Property User #|
+        #Sort-Object -Property Name
 
         # Ensure accounts only appear once on the report if they exist in multiple domains
         Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"

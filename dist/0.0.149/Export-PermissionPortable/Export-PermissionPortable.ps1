@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.148
+.VERSION 0.0.149
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Added proper UNC and mapped drive functionality
+Bug fix $ExpandedAccountPermissions vs $FormattedSecurityPrincipals
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -4916,6 +4917,8 @@ function Expand-AccountPermission {
                 $Props = ConvertTo-SimpleProperty -InputObject $ACE -Property $ThisProperty.Name -PropertyDictionary $Props -Prefix "ACE"
             }
 
+            $Props['SourceAclPath'] = $ACE.SourceAccessList.Path
+
             [pscustomobject]$Props
 
         }
@@ -5044,18 +5047,30 @@ function Format-FolderPermission {
             Write-Progress -Activity ("Total Users: " + $UserPermission.Count) -Status $status -PercentComplete $percentage
 
             if ($ThisUser.Group.DirectoryEntry.Properties) {
-                $Name = $ThisUser.Group.DirectoryEntry.Properties['name'] | Sort-Object -Unique
-                $Dept = $ThisUser.Group.DirectoryEntry.Properties['department'] | Sort-Object -Unique
-                $Title = $ThisUser.Group.DirectoryEntry.Properties['title'] | Sort-Object -Unique
-            } else {
-                $Name = $ThisUser.Group.name | Sort-Object -Unique
-                $Dept = $ThisUser.Group.department | Sort-Object -Unique
-                $Title = $ThisUser.Group.title | Sort-Object -Unique
-            }
-            if ("$Name" -eq '') {
-                $Name = $ThisUser.Name
-            }
-            if ($ThisUser.Group.DirectoryEntry.Properties) {
+                $Name = $ThisUser.Group.DirectoryEntry |
+                ForEach-Object {
+                    if ($_.Properties) {
+                        $_.Properties['name']
+                    }
+                } |
+                Sort-Object -Unique
+
+                $Dept = $ThisUser.Group.DirectoryEntry |
+                ForEach-Object {
+                    if ($_.Properties) {
+                        $_.Properties['department']
+                    }
+                } |
+                Sort-Object -Unique
+
+                $Title = $ThisUser.Group.DirectoryEntry |
+                ForEach-Object {
+                    if ($_.Properties) {
+                        $_.Properties['title']
+                    }
+                } |
+                Sort-Object -Unique
+
                 if ($ThisUser.Group.DirectoryEntry.Properties['objectclass'] -contains 'group' -or
                     "$($ThisUser.Group.DirectoryEntry.Properties['groupType'])" -ne ''
                 ) {
@@ -5064,6 +5079,10 @@ function Format-FolderPermission {
                     $SchemaClassName = 'user'
                 }
             } else {
+                $Name = $ThisUser.Group.name | Sort-Object -Unique
+                $Dept = $ThisUser.Group.department | Sort-Object -Unique
+                $Title = $ThisUser.Group.title | Sort-Object -Unique
+
                 if ($ThisUser.Group.Properties) {
                     if (
                         $ThisUser.Group.Properties['objectclass'] -contains 'group' -or
@@ -5083,10 +5102,13 @@ function Format-FolderPermission {
                     }
                 }
             }
+            if ("$Name" -eq '') {
+                $Name = $ThisUser.Name
+            }
 
-            ForEach ($ThisACE in $ThisUser.Group.NtfsAccessControlEntries) {
+            ForEach ($ThisACE in $ThisUser.Group) {
 
-                switch ($ThisACE.InheritanceFlags) {
+                switch ($ThisACE.ACEInheritanceFlags) {
                     'ContainerInherit, ObjectInherit' { $Scope = 'this folder, subfolders, and files' }
                     'ContainerInherit' { $Scope = 'this folder and subfolders' }
                     'ObjectInherit' { $Scope = 'this folder and files, but not subfolders' }
@@ -5096,18 +5118,18 @@ function Format-FolderPermission {
                 if ($null -eq $ThisUser.Group.IdentityReference) {
                     $IdentityReference = $null
                 } else {
-                    $IdentityReference = $ThisACE.IdentityReferenceResolved
+                    $IdentityReference = $ThisACE.ACEIdentityReferenceResolved
                 }
 
-                $FileSystemRights = $ThisACE.FileSystemRights
+                $FileSystemRights = $ThisACE.ACEFileSystemRights
                 ForEach ($Ignore in $FileSystemRightsToIgnore) {
                     $FileSystemRights = $FileSystemRights -replace ", $Ignore\Z", '' -replace "$Ignore,", ''
                 }
 
                 [pscustomobject]@{
-                    Folder                   = $ThisACE.SourceAccessList.Path
-                    FolderInheritanceEnabled = !($ThisACE.SourceAccessList.AreAccessRulesProtected)
-                    Access                   = "$($ThisACE.AccessControlType) $FileSystemRights $Scope"
+                    Folder                   = $ThisACE.ACESourceAccessList.Path
+                    FolderInheritanceEnabled = !($ThisACE.ACESourceAccessList.AreAccessRulesProtected)
+                    Access                   = "$($ThisACE.ACEAccessControlType) $FileSystemRights $Scope"
                     Account                  = $ThisUser.Name
                     Name                     = $Name
                     Department               = $Dept
@@ -8227,11 +8249,13 @@ function Select-UniqueAccountPermission {
             $ThisKnownUser = $KnownUsers[$ShortName]
             if ($null -eq $ThisKnownUser) {
                 $KnownUsers[$ShortName] = [pscustomobject]@{
+                    'Count' = $ThisUser.Group.Count
                     'Name'  = $ShortName
                     'Group' = $ThisUser.Group
                 }
             } else {
                 $KnownUsers[$ShortName] = [pscustomobject]@{
+                    'Count' = $ThisKnownUser.Group.Count + $ThisUser.Group.Count
                     'Name'  = $ShortName
                     'Group' = $ThisKnownUser.Group + $ThisUser.Group
                 }
@@ -8243,6 +8267,22 @@ function Select-UniqueAccountPermission {
         $KnownUsers.Values
     }
 
+}
+function Update-CaptionCapitalization {
+    param (
+        [string]$ThisHostName,
+        [hashtable]$Win32AccountsByCaption
+    )
+    $Win32AccountsByCaption.Keys |
+    ForEach-Object {
+        $Object = $Win32AccountsByCaption[$_]
+        #$Win32AccountsByCaption.Remove($_)
+        $NewKey = $_ -replace "^$ThisHostname\\$ThisHostname\\", "$ThisHostname\$ThisHostname\"
+        $NewKey = $_ -replace "^$ThisHostname\\", "$ThisHostname\"
+        Write-Host "Old Key: $_"
+        Write-Host "New Key: $NewKey"
+        #$Win32AccountsByCaption[$NewKey] = $Object
+    }
 }
 
 # Add any custom C# classes as usable (exported) types
@@ -8608,17 +8648,14 @@ process {
         Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
 
         $ExpandedAccountPermissions |
-        Select-Object -Property @{
-            Label      = 'SourceAclPath'
-            Expression = { $_.ACESourceAccessList.Path }
-        }, * |
         Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath
 
         Write-Information $CsvFilePath
 
-        $Accounts = $FormattedSecurityPrincipals |
-        Group-Object -Property User |
-        Sort-Object -Property Name
+        #$Accounts = $FormattedSecurityPrincipals |
+        $Accounts = $ExpandedAccountPermissions |
+        Group-Object -Property User #|
+        #Sort-Object -Property Name
 
         # Ensure accounts only appear once on the report if they exist in multiple domains
         Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
