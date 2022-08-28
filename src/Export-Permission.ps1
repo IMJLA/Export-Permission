@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.146
+.VERSION 0.0.147
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix debug output for Get-AdsiServer
+bug fix in psntfs for UNC folder targets
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix debug output for Get-AdsiServer
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -385,9 +386,9 @@ begin {
     }
 
     # These 3 events already happened but we will log them now that we have the correct capitalization of the user
-    Write-LogMsg @LogParams -Text "& HOSTNAME.EXE" -Type Debug
-    Write-LogMsg @LogParams -Text "& whoami.exe" -Type Debug
-    Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI" -Type Debug
+    Write-LogMsg @LogParams -Text "& HOSTNAME.EXE"
+    Write-LogMsg @LogParams -Text "& whoami.exe"
+    Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
     Write-LogMsg @LogParams -Text "Get-CurrentFqdn"
     $ThisFqdn = Get-CurrentFqdn @LoggingParams

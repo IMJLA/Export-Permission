@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.146
+.VERSION 0.0.147
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix debug output for Get-AdsiServer
+bug fix in psntfs for UNC folder targets
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5317,37 +5318,51 @@ function Get-FolderTarget {
 
             $RegEx = '^(?<DriveLetter>\w):'
             if ($TargetPath -match $RegEx) {
-                # TODO: Resolve mapped network drives to their UNC path, currently this will incorrectly treat them as local paths
-                $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
+                # Resolve mapped network drives to their UNC path
+                $MappedNetworkDrives = Get-Win32MappedLogicalDisk
+
+                $MatchingNetworkDrive = $MappedNetworkDrives |
+                Where-Object -FilterScript { $_.DeviceID -eq "$($Matches.DriveLetter):" }
+
+                if ($MatchingNetworkDrive) {
+                    $MatchingNetworkDrive.ProviderName
+                } else {
+                    $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
+                }
             } else {
                 # Can't use [NetApi32Dll]::NetDfsGetInfo($TargetPath) because it doesn't work if the provided path is a subfolder of a DFS folder
                 # Can't use [NetApi32Dll]::NetDfsGetClientInfo($TargetPath) because it does not return disabled folder targets
                 # Instead need to use [NetApi32Dll]::NetDfsEnum($TargetPath) then Where-Object to filter results
-                $AllDfs = Get-NetDfsEnum -Verbose -FolderPath $TargetPath
+                $AllDfs = Get-NetDfsEnum -Verbose -FolderPath $TargetPath -ErrorAction SilentlyContinue
 
-                $MatchingDfsEntryPaths = $AllDfs |
-                Group-Object -Property DfsEntryPath |
-                Where-Object -FilterScript {
-                    $TargetPath -match [regex]::Escape($_.Name)
+                if ($AllDfs) {
+                    $MatchingDfsEntryPaths = $AllDfs |
+                    Group-Object -Property DfsEntryPath |
+                    Where-Object -FilterScript {
+                        $TargetPath -match [regex]::Escape($_.Name)
+                    }
+
+                    # Filter out the DFS Namespace
+                    # TODO: I know this is an inefficient n2 algorithm, but my brain is fried...plez...halp...leeloo dallas multipass
+                    $RemainingDfsEntryPaths = $MatchingDfsEntryPaths |
+                    Where-Object -FilterScript {
+                        -not [bool]$(
+                            ForEach ($ThisEntryPath in $MatchingDfsEntryPaths) {
+                                if ($ThisEntryPath.Name -match "$([regex]::Escape("$($_.Name)")).+") { $true }
+                            }
+                        )
+                    } |
+                    Sort-Object -Property Name
+
+                    $RemainingDfsEntryPaths |
+                    Select-Object -Last 1 -ExpandProperty Group |
+                    ForEach-Object {
+                        $_.FullOriginalQueryPath -replace [regex]::Escape($_.DfsEntryPath), $_.DfsTarget
+                    }
+                } else {
+                    $TargetPath
                 }
 
-                # Filter out the DFS Namespace
-                # TODO: I know this is an inefficient n2 algorithm, but my brain is fried...plez...halp...leeloo dallas multipass
-                $RemainingDfsEntryPaths = $MatchingDfsEntryPaths |
-                Where-Object -FilterScript {
-                    -not [bool]$(
-                        ForEach ($ThisEntryPath in $MatchingDfsEntryPaths) {
-                            if ($ThisEntryPath.Name -match "$([regex]::Escape("$($_.Name)")).+") { $true }
-                        }
-                    )
-                } |
-                Sort-Object -Property Name
-
-                $RemainingDfsEntryPaths |
-                Select-Object -Last 1 -ExpandProperty Group |
-                ForEach-Object {
-                    $_.FullOriginalQueryPath -replace [regex]::Escape($_.DfsEntryPath), $_.DfsTarget
-                }
             }
         }
     }
@@ -5398,6 +5413,52 @@ function Get-Subfolder {
         Get-ChildItem $TargetPath -Recurse | Where-Object -FilterScript { $_.PSIsContainer } | ForEach-Object { $_.FullName }
     }
     Write-Progress -Activity ("Retrieving subfolders...") -Completed
+}
+function Get-Win32MappedLogicalDisk {
+    param (
+        [string]$ComputerName,
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
+    )
+
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = 'Debug'
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
+
+    if (
+        $ComputerName -eq $ThisHostname -or
+        $ComputerName -eq "$ThisHostname." -or
+        $ComputerName -eq $ThisFqdn
+    ) {
+        #Write-LogMsg @LogParams -Text "Get-CimInstance -ClassName Win32_MappedLogicalDisk"
+        Get-CimInstance -ClassName Win32_MappedLogicalDisk
+    } else {
+        #Write-LogMsg @LogParams -Text "Get-CimInstance -ComputerName $ComputerName -ClassName Win32_MappedLogicalDisk"
+        # If an Active Directory domain is targeted there are no local accounts and CIM connectivity is not expected
+        # Suppress errors and return nothing in that case
+        Get-CimInstance -ComputerName $ComputerName -ClassName Win32_MappedLogicalDisk -ErrorAction SilentlyContinue
+    }
 }
 function New-NtfsAclIssueReport {
 
@@ -8236,9 +8297,9 @@ ForEach ($ThisFile in $CSharpFiles) {
     }
 
     # These 3 events already happened but we will log them now that we have the correct capitalization of the user
-    Write-LogMsg @LogParams -Text "& HOSTNAME.EXE" -Type Debug
-    Write-LogMsg @LogParams -Text "& whoami.exe" -Type Debug
-    Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI" -Type Debug
+    Write-LogMsg @LogParams -Text "& HOSTNAME.EXE"
+    Write-LogMsg @LogParams -Text "& whoami.exe"
+    Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
     Write-LogMsg @LogParams -Text "Get-CurrentFqdn"
     $ThisFqdn = Get-CurrentFqdn @LoggingParams
