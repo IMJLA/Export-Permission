@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.151
+.VERSION 0.0.152
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix Get-FolderTarget
+Fixed bug with Expand-AccountPermission in psntfs module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix Get-FolderTarget
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.151
+.VERSION 0.0.152
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix Get-FolderTarget
+Fixed bug with Expand-AccountPermission in psntfs module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -4838,6 +4839,10 @@ function ConvertTo-SimpleProperty {
         # The following exception occurred while retrieving member "GetType": "Not implemented"
         if (Get-Member -InputObject $Value -Name GetType) {
             [string]$Type = $Value.GetType().FullName
+        } else {
+            # The only scenario we've encountered where the GetType() method does not exist is DirectoryEntry objects from the WinNT provider
+            # Force the type to 'System.DirectoryServices.DirectoryEntry'
+            [string]$Type = 'System.DirectoryServices.DirectoryEntry'
         }
     }
 
