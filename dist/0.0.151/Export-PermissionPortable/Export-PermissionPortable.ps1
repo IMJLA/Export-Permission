@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.150
+.VERSION 0.0.151
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated adsi module
+bugfix Get-FolderTarget
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5421,7 +5422,9 @@ function Get-FolderTarget {
                         $_.FullOriginalQueryPath -replace [regex]::Escape($_.DfsEntryPath), $_.DfsTarget
                     }
                 } else {
-                    $TargetPath
+                    $Server = $TargetPath.split('\')[2]
+                    $FQDN = ConvertTo-DnsFqdn -ComputerName $Server
+                    $TargetPath -replace "^\\\\$Server\\", "\\$FQDN\"
                 }
 
             }

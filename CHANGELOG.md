@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.151] - 2022-08-27 - bugfix Get-FolderTarget
+
 ## [0.0.150] - 2022-08-27 - updated adsi module
 
 ## [0.0.149] - 2022-08-27 - Bug fix $ExpandedAccountPermissions vs $FormattedSecurityPrincipals
