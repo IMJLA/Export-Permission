@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.153
+.VERSION 0.0.154
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed bug 7 with updated psntfs module
+bugfix IgnoreDomain was not working for 'Due to Membership In' column
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Fixed bug 7 with updated psntfs module
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -677,6 +678,7 @@ process {
                 InputParameter       = 'AccountPermission'
                 TodaysHostname       = $ThisHostname
                 ObjectStringProperty = 'Name'
+                Timeout              = 1200
                 AddParam             = @{
                     WhoAmI      = $WhoAmI
                     LogMsgCache = $LogMsgCache
@@ -701,10 +703,11 @@ process {
 
         #$Accounts = $FormattedSecurityPrincipals |
         $Accounts = $ExpandedAccountPermissions |
-        Group-Object -Property User #|
-        #Sort-Object -Property Name
+        Group-Object -Property User
 
-        # Ensure accounts only appear once on the report if they exist in multiple domains
+        # Filter out domain names we do not want on the report
+        # This can be done when the domain is always the same and doesn't need to be displayed
+        # This can also be done to ensure accounts only appear once on the report if they exist in multiple domains
         Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
         $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
 
@@ -727,6 +730,7 @@ process {
             FolderPermissions  = $FolderPermissions
             ExcludeAccount     = $ExcludeAccount
             ExcludeEmptyGroups = $ExcludeEmptyGroups
+            IgnoreDomain       = $IgnoreDomain
         }
         Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
         $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock

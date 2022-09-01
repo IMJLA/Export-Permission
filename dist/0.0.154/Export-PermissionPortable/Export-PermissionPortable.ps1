@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.153
+.VERSION 0.0.154
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed bug 7 with updated psntfs module
+bugfix IgnoreDomain was not working for 'Due to Membership In' column
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -632,6 +633,77 @@ function ConvertFrom-PropertyValueCollectionToString {
     switch ($SubType) {
         'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $PropertyValueCollection.Value }
         default { "$($PropertyValueCollection.Value)" }
+    }
+}
+function ConvertFrom-ResultPropertyValueCollectionToString {
+    <#
+        .SYNOPSIS
+        Convert a ResultPropertyValueCollection to a string
+        .DESCRIPTION
+        Useful when working with System.DirectoryServices and some other namespaces
+        .INPUTS
+        None. Pipeline input is not accepted.
+        .OUTPUTS
+        [System.String]
+        .EXAMPLE
+        $DirectoryEntry = [adsi]("WinNT://$(hostname)")
+        $DirectoryEntry.Properties.Keys |
+        ForEach-Object {
+            ConvertFrom-PropertyValueCollectionToString -PropertyValueCollection $DirectoryEntry.Properties[$_]
+        }
+
+        For each property in a DirectoryEntry, convert its corresponding PropertyValueCollection to a string
+    #>
+    param (
+        [System.DirectoryServices.ResultPropertyValueCollection]$ResultPropertyValueCollection
+    )
+    $SubType = & { $ResultPropertyValueCollection.Value.GetType().FullName } 2>$null
+    switch ($SubType) {
+        'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $ResultPropertyValueCollection.Value }
+        default { "$($ResultPropertyValueCollection.Value)" }
+    }
+}
+function ConvertFrom-SearchResult {
+    <#
+    .SYNOPSIS
+    Convert a SearchResult to a PSCustomObject
+    .DESCRIPTION
+    Recursively convert every property into a string, or a PSCustomObject (whose properties are all strings, or more PSCustomObjects)
+    This obfuscates the troublesome ResultPropertyCollection and ResultPropertyValueCollection and Hashtable aspects of working with ADSI searches
+    .NOTES
+    # TODO: There is a faster way than Select-Object, just need to dig into the default formatting of SearchResult to see how to get those properties
+    #>
+
+    param (
+        [Parameter(
+            Position = 0,
+            ValueFromPipeline
+        )]
+        [System.DirectoryServices.SearchResult[]]$SearchResult
+    )
+
+    process {
+        ForEach ($ThisSearchResult in $SearchResult) {
+            $ObjectWithProperties = $ThisSearchResult |
+            Select-Object -Property *
+
+            $ObjectNoteProperties = $ObjectWithProperties |
+            Get-Member -MemberType Property, CodeProperty, ScriptProperty, NoteProperty
+
+            $ThisObject = @{}
+
+            # Enumerate the keys of the ResultPropertyCollection
+            ForEach ($ThisProperty in $ThisSearchResult.Properties.Keys) {
+                $ThisObject = ConvertTo-SimpleProperty -InputObject $ThisSearchResult.Properties -Property $ThisProperty -PropertyDictionary $ThisObject
+            }
+
+            # We will allow any existing properties to override members of the ResultPropertyCollection
+            ForEach ($ThisObjProperty in $ObjectNoteProperties) {
+                $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
+            }
+
+            [PSCustomObject]$ThisObject
+        }
     }
 }
 function ConvertTo-DecStringRepresentation {
@@ -4170,7 +4242,7 @@ function Resolve-IdentityReference {
     }
     if ($Name) {
         # Win32_Account provides a NetBIOS-resolved IdentityReference
-        # NT Authority\SYSTEM on would be SERVER123\SYSTEM as a Win32_Account on a server with hostname server123
+        # NT Authority\SYSTEM would be SERVER123\SYSTEM as a Win32_Account on a server with hostname server123
         # This could also match on a domain account since those can be returned as Win32_Account, not sure if that will be a bug or what
         $CacheResult = $Win32AccountsByCaption["$ServerNetBIOS\$ServerNetBIOS\$Name"]
         if ($CacheResult) {
@@ -4821,7 +4893,6 @@ function GetDirectories {
     }
 }
 function ConvertTo-SimpleProperty {
-    #TODO: Only need to input $Value and output the PSCustomObject, drop the other params
     param (
         $InputObject,
 
@@ -4879,6 +4950,32 @@ function ConvertTo-SimpleProperty {
         }
         'System.Object' {
             $PropertyDictionary["$Prefix$Property"] = $Value
+            continue
+        }
+        'System.DirectoryServices.SearchResult' {
+            $PropertyDictionary["$Prefix$Property"] = ConvertFrom-SearchResult -SearchResult $Value
+            continue
+        }
+        'System.DirectoryServices.ResultPropertyCollection' {
+            $ThisObject = @{}
+
+            ForEach ($ThisProperty in $Value.Keys) {
+                $ThisPropertyString = ConvertFrom-ResultPropertyValueCollectionToString -ResultPropertyValueCollection $Value[$ThisProperty]
+                $ThisObject[$ThisProperty] = $ThisPropertyString
+
+                # This copies the properties up to the top level.
+                # Want to remove this later
+                # The nested pscustomobject accomplishes the goal of removing hashtables and PropertyValueCollections and PropertyCollections
+                # But I may have existing functionality expecting these properties so I am not yet ready to remove this
+                # When I am, I should move this code into a ConvertFrom-PropertyCollection function in the Adsi module
+                $PropertyDictionary["$Prefix$ThisProperty"] = $ThisPropertyString
+
+            }
+            $PropertyDictionary["$Prefix$Property"] = [PSCustomObject]$ThisObject
+            continue
+        }
+        'System.DirectoryServices.ResultPropertyValueCollection' {
+            $PropertyDictionary["$Prefix$Property"] = ConvertFrom-ResultPropertyValueCollectionToString -ResultPropertyValueCollection $Value
             continue
         }
         'System.Management.Automation.PSCustomObject' {
@@ -5223,7 +5320,7 @@ function Format-SecurityPrincipal {
 
         # Format and output the security principal
         $ThisPrincipal |
-        Select-Object -Property @{
+        Select-Object -ExcludeProperty Name -Property @{
             Label      = 'User'
             Expression = {
                 $ThisPrincipalAccount = $null
@@ -5244,6 +5341,20 @@ function Format-SecurityPrincipal {
         @{
             Label      = 'NtfsAccessControlEntries'
             Expression = { $_.Group }
+        },
+        @{
+            Label      = 'Name'
+            Expression = {
+                $ThisName = $null
+                if ($_.DirectoryEntry.Properties) {
+                    $ThisName = $_.DirectoryEntry.Properties['name']
+                }
+                if ("$ThisName" -eq '') {
+                    $_.Name -replace [regex]::Escape("$($_.DomainNetBios)\"), ''
+                } else {
+                    $ThisName
+                }
+            }
         },
         *
 
@@ -5285,7 +5396,10 @@ function Format-SecurityPrincipal {
         },
         @{
             Label      = 'IdentityReference'
-            Expression = { $ThisPrincipal.Group.IdentityReferenceResolved | Sort-Object -Unique }
+            Expression = {
+                $ThisPrincipal.Group.IdentityReferenceResolved |
+                Sort-Object -Unique
+            }
         },
         @{
             Label      = 'NtfsAccessControlEntries'
@@ -8064,11 +8178,14 @@ function Get-FolderPermissionsBlock {
 
         $ExcludeEmptyGroups,
 
-        # Regular expressions matching domain NetBIOS names to ignore
-        # They will be removed from NTAccount names ('CONTOSO\User' will become 'User')
-        # Include the trailing \ in the RegEx pattern, and escape it with another \
-        # Example: 'CONTOSO\\'
-        $IgnoreDomain
+        <#
+        Domain(s) to ignore (they will be removed from the username)
+
+        Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.
+
+        Can also be used to remove all domains simply for brevity in the report.
+        #>
+        [string[]]$IgnoreDomain
 
     )
 
@@ -8137,7 +8254,7 @@ function Get-FolderPermissionsBlock {
         @{Label = 'Due to Membership In'; Expression = {
                 $GroupString = ($_.Group.IdentityReference | Sort-Object -Unique) -join ' ; '
                 ForEach ($IgnoreThisDomain in $IgnoreDomain) {
-                    $GroupString = $GroupString -replace $IgnoreThisDomain, ''
+                    $GroupString = $GroupString -replace "$IgnoreThisDomain\\", ''
                 }
                 $GroupString
             }
@@ -8328,20 +8445,20 @@ function Select-UniqueAccountPermission {
 
 }
 function Update-CaptionCapitalization {
+    # As of 2022-08-31 this function is still not implemented...need to rethink
     param (
         [string]$ThisHostName,
         [hashtable]$Win32AccountsByCaption
     )
+    $NewDictionary = [hashtable]::Synchronized(@{})
     $Win32AccountsByCaption.Keys |
     ForEach-Object {
         $Object = $Win32AccountsByCaption[$_]
-        #$Win32AccountsByCaption.Remove($_)
         $NewKey = $_ -replace "^$ThisHostname\\$ThisHostname\\", "$ThisHostname\$ThisHostname\"
-        $NewKey = $_ -replace "^$ThisHostname\\", "$ThisHostname\"
-        Write-Host "Old Key: $_"
-        Write-Host "New Key: $NewKey"
-        #$Win32AccountsByCaption[$NewKey] = $Object
+        $NewKey = $NewKey -replace "^$ThisHostname\\", "$ThisHostname\"
+        $NewDictionary[$NewKey] = $Object
     }
+    return $NewDictionary
 }
 
 # Add any custom C# classes as usable (exported) types
@@ -8689,6 +8806,7 @@ process {
                 InputParameter       = 'AccountPermission'
                 TodaysHostname       = $ThisHostname
                 ObjectStringProperty = 'Name'
+                Timeout              = 1200
                 AddParam             = @{
                     WhoAmI      = $WhoAmI
                     LogMsgCache = $LogMsgCache
@@ -8713,10 +8831,11 @@ process {
 
         #$Accounts = $FormattedSecurityPrincipals |
         $Accounts = $ExpandedAccountPermissions |
-        Group-Object -Property User #|
-        #Sort-Object -Property Name
+        Group-Object -Property User
 
-        # Ensure accounts only appear once on the report if they exist in multiple domains
+        # Filter out domain names we do not want on the report
+        # This can be done when the domain is always the same and doesn't need to be displayed
+        # This can also be done to ensure accounts only appear once on the report if they exist in multiple domains
         Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
         $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
 
@@ -8739,6 +8858,7 @@ process {
             FolderPermissions  = $FolderPermissions
             ExcludeAccount     = $ExcludeAccount
             ExcludeEmptyGroups = $ExcludeEmptyGroups
+            IgnoreDomain       = $IgnoreDomain
         }
         Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
         $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock

@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.154] - 2022-08-31 - bugfix IgnoreDomain was not working for 'Due to Membership In' column
+
 ## [0.0.153] - 2022-08-28 - Fixed bug 7 with updated psntfs module
 
 ## [0.0.152] - 2022-08-28 - Fixed bug with Expand-AccountPermission in psntfs module
