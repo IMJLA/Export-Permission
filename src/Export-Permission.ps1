@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.154
+.VERSION 0.0.155
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix IgnoreDomain was not working for 'Due to Membership In' column
+Fixed Issue 3
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix IgnoreDomain was not working for 'Due to Membership In' column
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -502,6 +503,7 @@ process {
                 TodaysHostname = $ThisHostname
                 WhoAmI         = $WhoAmI
                 LogMsgCache    = $LogMsgCache
+                Timeout        = 600
                 AddParam       = @{
                     Win32AccountsBySID     = $Win32AccountsBySID
                     Win32AccountsByCaption = $Win32AccountsByCaption
