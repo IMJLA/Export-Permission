@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.155
+.VERSION 0.0.156
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed Issue 3
+updated psntfs
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5103,6 +5104,25 @@ function ConvertTo-SimpleProperty {
         }
         'System.DirectoryServices.PropertyCollection' {
             $ThisObject = @{}
+            <#
+            This error was happening when:
+                A DirectoryEntry has a SchemaEntry property
+                which is a DirectoryEntry
+                which has a Properties property
+                which is a System.DirectoryServices.PropertyCollection
+                but throws the following error to the Success stream (not the error stream, so it is hard to catch):
+                    PS C:\Users\Test> $ThisDirectoryEntry.Properties
+                    format-default : The entry properties cannot be enumerated. Consider using the entry schema to determine what properties are available.
+                        + CategoryInfo          : NotSpecified: (:) [format-default], NotSupportedException
+                        + FullyQualifiedErrorId : System.NotSupportedException,Microsoft.PowerShell.Commands.FormatDefaultCommand
+            To catch the error we will redirect the Success Stream to the Error Stream
+            Then if the Exception type matches, we will use the continue keyword to break out of the current switch statement
+            #>
+            try {
+                $Value 1>2
+            } catch [System.NotSupportedException] {
+                continue
+            }
 
             ForEach ($ThisProperty in $Value.Keys) {
                 $ThisPropertyString = ConvertFrom-PropertyValueCollectionToString -PropertyValueCollection $Value[$ThisProperty]

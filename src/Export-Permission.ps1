@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.155
+.VERSION 0.0.156
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed Issue 3
+updated psntfs
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Fixed Issue 3
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
