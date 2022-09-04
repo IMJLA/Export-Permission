@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.158
+.VERSION 0.0.159
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,21 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fixed issue 33 with new psrunspace version
+fixed issue 45
 
 .PRIVATEDATA
 
 #> 
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -70,11 +60,13 @@ fixed issue 33 with new psrunspace version
     Supports these scenarios:
     - local folder paths (resolved to UNC paths using the administrative shares, so the computer name is shown in the reports)
     - UNC folder paths
-    - DFS folder paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
-    - Active Directory domain trusts, and unresolved SIDs for deleted accounts
+    - DFS folder paths (resolves them to their UNC folder targets, including disabled ones, then reports permissions on each folder target)
+    - Mapped network drives (resolves them to their UNC paths)
+    - Active Directory domain trusts
+    - Unresolved SIDs for deleted accounts
+    - Group memberships via the Primary Group as well as the memberOf property
 
     Does not support these scenarios:
-    - Mapped network drives (ToDo enhancement; for now use UNC paths)
     - ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)
     - File permissions (ToDo enhancement; for now only folder permissions are reported)
     - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
@@ -86,8 +78,8 @@ fixed issue 33 with new psrunspace version
     - Uses ADSI to get information about the accounts and groups listed in the permissions
     - Exports information about the accounts and groups to a .csv file
     - Uses ADSI to recursively retrieve group members
+        - Retrieves group members using both the memberOf and primaryGroupId attributes
         - The entire chain of group memberships is not retrieved (for performance reasons)
-        - This means nested group members are retrieved, but nested groups themselves are not
     - Exports information about all accounts with access to a .csv file
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
@@ -252,7 +244,7 @@ param (
     # Path to the NTFS folder whose permissions to export
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
-    [System.IO.DirectoryInfo[]]$TargetPath = 'C:\Test',
+    [System.IO.DirectoryInfo[]]$TargetPath = 'Z:\',
 
     # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount,
@@ -307,7 +299,7 @@ param (
     [scriptblock]$GroupNamingConvention = { $true },
 
     # Number of asynchronous threads to use
-    [uint16]$ThreadCount = 4,
+    [uint16]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
@@ -6958,7 +6950,7 @@ function Split-Thread {
         $InputParameter = $null,
 
         # Maximum number of concurrent threads to allow
-        [int]$Threads = 20,
+        [int]$Threads = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
 
         # Milliseconds to wait between cycles of the loop that checks threads for completion
         [int]$SleepTimer = 200,
@@ -8336,6 +8328,9 @@ function Get-FolderAccessList {
         #>
         $LevelsOfSubfolders,
 
+        # Number of asynchronous threads to use
+        [uint16]$ThreadCount = ((Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum),
+
         # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
         [string]$DebugOutputStream = 'Silent',
 
@@ -8363,16 +8358,28 @@ function Get-FolderAccessList {
         Write-LogMsg @LogParams -Text "Folders (including parent): $($Subfolders.Count + 1)"
         Get-FolderAce -LiteralPath $ThisFolder -IncludeInherited
         if ($Subfolders) {
-            $GetFolderAce = @{
-                Command           = 'Get-FolderAce'
-                InputObject       = $Subfolders
-                InputParameter    = 'LiteralPath'
-                DebugOutputStream = $DebugOutputStream
-                TodaysHostname    = $TodaysHostname
-                WhoAmI            = $WhoAmI
-                LogMsgCache       = $LogMsgCache
+            if ($ThreadCount -eq 1) {
+                $i = 0
+                ForEach ($ThisSubfolder in $Subfolders) {
+                    $PercentComplete = $i / $Subfolders.Count
+                    Write-Progress -Activity "Get-FolderAce" -CurrentOperation $ThisSubfolder -PercentComplete $PercentComplete
+                    $i++
+                    Get-FolderAce -LiteralPath $ThisSubfolder
+                }
+                Write-Progress -Activity "Get-FolderAce" -Completed
+            } else {
+                $GetFolderAce = @{
+                    Command           = 'Get-FolderAce'
+                    InputObject       = $Subfolders
+                    InputParameter    = 'LiteralPath'
+                    DebugOutputStream = $DebugOutputStream
+                    TodaysHostname    = $TodaysHostname
+                    WhoAmI            = $WhoAmI
+                    LogMsgCache       = $LogMsgCache
+                    Threads           = $ThreadCount
+                }
+                Split-Thread @GetFolderAce
             }
-            Split-Thread @GetFolderAce
         }
     }
 }
@@ -8753,7 +8760,7 @@ process {
         Write-LogMsg @LogParams -Text "Get-FolderTarget -FolderPath '$ThisTargetPath'"
         $FolderTargets = Get-FolderTarget -FolderPath $ThisTargetPath
         Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
-        $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels @LoggingParams
+        $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount @LoggingParams
 
         # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
         $CsvFilePath = "$LogDir\1-AccessControlEntries.csv"
@@ -8827,6 +8834,7 @@ process {
                 WhoAmI         = $WhoAmI
                 LogMsgCache    = $LogMsgCache
                 Timeout        = 600
+                Threads        = $ThreadCount
                 AddParam       = @{
                     Win32AccountsBySID     = $Win32AccountsBySID
                     Win32AccountsByCaption = $Win32AccountsByCaption
@@ -8877,6 +8885,7 @@ process {
                 #DebugOutputStream    = 'Debug'
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
+                Threads              = $ThreadCount
                 AddParam             = @{
                     DirectoryEntryCache    = $DirectoryEntryCache
                     Win32AccountsBySID     = $Win32AccountsBySID
@@ -8942,6 +8951,7 @@ process {
                 TodaysHostname       = $ThisHostname
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
+                Threads              = $ThreadCount
                 AddParam             = @{
                     DirectoryEntryCache    = $DirectoryEntryCache
                     IdentityReferenceCache = $IdentityReferenceCache
@@ -8981,6 +8991,7 @@ process {
                 TodaysHostname       = $ThisHostname
                 WhoAmI               = $WhoAmI
                 LogMsgCache          = $LogMsgCache
+                Threads              = $ThreadCount
             }
             Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipals -ObjectStringProperty 'Name'"
             $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
@@ -9004,6 +9015,7 @@ process {
                 TodaysHostname       = $ThisHostname
                 ObjectStringProperty = 'Name'
                 Timeout              = 1200
+                Threads              = $ThreadCount
                 AddParam             = @{
                     WhoAmI      = $WhoAmI
                     LogMsgCache = $LogMsgCache

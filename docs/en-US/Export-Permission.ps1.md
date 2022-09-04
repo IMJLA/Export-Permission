@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.157
+help version: 0.0.158
 locale: en-US
 Module Name:
 online version:
@@ -34,11 +34,13 @@ Benefits:
 Supports these scenarios:
 - local folder paths (resolved to UNC paths using the administrative shares, so the computer name is shown in the reports)
 - UNC folder paths
-- DFS folder paths (resolves them to their UNC folder targets, and reports permissions on each folder target)
-- Active Directory domain trusts, and unresolved SIDs for deleted accounts
+- DFS folder paths (resolves them to their UNC folder targets, including disabled ones, then reports permissions on each folder target)
+- Mapped network drives (resolves them to their UNC paths)
+- Active Directory domain trusts
+- Unresolved SIDs for deleted accounts
+- Group memberships via the Primary Group as well as the memberOf property
 
 Does not support these scenarios:
-- Mapped network drives (ToDo enhancement; for now use UNC paths)
 - ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)
 - File permissions (ToDo enhancement; for now only folder permissions are reported)
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
@@ -50,8 +52,8 @@ Behavior:
 - Uses ADSI to get information about the accounts and groups listed in the permissions
 - Exports information about the accounts and groups to a .csv file
 - Uses ADSI to recursively retrieve group members
+    - Retrieves group members using both the memberOf and primaryGroupId attributes
     - The entire chain of group memberships is not retrieved (for performance reasons)
-    - This means nested group members are retrieved, but nested groups themselves are not
 - Exports information about all accounts with access to a .csv file
 - Exports information about all accounts with access to a report generated as a .html file
 - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
@@ -476,7 +478,7 @@ Aliases:
 
 Required: False
 Position: 1
-Default value: C:\Test
+Default value: Z:\
 Accept pipeline input: True (ByValue)
 Accept wildcard characters: False
 ```
@@ -491,7 +493,7 @@ Aliases:
 
 Required: False
 Position: 8
-Default value: 4
+Default value: (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

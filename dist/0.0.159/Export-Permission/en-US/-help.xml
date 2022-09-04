@@ -18,11 +18,13 @@
       <maml:para></maml:para>
       <maml:para>Supports these scenarios: - local folder paths (resolved to UNC paths using the administrative shares, so the computer name is shown in the reports)</maml:para>
       <maml:para>- UNC folder paths</maml:para>
-      <maml:para>- DFS folder paths (resolves them to their UNC folder targets, and reports permissions on each folder target)</maml:para>
-      <maml:para>- Active Directory domain trusts, and unresolved SIDs for deleted accounts</maml:para>
+      <maml:para>- DFS folder paths (resolves them to their UNC folder targets, including disabled ones, then reports permissions on each folder target)</maml:para>
+      <maml:para>- Mapped network drives (resolves them to their UNC paths)</maml:para>
+      <maml:para>- Active Directory domain trusts</maml:para>
+      <maml:para>- Unresolved SIDs for deleted accounts</maml:para>
+      <maml:para>- Group memberships via the Primary Group as well as the memberOf property</maml:para>
       <maml:para></maml:para>
-      <maml:para>Does not support these scenarios: - Mapped network drives (ToDo enhancement; for now use UNC paths)</maml:para>
-      <maml:para>- ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)</maml:para>
+      <maml:para>Does not support these scenarios: - ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)</maml:para>
       <maml:para>- File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
       <maml:para>- Share permissions (ToDo enhancement; for now only NTFS permissions are reported)</maml:para>
       <maml:para></maml:para>
@@ -32,7 +34,7 @@
       <maml:para>- Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
       <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
       <maml:para>- Uses ADSI to recursively retrieve group members</maml:para>
-      <maml:para>    - The entire chain of group memberships is not retrieved (for performance reasons)     - This means nested group members are retrieved, but nested groups themselves are not - Exports information about all accounts with access to a .csv file</maml:para>
+      <maml:para>    - Retrieves group members using both the memberOf and primaryGroupId attributes     - The entire chain of group memberships is not retrieved (for performance reasons) - Exports information about all accounts with access to a .csv file</maml:para>
       <maml:para>- Exports information about all accounts with access to a report generated as a .html file</maml:para>
       <maml:para>- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
     </maml:description>
@@ -49,7 +51,7 @@
             <maml:name>System.IO.DirectoryInfo[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>C:\Test</dev:defaultValue>
+          <dev:defaultValue>Z:\</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
           <maml:name>PrtgSensorProtocol</maml:name>
@@ -183,7 +185,7 @@
             <maml:name>System.UInt16</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>4</dev:defaultValue>
+          <dev:defaultValue>(Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
           <maml:name>PrtgProbe</maml:name>
@@ -403,7 +405,7 @@
           <maml:name>System.IO.DirectoryInfo[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>C:\Test</dev:defaultValue>
+        <dev:defaultValue>Z:\</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
         <maml:name>ThreadCount</maml:name>
@@ -415,7 +417,7 @@
           <maml:name>System.UInt16</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>4</dev:defaultValue>
+        <dev:defaultValue>(Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
         <maml:name>Title</maml:name>
