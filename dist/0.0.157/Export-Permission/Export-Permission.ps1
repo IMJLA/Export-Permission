@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.156
+.VERSION 0.0.157
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated psntfs
+closed issue 27
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ updated psntfs
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -421,17 +422,6 @@ process {
         $FolderTargets = Get-FolderTarget -FolderPath $ThisTargetPath
         Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($FolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
         $Permissions = Get-FolderAccessList -FolderTargets $FolderTargets -LevelsOfSubfolders $SubfolderLevels @LoggingParams
-
-        # If $ThisTargetPath was on a local disk such as C:\
-        # The Get-FolderTarget cmdlet has replaced that local disk path with the corresponding UNC path \\$(hostname)\C$
-        # If $ThisTargetPath is the root of that local disk, Get-FolderAccessList's dependency Get-Item cannot retrieve a DirectoryInfo object for the root of the share
-        # (error: "Could not find item")
-        # As a workaround here we will instead get the folder ACL for the original $ThisTargetPath
-        # But I don't think this solves it since it won't work for actual remote paths at the root of the share: \\server\share
-        if ($null -eq $Permissions) {
-            Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets '$ThisTargetPath' -LevelsOfSubfolders $SubfolderLevels"
-            $Permissions = Get-FolderAccessList -FolderTargets $ThisTargetPath -LevelsOfSubfolders $SubfolderLevels @LoggingParams
-        }
 
         # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
         $CsvFilePath = "$LogDir\1-AccessControlEntries.csv"
