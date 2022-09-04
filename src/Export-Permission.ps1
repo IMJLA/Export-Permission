@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.157
+.VERSION 0.0.158
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-closed issue 27
+fixed issue 33 with new psrunspace version
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ closed issue 27
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

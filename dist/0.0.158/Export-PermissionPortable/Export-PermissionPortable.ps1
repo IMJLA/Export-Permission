@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.157
+.VERSION 0.0.158
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-closed issue 27
+fixed issue 33 with new psrunspace version
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -7139,6 +7140,12 @@ function Split-Thread {
             $null = $RunspacePool.Dispose()
             Write-LogMsg @LogParams -Text " # [System.Management.Automation.Runspaces.RunspacePool]::Dispose() completed"
 
+        } else {
+            # Statement-terminating error
+            #$PSCmdlet.ThrowTerminatingError()
+
+            # Script-terminating error
+            throw 'Split-Thread timeout reached'
         }
 
         Write-Progress -Activity 'Completed' -Completed
