@@ -153,7 +153,7 @@
             <maml:name>System.String</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>"$env:AppData\Export-Permission\Logs"</dev:defaultValue>
+          <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
           <maml:name>SubfolderLevels</maml:name>
@@ -215,7 +215,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>ExcludeEmptyGroups</maml:name>
           <maml:description>
-            <maml:para>Exclude empty groups from the HTML report</maml:para>
+            <maml:para>Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>System.Management.Automation.SwitchParameter</maml:name>
@@ -275,7 +275,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>ExcludeEmptyGroups</maml:name>
         <maml:description>
-          <maml:para>Exclude empty groups from the HTML report</maml:para>
+          <maml:para>Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -350,7 +350,7 @@
           <maml:name>System.String</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>"$env:AppData\Export-Permission\Logs"</dev:defaultValue>
+        <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>PrtgProbe</maml:name>

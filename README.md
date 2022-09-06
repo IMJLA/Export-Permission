@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.159
+help version: 0.0.160
 locale: en-US
 Module Name:
 online version:
@@ -292,7 +292,7 @@ Accept wildcard characters: False
 ```
 
 ### -ExcludeEmptyGroups
-Exclude empty groups from the HTML report
+Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -393,7 +393,7 @@ Aliases:
 
 Required: False
 Position: 5
-Default value: "$env:AppData\Export-Permission\Logs"
+Default value: "$env:AppData\Export-Permission"
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
