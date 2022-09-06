@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.160] - 2022-09-05 - Completed enhancement issue 14
+
 ## [0.0.159] - 2022-09-04 - fixed issue 45
 
 ## [0.0.158] - 2022-09-04 - fixed issue 33 with new psrunspace version

@@ -20,7 +20,10 @@ BeforeDiscovery {
 }
 
 describe "Should include BUILTIN\Guests" {
-    #.\src\Export-Permission.ps1 -TargetPath $ParentFolderPath
+    it 'the test' {
+        #.\src\Export-Permission.ps1 -TargetPath $ParentFolderPath
+        $true | should -notbe $false
+    }
 }
 
 
