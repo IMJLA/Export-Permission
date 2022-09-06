@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.161
+.VERSION 0.0.162
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fine-tuning appearance of html report
+bugfix in report footer
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Fine-tuning appearance of html report
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -825,10 +826,13 @@ end {
     ConvertTo-HtmlList |
     ConvertTo-BootstrapListGroup
 
-    Write-LogMsg @LogParams -Text "New-BootstrapColumn -Html '`Reports$HtmlListOfReports',`Logs$HtmlListOfLogs"
-    $FileListColumns = New-BootstrapColumn -Html "Reports$HtmlListOfReports", "Logs$HtmlListOfLogs" -Width 6
+    $HtmlReportsHeading = New-HtmlHeading -Text 'Reports' -Level 6
+    $HtmlLogsHeading = New-HtmlHeading -Text 'Logs' -Level 6
+    Write-LogMsg @LogParams -Text "New-BootstrapColumn -Html '`$HtmlReportsHeading`$HtmlListOfReports',`$HtmlLogsHeading`$HtmlListOfLogs"
+    $FileListColumns = New-BootstrapColumn -Html "$HtmlReportsHeading$HtmlListOfReports", "$HtmlLogsHeading$HtmlListOfLogs" -Width 6
 
-    $HtmlOutputDir = New-HtmlHeading -Text $OutputDir -Level 6
+    #$HtmlOutputDir = New-HtmlHeading -Text $OutputDir -Level 6
+    $HtmlOutputDir = New-BootstrapAlert -Text $OutputDir -Class 'secondary'
     Write-LogMsg @LogParams -Text "New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content `$FileListColumns"
     $FileList = New-BootstrapDivWithHeading -HeadingText "Output Folder:" -Content "$HtmlOutputDir$FileListColumns"
 
