@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.163] - 2022-10-16 - updated psbootstrapcss module
+
 ## [0.0.162] - 2022-09-05 - bugfix in report footer
 
 ## [0.0.161] - 2022-09-05 - Fine-tuning appearance of html report

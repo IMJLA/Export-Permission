@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.162
+.VERSION 0.0.163
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix in report footer
+updated psbootstrapcss module
 
 .PRIVATEDATA
 
@@ -39,7 +39,6 @@ bugfix in report footer
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
 
 
 <#
@@ -244,7 +243,7 @@ param (
     # Path to the NTFS folder whose permissions to export
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
-    [System.IO.DirectoryInfo[]]$TargetPath = 'Z:\',
+    [System.IO.DirectoryInfo[]]$TargetPath = 'C:\Test',
 
     # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount = 'user123',
@@ -345,10 +344,19 @@ begin {
 
     #----------------[ Logging ]----------------
 
+    # Start a timer to measure progress and performance
     $StopWatch = [System.Diagnostics.Stopwatch]::new()
     $null = $StopWatch.Start()
+
+    # Generate a unique ID for this run of the script
     $ReportInstanceId = [guid]::NewGuid().ToString()
+
+    # Create a folder to store logs
     $OutputDir = New-DatedSubfolder -Root $OutputDir -Suffix "_$ReportInstanceId"
+
+    # Start the PowerShell transcript
+    # PowerShell cannot redirect the Success stream of Start-Transcript to the Information stream
+    # But it can redirect it to $null, and then send the Transcript file path to Write-Information
     $TranscriptFile = "$OutputDir\PowerShellTranscript.log"
     Start-Transcript $TranscriptFile *>$null
     Write-Information $TranscriptFile
@@ -369,8 +377,9 @@ begin {
     $DomainsByNetbios = [hashtable]::Synchronized(@{})
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
     $LogMsgCache = [hashtable]::Synchronized(@{})
-    $Permissions = $null
     $ResolvedFolderTargets = [System.Collections.Generic.List[string]]::new()
+    $UniqueServerNames = [System.Collections.Generic.List[string]]::new()
+    $Permissions = $null
     $SecurityPrincipals = $null
     $FormattedSecurityPrincipals = $null
     $UniqueAccountPermissions = $null
@@ -408,6 +417,7 @@ begin {
     Write-LogMsg @LogParams -Text "& whoami.exe"
     Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
+    # Get the FQDN of the computer running the script
     Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn"
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
 
@@ -460,7 +470,6 @@ end {
     # This prevents repetitive queries to the same directory servers
 
     # Identify server names from the item paths
-    $UniqueServerNames = [System.Collections.Generic.List[[string]]]::new()
     $null = $UniqueServerNames.Add($ThisFqdn)
 
     $Permissions.SourceAccessList.Path |
@@ -734,129 +743,19 @@ end {
     Group-Object -Property Folder |
     Sort-Object -Property Name
 
-
-    # Convert the folder permissions to an HTML table
-    $GetFolderPermissionsBlock = @{
-        FolderPermissions  = $FolderPermissions
-        ExcludeAccount     = $ExcludeAccount
-        ExcludeEmptyGroups = $ExcludeEmptyGroups
-        IgnoreDomain       = $IgnoreDomain
+    # Export two versions of the HTML report
+    # The first version uses no JavaScript so it can be rendered by e-mail clients
+    # The second version is JavaScript-dependent and will not work in e-mail clients
+    $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeAccountClass = $ExcludeAccountClass ;
+        ExcludeEmptyGroups = $ExcludeEmptyGroups ; IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ;
+        ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoGroupMembers ;
+        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ;
+        OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
+        StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title
     }
-    Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
-    $HtmlFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
+    Export-FolderPermissionHtml @ExportFolderPermissionHtml
 
-    ##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
-    ### Convert-ToHtml will not expand in-line HTML
-    ### So replace the placeholders (semicolons) with HTML line breaks now, after Convert-ToHtml has already run
-    ##$HtmlFolderPermissions = $HtmlFolderPermissions -replace ' ; ','<br>'
-
-    $TargetPathString = $TargetPath -join '<br />'
-    Write-LogMsg @LogParams -Text "New-BootstrapAlert -Class Dark -Text '$TargetPathString'"
-    $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPathString) $ReportDescription"
-
-    # Convert the folder list to an HTML table
-    Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
-
-    $HtmlTableOfFolders = Select-FolderTableProperty -InputObject $FolderPermissions |
-    ConvertTo-Html -Fragment |
-    New-BootstrapTable
-
-    Write-LogMsg @LogParams -Text "New-BootstrapDivWithHeading -HeadingText '$FolderTableHeader' -Content `$HtmlTableOfFolders"
-    $FolderList = New-BootstrapDivWithHeading -HeadingText $FolderTableHeader -Content $HtmlTableOfFolders
-
-    $HeadingText = 'Accounts Excluded by Regular Expression'
-    if ($ExcludeAccount) {
-        $ListGroup = $ExcludeAccount |
-        ConvertTo-HtmlList |
-        ConvertTo-BootstrapListGroup
-
-        $Description = 'Accounts matching these regular expressions were excluded from the report.'
-        Write-LogMsg @LogParams -Text "New-BootstrapDivWithHeading -HeadingText '$HeadingText' -Content `"`$Description`$ListGroup`""
-        $HtmlRegExExclusions = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content "$Description$ListGroup"
-    } else {
-        $Description = 'No accounts were excluded based on regular expressions.'
-        $HtmlRegExExclusions = $Description
-        $HtmlRegExExclusions = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content $Description
-    }
-
-    $HeadingText = 'Accounts Excluded by Class'
-    if ($ExcludeAccountClass) {
-        $ListGroup = $ExcludeAccountClass |
-        ConvertTo-HtmlList |
-        ConvertTo-BootstrapListGroup
-
-        $Description = 'Accounts whose objectClass property is in this list were excluded from the report.'
-        $HtmlClassExclusions = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content "$Description$ListGroup"
-    } else {
-        $Description = 'No accounts were excluded based on objectClass.'
-        $HtmlClassExclusions = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content $Description
-    }
-
-    $HeadingText = 'Domains Ignored'
-    if ($IgnoreDomain) {
-        $ListGroup = $IgnoreDomain |
-        ConvertTo-HtmlList |
-        ConvertTo-BootstrapListGroup
-
-        $Description = 'Accounts from these domains are listed in the report without their domain.'
-        $HtmlIgnoredDomains = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content "$Description$ListGroup"
-    } else {
-        $Description = 'No domains were ignored.  All accounts have their domain listed.'
-        $HtmlIgnoredDomains = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content $Description
-    }
-
-    $HeadingText = 'Group Members'
-    if ($NoGroupMembers) {
-        $Description = 'Group members were excluded from the report.<br />Only accounts directly from the ACLs are included in the report.'
-    } else {
-        $Description = 'No accounts were excluded based on group membership.'
-    }
-    $HtmlExcludedGroupMembers = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content $Description
-
-    Write-LogMsg @LogParams -Text "New-BootstrapColumn -Html '`$HtmlExcludedGroupMembers`$HtmlClassExclusions',`$HtmlIgnoredDomains`$HtmlRegExExclusions"
-    $ExclusionsDiv = New-BootstrapColumn -Html "$HtmlExcludedGroupMembers$HtmlClassExclusions", "$HtmlIgnoredDomains$HtmlRegExExclusions" -Width 6
-
-    $HtmlListOfReports = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile, $ReportFile |
-    Split-Path -Leaf |
-    ConvertTo-HtmlList |
-    ConvertTo-BootstrapListGroup
-
-    $HtmlListOfLogs = $TranscriptFile, $LogFile |
-    Split-Path -Leaf |
-    ConvertTo-HtmlList |
-    ConvertTo-BootstrapListGroup
-
-    $HtmlReportsHeading = New-HtmlHeading -Text 'Reports' -Level 6
-    $HtmlLogsHeading = New-HtmlHeading -Text 'Logs' -Level 6
-    Write-LogMsg @LogParams -Text "New-BootstrapColumn -Html '`$HtmlReportsHeading`$HtmlListOfReports',`$HtmlLogsHeading`$HtmlListOfLogs"
-    $FileListColumns = New-BootstrapColumn -Html "$HtmlReportsHeading$HtmlListOfReports", "$HtmlLogsHeading$HtmlListOfLogs" -Width 6
-
-    #$HtmlOutputDir = New-HtmlHeading -Text $OutputDir -Level 6
-    $HtmlOutputDir = New-BootstrapAlert -Text $OutputDir -Class 'secondary'
-    Write-LogMsg @LogParams -Text "New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content `$FileListColumns"
-    $FileList = New-BootstrapDivWithHeading -HeadingText "Output Folder:" -Content "$HtmlOutputDir$FileListColumns"
-
-    Write-LogMsg @LogParams -Text "Get-ReportFooter -StopWatch `$StopWatch -ReportInstanceId '$ReportInstanceId' -WhoAmI '$WhoAmI' -ThisFqdn '$ThisFqdn'"
-    $ReportFooter = Get-HtmlReportFooter -StopWatch $StopWatch -ReportInstanceId $ReportInstanceId -WhoAmI $WhoAmI -ThisFqdn $ThisFqdn -ItemCount ($Subfolders.Count + $ResolvedFolderTargets.Count)
-
-    Write-LogMsg @LogParams -Text "Get-HtmlBody -FolderList `$FolderList -HtmlFolderPermissions `$HtmlFolderPermissions"
-    [string]$Body = Get-HtmlBody -FolderList $FolderList -HtmlFolderPermissions $HtmlFolderPermissions -HtmlExclusions $ExclusionsDiv -HtmlFileList $FileList -ReportFooter $ReportFooter
-
-    $ReportParameters = @{
-        Title       = $Title
-        Description = $ReportDescription
-        Body        = $Body
-    }
-    Write-LogMsg @LogParams -Text "New-BootstrapReport @ReportParameters"
-    $Report = New-BootstrapReport @ReportParameters
-
-    # Save the Html report
-    $null = Set-Content -LiteralPath $ReportFile -Value $Report
-
-    # Output the name of the report file to the Information stream
-    Write-Information $ReportFile
-
-    # Report common issues with NTFS permissions (formatted as XML for PRTG)
+    # Identify common issues with permissions
     # ToDo: Users with ownership
     $NtfsIssueParams = @{
         FolderPermissions     = $FolderPermissions
@@ -866,7 +765,7 @@ end {
     Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
-    # Format the information as a custom XML sensor for Paessler PRTG Network Monitor
+    # Format the issues as a custom XML sensor for Paessler PRTG Network Monitor
     Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
     $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
 

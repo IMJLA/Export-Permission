@@ -51,7 +51,7 @@
             <maml:name>System.IO.DirectoryInfo[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>Z:\</dev:defaultValue>
+          <dev:defaultValue>C:\Test</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
           <maml:name>PrtgProbe</maml:name>
@@ -429,7 +429,7 @@
           <maml:name>System.IO.DirectoryInfo[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>Z:\</dev:defaultValue>
+        <dev:defaultValue>C:\Test</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
         <maml:name>ThreadCount</maml:name>

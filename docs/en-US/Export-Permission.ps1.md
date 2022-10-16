@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.161
+help version: 0.0.162
 locale: en-US
 Module Name:
 online version:
@@ -497,7 +497,7 @@ Aliases:
 
 Required: False
 Position: 1
-Default value: Z:\
+Default value: C:\Test
 Accept pipeline input: True (ByValue)
 Accept wildcard characters: False
 ```
