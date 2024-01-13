@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.162
+help version: 0.0.163
 locale: en-US
 Module Name:
 online version:
@@ -20,7 +20,8 @@ Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <Stri
  [[-ExcludeAccountClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoGroupMembers]
  [[-SubfolderLevels] <Int32>] [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>]
  [[-ThreadCount] <UInt16>] [-OpenReportAtEnd] [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>]
- [[-PrtgSensorPort] <UInt16>] [[-PrtgSensorToken] <String>] [<CommonParameters>]
+ [[-PrtgSensorPort] <UInt16>] [[-PrtgSensorToken] <String>] [-ProgressAction <ActionPreference>]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -57,7 +58,8 @@ Behavior:
 - Exports information about the accounts and groups to a .csv file
 - Uses ADSI to recursively retrieve group members
   - Retrieves group members using both the memberOf and primaryGroupId attributes
-  - The entire chain of group memberships is not retrieved (for performance reasons)
+  - Members of nested groups are retrieved as members of the group listed in the permissions.
+      - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
 - Exports information about all accounts with access to a .csv file
 - Exports information about all accounts with access to a report generated as a .html file
 - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
@@ -82,7 +84,7 @@ Exclude the built-in Administrator account from the HTML report
 
 The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
 
-The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\\\Administrator'
+The RegEx escape character is \ so the regular expression needed for the parameter is 'BUILTIN\\\\Administrator'
 
 ### EXAMPLE 3
 ```
@@ -398,6 +400,21 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -ProgressAction
+{{ Fill ProgressAction Description }}
+
+```yaml
+Type: System.Management.Automation.ActionPreference
+Parameter Sets: (All)
+Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -PrtgProbe
 If all four of the PRTG parameters are specified,
 
@@ -541,7 +558,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 ## OUTPUTS
 
-### [System.String] XML PRTG sensor output
+### [System.String] XML output formatted for a Custom XML Sensor in Paessler PRTG Network Monitor
 ## NOTES
 This code has not been reviewed or audited by a third party
 

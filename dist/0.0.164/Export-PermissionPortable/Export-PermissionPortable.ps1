@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.163
+.VERSION 0.0.164
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated psbootstrapcss module
+comment updates
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -83,7 +84,8 @@ updated psbootstrapcss module
     - Exports information about the accounts and groups to a .csv file
     - Uses ADSI to recursively retrieve group members
       - Retrieves group members using both the memberOf and primaryGroupId attributes
-      - The entire chain of group memberships is not retrieved (for performance reasons)
+      - Members of nested groups are retrieved as members of the group listed in the permissions.
+          - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
     - Exports information about all accounts with access to a .csv file
     - Exports information about all accounts with access to a report generated as a .html file
     - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
@@ -92,7 +94,7 @@ updated psbootstrapcss module
 
     Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 .OUTPUTS
-    [System.String] XML PRTG sensor output
+    [System.String] XML output formatted for a Custom XML Sensor in Paessler PRTG Network Monitor
 .NOTES
     This code has not been reviewed or audited by a third party
 
@@ -116,7 +118,7 @@ updated psbootstrapcss module
 
     The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
 
-    The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'
+    The RegEx escape character is \ so the regular expression needed for the parameter is 'BUILTIN\\Administrator'
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
         'BUILTIN\\Administrators',
@@ -9855,6 +9857,9 @@ end {
         FolderPermissions     = $FolderPermissions
         UserPermissions       = $Accounts
         GroupNamingConvention = $GroupNamingConvention
+        TodaysHostname        = $ThisHostname
+        WhoAmI                = $WhoAmI
+        LogMsgCache           = $LogMsgCache
     }
     Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams

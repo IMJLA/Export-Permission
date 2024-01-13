@@ -255,6 +255,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
 
         # Add the constituent code of each module
         ForEach ($ThisModuleName in $MainScriptFileInfoTest.RequiredModules.Name) {
+            # Get the latest version of the module
             $ThisModule = Get-Module -Name $ThisModuleName -ListAvailable |
             Sort-Object -Property Version -Descending |
             Select-Object -First 1

@@ -34,7 +34,7 @@
       <maml:para>- Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
       <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
       <maml:para>- Uses ADSI to recursively retrieve group members</maml:para>
-      <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - The entire chain of group memberships is not retrieved (for performance reasons) - Exports information about all accounts with access to a .csv file</maml:para>
+      <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - Members of nested groups are retrieved as members of the group listed in the permissions.       - Their hierarchy of nested group memberships is not retrieved (for performance reasons). - Exports information about all accounts with access to a .csv file</maml:para>
       <maml:para>- Exports information about all accounts with access to a report generated as a .html file</maml:para>
       <maml:para>- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
     </maml:description>
@@ -245,6 +245,18 @@
           </dev:type>
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="proga">
+          <maml:name>ProgressAction</maml:name>
+          <maml:description>
+            <maml:para>{{ Fill ProgressAction Description }}</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Management.Automation.ActionPreference</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Management.Automation.ActionPreference</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
@@ -351,6 +363,18 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="proga">
+        <maml:name>ProgressAction</maml:name>
+        <maml:description>
+          <maml:para>{{ Fill ProgressAction Description }}</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.ActionPreference</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.ActionPreference</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>PrtgProbe</maml:name>
@@ -477,7 +501,7 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>[System.String] XML PRTG sensor output</maml:name>
+          <maml:name>[System.String] XML output formatted for a Custom XML Sensor in Paessler PRTG Network Monitor</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -508,7 +532,7 @@
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Exclude the built-in Administrator account from the HTML report</maml:para>
           <maml:para>The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.</maml:para>
-          <maml:para>The RegEx escape character is \ so that is why the regular expression needed for the parameter is 'BUILTIN\\Administrator'</maml:para>
+          <maml:para>The RegEx escape character is \ so the regular expression needed for the parameter is 'BUILTIN\\Administrator'</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
