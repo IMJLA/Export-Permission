@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.165
+.VERSION 0.0.166
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated comments
+removed trailing whitespaces in comment-based help help header
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ updated comments
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

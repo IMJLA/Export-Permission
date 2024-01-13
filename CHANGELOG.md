@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.166] - 2024-01-12 - removed trailing whitespaces in comment-based help help header
+
 ## [0.0.165] - 2024-01-12 - updated comments
 
 ## [0.0.164] - 2024-01-12 - comment updates
