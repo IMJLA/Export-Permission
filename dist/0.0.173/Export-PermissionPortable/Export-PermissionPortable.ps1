@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.172
+.VERSION 0.0.173
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new version of psbootstrapcss
+new version of permission module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -9235,11 +9236,12 @@ function Get-FolderPermissionsBlock {
         if ($ExcludeAccountClass.Count -ge 0) {
             $FilteredAccounts = $FilteredAccounts |
             Where-Object -FilterScript {
-                ForEach ($Schema in $_.Group.SchemaClassName) {
+                $TestResult = ForEach ($Schema in $_.Group.SchemaClassName) {
                     if ($ClassExclusions[$Schema]) {
                         $true
                     }
                 }
+                -not $TestResult
             }
         }
 

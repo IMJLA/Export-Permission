@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.172
+.VERSION 0.0.173
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new version of psbootstrapcss
+new version of permission module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ new version of psbootstrapcss
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
