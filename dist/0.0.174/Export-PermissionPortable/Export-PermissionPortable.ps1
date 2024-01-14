@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.173
+.VERSION 0.0.174
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -30,6 +30,7 @@ new version of permission module
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -9194,7 +9195,7 @@ function Get-FolderPermissionsBlock {
     # Convert the $ExcludeAccountClass array into a dictionary for fast lookups
     $ClassExclusions = @{}
     ForEach ($ThisClass in $ExcludeAccountClass) {
-        $ClassExclusions[$_] = $true
+        $ClassExclusions[$ThisClass] = $true
     }
 
     $ShortestFolderPath = $FolderPermissions.Name |
