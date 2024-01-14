@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.171
+.VERSION 0.0.172
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fixed psake file to remove previously unnecessary feature which was instead implemented in new version of psbootstrapcss
+new version of psbootstrapcss
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -8127,12 +8128,8 @@ function ConvertTo-HtmlList {
     }
 }
 function Get-BootstrapTemplate {
-	param(
-		[switch]$NoJavaScript
-	)
-	if ($NoJavaScript) {
-		@"
-    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+	@"
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<style type="text/css">
@@ -8168,11 +8165,7 @@ function Get-BootstrapTemplate {
 		</div>_ReportScript_
 	</body>
 </html>
-
 "@
-	} else {
-
-	}
 }
 function Get-JavaScript {
     @'
