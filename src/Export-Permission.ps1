@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.168
+.VERSION 0.0.171
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-gh issue 38 implemented ExcludeAccountClass param and deprecated ExcludeEmptyGroups switch
+fixed psake file to remove previously unnecessary feature which was instead implemented in new version of psbootstrapcss
 
 .PRIVATEDATA
 
@@ -39,6 +39,9 @@ gh issue 38 implemented ExcludeAccountClass param and deprecated ExcludeEmptyGro
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
+
+
 
 
 

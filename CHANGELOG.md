@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.171] - 2024-01-14 - fixed psake file to remove previously unnecessary feature which was instead implemented in new version of psbootstrapcss
+
+## [0.0.170] - 2024-01-14 - psakefile bug was generating invalid export-permissionportable scripts
+
+## [0.0.169] - 2024-01-14 - bug 49 fix in export-permissionportable by embedding external file content into script during psake build process
+
 ## [0.0.168] - 2024-01-14 - gh issue 38 implemented ExcludeAccountClass param and deprecated ExcludeEmptyGroups switch
 
 ## [0.0.167] - 2024-01-13 - Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in Format-FolderPermission
