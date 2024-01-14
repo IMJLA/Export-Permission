@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.174
+.VERSION 0.0.175
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new version of permission module
+updated permission module to update verbiage in final html report for the group membership exclusion
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ new version of permission module
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

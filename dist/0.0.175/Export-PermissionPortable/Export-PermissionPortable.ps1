@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.174
+.VERSION 0.0.175
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new version of permission module
+updated permission module to update verbiage in final html report for the group membership exclusion
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -8904,7 +8905,7 @@ function Export-FolderPermissionHtml {
     if ($NoGroupMembers) {
         $Description = 'Group members were excluded from the report.<br />Only accounts directly from the ACLs are included in the report.'
     } else {
-        $Description = 'No accounts were excluded based on group membership.'
+        $Description = 'No accounts were excluded based on group membership.<br />Members of groups from the ACLs are included in the report.'
     }
     $HtmlExcludedGroupMembers = New-BootstrapDivWithHeading -HeadingText $HeadingText -Content $Description
 
