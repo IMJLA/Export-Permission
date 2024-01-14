@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.165
+help version: 0.0.166
 locale: en-US
 Module Name:
 online version:
@@ -19,9 +19,9 @@ Create CSV, HTML, and XML reports of permissions
 Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>] [-ExcludeEmptyGroups]
  [[-ExcludeAccountClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoGroupMembers]
  [[-SubfolderLevels] <Int32>] [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>]
- [[-ThreadCount] <UInt16>] [-OpenReportAtEnd] [[-PrtgProbe] <String>] [[-PrtgSensorProtocol] <String>]
- [[-PrtgSensorPort] <UInt16>] [[-PrtgSensorToken] <String>] [-ProgressAction <ActionPreference>]
- [<CommonParameters>]
+ [[-ThreadCount] <UInt16>] [-OpenReportAtEnd] [-NoJavaScript] [[-PrtgProbe] <String>]
+ [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <UInt16>] [[-PrtgSensorToken] <String>]
+ [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -357,6 +357,21 @@ Accept wildcard characters: False
 
 ### -NoGroupMembers
 Do not get group members (only report the groups themselves)
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -NoJavaScript
+Generate a report with only HTML and CSS but no JavaScript
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

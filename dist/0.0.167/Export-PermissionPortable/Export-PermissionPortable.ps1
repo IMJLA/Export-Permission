@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.166
+.VERSION 0.0.167
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,14 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-removed trailing whitespaces in comment-based help help header
+Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in Format-FolderPermission
 
 .PRIVATEDATA
 
 #> 
-
-
-
 
 
 
@@ -314,6 +311,9 @@ param (
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
+
+    # Generate a report with only HTML and CSS but no JavaScript
+    [switch]$NoJavaScript,
 
     <#
     If all four of the PRTG parameters are specified,
@@ -5096,7 +5096,8 @@ function ConvertTo-SimpleProperty {
         # The following exception occurred while retrieving member "GetType": "Not implemented"
         if (Get-Member -InputObject $Value -Name GetType) {
             [string]$Type = $Value.GetType().FullName
-        } else {
+        }
+        else {
             # The only scenario we've encountered where the GetType() method does not exist is DirectoryEntry objects from the WinNT provider
             # Force the type to 'System.DirectoryServices.DirectoryEntry'
             [string]$Type = 'System.DirectoryServices.DirectoryEntry'
@@ -5123,9 +5124,8 @@ function ConvertTo-SimpleProperty {
             To catch the error we will redirect the Success Stream to the Error Stream
             Then if the Exception type matches, we will use the continue keyword to break out of the current switch statement
             #>
-            try {
-                $Value 1>2
-            } catch [System.NotSupportedException] {
+            $KeyCount = $Value.Keys.$KeyCount
+            if (-not $KeyCount -gt 0) {
                 continue
             }
 
@@ -5231,7 +5231,7 @@ function Expand-AccountPermission {
         # Object that was output from Format-SecurityPrincipal
         $AccountPermission,
 
-        # Properties to exclude from the output
+        # Properties to exclude from the output because they cause problems or are unnecessary/redundant/undesirable
         # All properties listed on a single line to workaround a bug in PlatyPS when building MAML help
         # (error is 'Invalid yaml: expected simple key-value pairs')
         # Caused by multi-line default parameter values in the markdown
@@ -5369,12 +5369,32 @@ function Format-FolderPermission {
         $UserPermission,
 
         # Ignore these FileSystemRights
-        [string[]]$FileSystemRightsToIgnore = @('Synchronize')
+        [string[]]$FileSystemRightsToIgnore = @('Synchronize'),
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
 
     )
 
     begin {
         $i = 0
+
+        $LogParams = @{
+            ThisHostname = $ThisHostname
+            Type         = 'Verbose'
+            LogMsgCache  = $LogMsgCache
+            WhoAmI       = $WhoAmI
+        }
     }
     process {
 
@@ -5384,9 +5404,12 @@ function Format-FolderPermission {
             #Calculate the completion percentage, and format it to show 0 decimal places
             $percentage = "{0:N0}" -f (($i / ($UserPermission.Count)) * 100)
 
+            #Update the log with the current status
+            [string]$statusMsg = "Status: $percentage% - Processing user permission $i of " + $UserPermission.Count + ": " + $ThisUser.Name
+            Write-LogMsg @LogParams -Text $statusMsg
+
             #Display the progress bar
-            $status = ("$(Get-Date -Format s)`t$(hostname)`tFormat-FolderPermission`tStatus: " + $percentage + "% - Processing user permission $i of " + $UserPermission.Count + ": " + $ThisUser.Name)
-            Write-Verbose $status
+            $status = "$(Get-Date -Format s)`t$ThisHostName`tFormat-FolderPermission`t$statusMsg"
             Write-Progress -Activity ("Total Users: " + $UserPermission.Count) -Status $status -PercentComplete $percentage
 
             if ($ThisUser.Group.DirectoryEntry.Properties) {
@@ -5403,7 +5426,8 @@ function Format-FolderPermission {
                     $Names = $ThisUser.Group.DirectoryEntry.Properties.Name
                     $Depts = $ThisUser.Group.DirectoryEntry.Properties.Department
                     $Titles = $ThisUser.Group.DirectoryEntry.Properties.Title
-                } else {
+                }
+                else {
                     $Names = $ThisUser.Group.DirectoryEntry |
                     ForEach-Object {
                         if ($_.Properties) {
@@ -5429,14 +5453,16 @@ function Format-FolderPermission {
                         "$($ThisUser.Group.DirectoryEntry.Properties['groupType'])" -ne ''
                     ) {
                         $SchemaClassName = 'group'
-                    } else {
+                    }
+                    else {
                         $SchemaClassName = 'user'
                     }
                 }
                 $Name = $Names | Sort-Object -Unique
                 $Dept = $Depts | Sort-Object -Unique
                 $Title = $Titles | Sort-Object -Unique
-            } else {
+            }
+            else {
                 $Name = $ThisUser.Group.name | Sort-Object -Unique
                 $Dept = $ThisUser.Group.department | Sort-Object -Unique
                 $Title = $ThisUser.Group.title | Sort-Object -Unique
@@ -5447,14 +5473,17 @@ function Format-FolderPermission {
                         "$($ThisUser.Group.Properties['groupType'])" -ne ''
                     ) {
                         $SchemaClassName = 'group'
-                    } else {
+                    }
+                    else {
                         $SchemaClassName = 'user'
                     }
-                } else {
+                }
+                else {
                     if ($ThisUser.Group.DirectoryEntry.SchemaClassName) {
                         $SchemaClassName = $ThisUser.Group.DirectoryEntry.SchemaClassName |
                         Select-Object -First 1
-                    } else {
+                    }
+                    else {
                         $SchemaClassName = $ThisUser.Group.SchemaClassName |
                         Select-Object -First 1
                     }
@@ -5475,7 +5504,8 @@ function Format-FolderPermission {
 
                 if ($null -eq $ThisUser.Group.IdentityReference) {
                     $IdentityReference = $null
-                } else {
+                }
+                else {
                     $IdentityReference = $ThisACE.ACEIdentityReferenceResolved
                 }
 
@@ -5664,7 +5694,8 @@ function Get-FolderAce {
             $Sections
         ) } 2>$null
 
-    if (-not $DirectorySecurity.Access) {
+    #if (-not $DirectorySecurity.Access) {
+    if ($null -eq $DirectorySecurity) {
         Write-Debug "  $(Get-Date -Format s)`t$TodaysHostname`tGet-FolderAce`t# Found no ACL for '$LiteralPath'"
         return
     }
@@ -5786,10 +5817,11 @@ function Get-Win32MappedLogicalDisk {
         $ComputerName -eq "$ThisHostname." -or
         $ComputerName -eq $ThisFqdn
     ) {
-        #Write-LogMsg @LogParams -Text "Get-CimInstance -ClassName Win32_MappedLogicalDisk"
+        Write-LogMsg @LogParams -Text "Get-CimInstance -ClassName Win32_MappedLogicalDisk"
         Get-CimInstance -ClassName Win32_MappedLogicalDisk
-    } else {
-        #Write-LogMsg @LogParams -Text "Get-CimInstance -ComputerName $ComputerName -ClassName Win32_MappedLogicalDisk"
+    }
+    else {
+        Write-LogMsg @LogParams -Text "Get-CimInstance -ComputerName $ComputerName -ClassName Win32_MappedLogicalDisk"
         # If an Active Directory domain is targeted there are no local accounts and CIM connectivity is not expected
         # Suppress errors and return nothing in that case
         Get-CimInstance -ComputerName $ComputerName -ClassName Win32_MappedLogicalDisk -ErrorAction SilentlyContinue
@@ -5808,8 +5840,28 @@ function New-NtfsAclIssueReport {
         The naming format that will be used for the users is CONTOSO\User1 where CONTOSO is the NetBIOS name of the domain, and User1 is the samAccountName of the user
         By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance
         #>
-        [scriptblock]$GroupNamingConvention = { $true }
+        [scriptblock]$GroupNamingConvention = { $true },
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages
     )
+
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = 'Verbose'
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
 
     $IssuesDetected = $false
 
@@ -5824,10 +5876,11 @@ function New-NtfsAclIssueReport {
     if ($Count -gt 0) {
         $IssuesDetected = $true
         $Txt = "folders with broken inheritance: $($FoldersWithBrokenInheritance.Name -join "`r`n")"
-    } else {
+    }
+    else {
         $Txt = 'OK'
     }
-    Write-Verbose "$Count`:$Txt"
+    Write-LogMsg @LogParams -Text "$Count $Txt"
 
     # List of ACEs for groups that do not match the specified naming convention
     # Invert the naming convention scriptblock (because we actually want to identify groups that do NOT follow the convention)
@@ -5842,25 +5895,29 @@ function New-NtfsAclIssueReport {
     if ($Count -gt 0) {
         $IssuesDetected = $true
         $Txt = "groups that don't match naming convention: $($NonCompliantGroups -join "`r`n")"
-    } else {
+    }
+    else {
         $Txt = 'OK'
     }
-    Write-Verbose "$Count`:$Txt"
+    Write-LogMsg @LogParams -Text "$Count $Txt"
 
     # ACEs for users (recommend replacing with group-based access on any folder that is not a home folder)
     $UserACEs = $UserPermissions.Group |
-    Where-Object -FilterScript { $_.ObjectType -contains 'User' } |
-    ForEach-Object { $_.NtfsAccessControlEntries } |
-    ForEach-Object { "$($_.IdentityReference) on '$($_.Path)'" } |
+    Where-Object -FilterScript {
+        $_.ObjectType -contains 'User' -and
+        $_.ACEIdentityReference -ne 'S-1-5-18' # The 'NT AUTHORITY\SYSTEM' account is part of default Windows file permissions and is out of scope
+    } |
+    ForEach-Object { "$($_.User) on '$($_.SourceAclPath)'" } |
     Sort-Object -Unique
     $Count = ($UserACEs | Measure-Object).Count
     if ($Count -gt 0) {
         $IssuesDetected = $true
         $Txt = "users with ACEs: $($UserACEs -join "`r`n")"
-    } else {
+    }
+    else {
         $Txt = 'OK'
     }
-    Write-Verbose "$Count`:$Txt"
+    Write-LogMsg @LogParams -Text "$Count $Txt"
 
     # ACEs for unresolvable SIDs (recommend removing these ACEs)
     $SIDsToCleanup = $UserPermissions.Group.NtfsAccessControlEntries |
@@ -5871,10 +5928,11 @@ function New-NtfsAclIssueReport {
     if ($Count -gt 0) {
         $IssuesDetected = $true
         $Txt = "ACEs for unresolvable SIDs: $($SIDsToCleanup -join "`r`n")"
-    } else {
+    }
+    else {
         $Txt = 'OK'
     }
-    Write-Verbose "$Count`:$Txt"
+    Write-LogMsg @LogParams -Text "$Count $Txt"
 
     # CREATOR OWNER access (recommend replacing with group-based access, or with explicit user access for a home folder.)
     $FoldersWithCreatorOwner = ($UserPermissions | ? { $_.Name -match 'CREATOR OWNER' }).Group.NtfsAccessControlEntries.Path | Sort -Unique
@@ -5882,10 +5940,11 @@ function New-NtfsAclIssueReport {
     if ($Count -gt 0) {
         $IssuesDetected = $true
         $Txt = "folders with 'CREATOR OWNER' ACEs: $($FoldersWithCreatorOwner -join "`r`n")"
-    } else {
+    }
+    else {
         $Txt = 'OK'
     }
-    Write-Verbose "$Count`:$Txt"
+    Write-LogMsg @LogParams -Text "$Count $Txt"
 
     [PSCustomObject]@{
         IssueDetected                = $IssuesDetected
@@ -5895,6 +5954,7 @@ function New-NtfsAclIssueReport {
         SIDsToCleanup                = $SIDsToCleanup
         FoldersWithCreatorOwner      = $FoldersWithCreatorOwner
     }
+
 }
 function Resolve-Folder {
 
@@ -6575,7 +6635,7 @@ function Expand-PsToken {
       $Tokens |
       Expand-PsToken
 
-      Return all tokens nested inside the provided $Code
+      Return all tokens nested inside the provided $Code string (not scriptblock)
     #>
 
     param (
@@ -6857,21 +6917,41 @@ function Open-Thread {
             $null = $PowershellInterface.Commands.Clear()
 
             if ($ScriptBlock) {
-                $null = Add-PsCommand @CommandInfoParams -Command $ScriptBlock -PowershellInterface $PowershellInterface
+                $null = Add-PsCommand @CommandInfoParams -Command $ScriptBlock -PowershellInterface $PowershellInterface #-DebugOutputStream 'Debug'
+
+                <#
+                If:
+                    the Command is a ScriptBlock (such as the content of a .ps1 file)
+                    and
+                    $InputParameter is null
+                Then:
+                    Pass $Object into the runspace as a parameter (not an argument)
+                Otherwise we will:
+                    Pass $Object into the runspace as an argument
+                Because:
+                    This allows more flexibility in the ScriptBlock
+                    TODO: Need more detail here, this was a bugfix for .ps1 files but I didn't save the details (or maybe I did and forgot)
+                #>
+                If ([string]::IsNullOrEmpty($InputParameter)) {
+                    $InputParameter = 'PsRunspaceArgument1'
+                }
             } else {
                 $null = Add-PsCommand @CommandInfoParams -Command $Command -CommandInfo $CommandInfo -PowershellInterface $PowershellInterface -Force
             }
 
-            # Prepare to pass $InputObject into the runspace as a parameter not an argument
+            # Prepare to
             # Do this even if we end up passing it as an argument to the command inside the runspace
+            ## WHY?? past self did not explain this and it's causing problems for non-script values of Command
+            ## Therefore I have re-introduced AddArgument until I figure out what was wrong with it #
             If ([string]::IsNullOrEmpty($InputParameter)) {
-                $InputParameter = 'PsRunspaceArgument1'
+                Write-LogMsg @LogParams -Text "`$PowershellInterface.AddArgument('$ObjectString') # for '$Command' on '$ObjectString'"
+                $null = $PowershellInterface.AddArgument($Object)
+                <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = " '$ObjectString'"
+            } else {
+                Write-LogMsg @LogParams -Text "`$PowershellInterface.AddParameter('$InputParameter', '$ObjectString') # for '$Command' on '$ObjectString'"
+                $null = $PowershellInterface.AddParameter($InputParameter, $Object)
+                <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = "-$InputParameter '$ObjectString'"
             }
-
-            Write-LogMsg @LogParams -Text "`$PowershellInterface.AddParameter('$InputParameter', '$ObjectString') # for '$Command' on '$ObjectString'"
-            $null = $PowershellInterface.AddParameter($InputParameter, $Object)
-            <#NormallyCommentThisForPerformanceOptimization#>$InputParameterStringForDebug = "-$InputParameter '$ObjectString'"
-
 
             $AdditionalParameters = @()
             $AdditionalParameters = ForEach ($Key in $AddParam.Keys) {
@@ -8405,7 +8485,7 @@ function New-BootstrapReport {
     } else {
         $ReportScript = $AdditionalScriptHtml
     }
-    Write-Debug $ReportScript
+    #Write-Debug $ReportScript
 
     # Turn URLs into hyperlinks
     $URLs = ($Body | Select-String -Pattern 'http[s]?:\/\/[^\s\"\<\>\#\%\{\}\|\\\^\~\[\]\`]*' -AllMatches).Matches.Value | Sort-Object -Unique
@@ -8689,6 +8769,9 @@ function Export-FolderPermissionHtml {
         # Title at the top of the HTML report
         $Title,
 
+        # Generate a report with only HTML and CSS but no JavaScript
+        [switch]$NoJavaScript,
+
         $FolderPermissions,
         $LogParams,
         $ReportDescription,
@@ -8719,7 +8802,7 @@ function Export-FolderPermissionHtml {
     Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
     $FormattedFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
 
-    ##Commented the two lines below because actually keeping semicolons means it copy/pastes better into Excel
+    ##Commented the three lines below because actually keeping semicolons means it copy/pastes better into Excel
     ### Convert-ToHtml will not expand in-line HTML
     ### So replace the placeholders (semicolons) with HTML line breaks now, after Convert-ToHtml has already run
     ##$FormattedFolderPermissions.HtmlDiv = $FormattedFolderPermissions.HtmlDiv -replace ' ; ','<br>'
@@ -8781,6 +8864,11 @@ function Export-FolderPermissionHtml {
     Write-LogMsg @LogParams -Text "New-BootstrapColumn -Html '`$HtmlExcludedGroupMembers`$HtmlClassExclusions',`$HtmlIgnoredDomains`$HtmlRegExExclusions"
     $ExclusionsDiv = New-BootstrapColumn -Html "$HtmlExcludedGroupMembers$HtmlClassExclusions", "$HtmlIgnoredDomains$HtmlRegExExclusions" -Width 6
 
+    if ($NoJavaScript) {
+        $NoJavaScriptReportFile = $ReportFile -replace 'PermissionsReport', 'PermissionsReport_NoJavaScript'
+        $ReportFileList += $NoJavaScriptReportFile
+    }
+
     # Convert the list of generated report files to a Bootstrap list group
     $HtmlListOfReports = $ReportFileList + $ReportFile |
     Split-Path -Leaf |
@@ -8838,11 +8926,14 @@ function Export-FolderPermissionHtml {
     Write-LogMsg @LogParams -Text "New-BootstrapReport @ReportParameters"
     $Report = New-BootstrapReport @ReportParameters
 
-    # Save the Html report
-    $null = Set-Content -LiteralPath $ReportFile -Value $Report
+    if ($NoJavaScript) {
+        # Save the Html report
+        $null = Set-Content -LiteralPath $NoJavaScriptReportFile -Value $Report
 
-    # Output the name of the report file to the Information stream
-    Write-Information $ReportFile
+        # Output the name of the report file to the Information stream
+        Write-Information $NoJavaScriptReportFile
+    }
+
 
     Write-LogMsg @LogParams -Text "Get-HtmlBody -FolderList `$JsonFolderList -HtmlFolderPermissions `$FormattedFolderPermissions.JsonDiv"
     $BodyParams = @{
@@ -8876,7 +8967,6 @@ function Export-FolderPermissionHtml {
     $Report = New-BootstrapReport @ReportParameters
 
     # Save the Html report
-    $ReportFile = $ReportFile -replace 'PermissionsReport', 'PermissionsReportJson'
     $null = Set-Content -LiteralPath $ReportFile -Value $Report
 
     # Output the name of the report file to the Information stream
@@ -9816,7 +9906,7 @@ end {
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
     Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
     Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
-    Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
+    Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
 
     $ExpandedAccountPermissions |
     Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
@@ -9837,9 +9927,10 @@ end {
     # Group the account permissions back into folder permissions for the report
     Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions |
+    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @LogParams |
     Group-Object -Property Folder |
     Sort-Object -Property Name
+
 
     # Export two versions of the HTML report
     # The first version uses no JavaScript so it can be rendered by e-mail clients
@@ -9849,7 +9940,7 @@ end {
         ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoGroupMembers ;
         ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ;
         OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
-        StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title
+        StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title; NoJavaScript = $NoJavaScript
     }
     Export-FolderPermissionHtml @ExportFolderPermissionHtml
 

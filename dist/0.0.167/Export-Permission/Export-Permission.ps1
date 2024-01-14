@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.166
+.VERSION 0.0.167
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-removed trailing whitespaces in comment-based help help header
+Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in Format-FolderPermission
 
 .PRIVATEDATA
 
@@ -39,9 +39,6 @@ removed trailing whitespaces in comment-based help help header
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
 
 
 <#
@@ -309,6 +306,9 @@ param (
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$OpenReportAtEnd,
+
+    # Generate a report with only HTML and CSS but no JavaScript
+    [switch]$NoJavaScript,
 
     <#
     If all four of the PRTG parameters are specified,
@@ -722,7 +722,7 @@ end {
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
     Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
     Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
-    Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath'"
+    Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
 
     $ExpandedAccountPermissions |
     Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
@@ -743,9 +743,10 @@ end {
     # Group the account permissions back into folder permissions for the report
     Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions |
+    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @LogParams |
     Group-Object -Property Folder |
     Sort-Object -Property Name
+
 
     # Export two versions of the HTML report
     # The first version uses no JavaScript so it can be rendered by e-mail clients
@@ -755,7 +756,7 @@ end {
         ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoGroupMembers ;
         ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ;
         OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
-        StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title
+        StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title; NoJavaScript = $NoJavaScript
     }
     Export-FolderPermissionHtml @ExportFolderPermissionHtml
 
