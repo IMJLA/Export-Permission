@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.167
+.VERSION 0.0.168
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in Format-FolderPermission
+gh issue 38 implemented ExcludeAccountClass param and deprecated ExcludeEmptyGroups switch
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -72,11 +73,11 @@ Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in 
     - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
     Behavior:
-    - Resolves the TargetPath parameter
-      - Local folder paths become UNC paths using the administrative shares, so the computer name is shown in reports
-      - DFS folder paths become all of their UNC folder targets, including disabled ones
+    - Resolves each path in the TargetPath parameter
+      - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
+      - DFS paths become all of their UNC folder targets, including disabled ones
       - Mapped network drives become their UNC paths
-    - Gets all permissions for the target folder
+    - Gets all permissions for the resolved paths
     - Gets non-inherited permissions for subfolders (if specified)
     - Exports the permissions to a .csv file
     - Uses ADSI to get information about the accounts and groups listed in the permissions
@@ -136,11 +137,11 @@ Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in 
 
     Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
+    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
-    Exclude empty groups from the HTML report (leaving accounts only)
+    Include empty groups on the HTML report (rather than the default setting which is to report user accounts only)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
 
@@ -253,9 +254,6 @@ param (
 
     # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount = 'user123',
-
-    # Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)
-    [switch]$ExcludeEmptyGroups,
 
     # Accounts whose objectClass property is in this list are excluded from the HTML report
     [string[]]$ExcludeAccountClass = @('group', 'computer'),
@@ -8734,10 +8732,7 @@ function Export-FolderPermissionHtml {
         $ExcludeAccount,
 
         # Accounts whose objectClass property is in this list are excluded from the HTML report
-        $ExcludeAccountClass,
-
-        # Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)
-        $ExcludeEmptyGroups,
+        [string[]]$ExcludeAccountClass = @('group', 'computer'),
 
         <#
         Domain(s) to ignore (they will be removed from the username)
@@ -8794,10 +8789,10 @@ function Export-FolderPermissionHtml {
 
     # Convert the folder permissions to an HTML table
     $GetFolderPermissionsBlock = @{
-        FolderPermissions  = $FolderPermissions
-        ExcludeAccount     = $ExcludeAccount
-        ExcludeEmptyGroups = $ExcludeEmptyGroups
-        IgnoreDomain       = $IgnoreDomain
+        FolderPermissions   = $FolderPermissions
+        ExcludeAccount      = $ExcludeAccount
+        ExcludeAccountClass = $ExcludeAccountClass
+        IgnoreDomain        = $IgnoreDomain
     }
     Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
     $FormattedFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
@@ -9130,7 +9125,8 @@ function Get-FolderPermissionsBlock {
         # Regular expressions matching names of Users or Groups to exclude from the Html report
         [string[]]$ExcludeAccount,
 
-        $ExcludeEmptyGroups,
+        # Accounts whose objectClass property is in this list are excluded from the HTML report
+        [string[]]$ExcludeAccountClass = @('group', 'computer'),
 
         <#
         Domain(s) to ignore (they will be removed from the username)
@@ -9142,6 +9138,12 @@ function Get-FolderPermissionsBlock {
         [string[]]$IgnoreDomain
 
     )
+
+    # Convert the $ExcludeAccountClass array into a dictionary for fast lookups
+    $ClassExclusions = @{}
+    ForEach ($ThisClass in $ExcludeAccountClass) {
+        $ClassExclusions[$_] = $true
+    }
 
     $ShortestFolderPath = $FolderPermissions.Name |
     Sort-Object |
@@ -9177,11 +9179,16 @@ function Get-FolderPermissionsBlock {
             )
         }
 
-        if ($ExcludeEmptyGroups) {
+        # Eliminate the specified classes, such as groups
+        # (any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc)
+        if ($ExcludeAccountClass.Count -ge 0) {
             $FilteredAccounts = $FilteredAccounts |
             Where-Object -FilterScript {
-                # Eliminate empty groups (not useful to see in the middle of a list of users/job titles/departments/etc).
-                $_.Group.SchemaClassName -notcontains 'group'
+                ForEach ($Schema in $_.Group.SchemaClassName) {
+                    if ($ClassExclusions[$Schema]) {
+                        $true
+                    }
+                }
             }
         }
 
@@ -9626,7 +9633,7 @@ process {
 
     ForEach ($ThisTargetPath in $TargetPath) {
 
-        # Resolve each target path to all of its associated UNC paths (including all DFS folder targets)
+        # Resolve each target path to all of its associated paths (including all DFS folder targets)
         Write-LogMsg @LogParams -Text "Resolve-Folder -FolderPath '$ThisTargetPath'"
         $null = $ResolvedFolderTargets.AddRange([string[]](Resolve-Folder -FolderPath $ThisTargetPath))
 
@@ -9936,10 +9943,9 @@ end {
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
     $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeAccountClass = $ExcludeAccountClass ;
-        ExcludeEmptyGroups = $ExcludeEmptyGroups ; IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ;
-        ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoGroupMembers ;
-        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ;
-        OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
+        IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ;
+        NoGroupMembers = $NoGroupMembers ; ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ;
+        LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
         StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title; NoJavaScript = $NoJavaScript
     }
     Export-FolderPermissionHtml @ExportFolderPermissionHtml

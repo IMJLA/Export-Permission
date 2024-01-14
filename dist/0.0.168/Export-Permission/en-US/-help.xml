@@ -28,7 +28,7 @@
       <maml:para>- File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
       <maml:para>- Share permissions (ToDo enhancement; for now only NTFS permissions are reported)</maml:para>
       <maml:para></maml:para>
-      <maml:para>Behavior: - Resolves the TargetPath parameter   - Local folder paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS folder paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets all permissions for the target folder</maml:para>
+      <maml:para>Behavior: - Resolves each path in the TargetPath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets all permissions for the resolved paths</maml:para>
       <maml:para>- Gets non-inherited permissions for subfolders (if specified)</maml:para>
       <maml:para>- Exports the permissions to a .csv file</maml:para>
       <maml:para>- Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
@@ -213,17 +213,6 @@
           <dev:defaultValue>(Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ExcludeEmptyGroups</maml:name>
-          <maml:description>
-            <maml:para>Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)</maml:para>
-          </maml:description>
-          <dev:type>
-            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>NoGroupMembers</maml:name>
           <maml:description>
             <maml:para>Do not get group members (only report the groups themselves)</maml:para>
@@ -294,18 +283,6 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>@('group', 'computer')</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>ExcludeEmptyGroups</maml:name>
-        <maml:description>
-          <maml:para>Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
         <maml:name>GroupNamingConvention</maml:name>
@@ -578,10 +555,10 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups</dev:code>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
-          <maml:para>Exclude empty groups from the HTML report (leaving accounts only)</maml:para>
+          <maml:para>Include empty groups on the HTML report (rather than the default setting which is to report user accounts only)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>

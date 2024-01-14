@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.166
+help version: 0.0.167
 locale: en-US
 Module Name:
 online version:
@@ -16,7 +16,7 @@ Create CSV, HTML, and XML reports of permissions
 ## SYNTAX
 
 ```
-Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>] [-ExcludeEmptyGroups]
+Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
  [[-ExcludeAccountClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoGroupMembers]
  [[-SubfolderLevels] <Int32>] [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>]
  [[-ThreadCount] <UInt16>] [-OpenReportAtEnd] [-NoJavaScript] [[-PrtgProbe] <String>]
@@ -47,11 +47,11 @@ Does not support these scenarios:
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
 Behavior:
-- Resolves the TargetPath parameter
-  - Local folder paths become UNC paths using the administrative shares, so the computer name is shown in reports
-  - DFS folder paths become all of their UNC folder targets, including disabled ones
+- Resolves each path in the TargetPath parameter
+  - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
+  - DFS paths become all of their UNC folder targets, including disabled ones
   - Mapped network drives become their UNC paths
-- Gets all permissions for the target folder
+- Gets all permissions for the resolved paths
 - Gets non-inherited permissions for subfolders (if specified)
 - Exports the permissions to a .csv file
 - Uses ADSI to get information about the accounts and groups listed in the permissions
@@ -108,12 +108,12 @@ Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 
 ### EXAMPLE 4
 ```
-Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
+Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
-Exclude empty groups from the HTML report (leaving accounts only)
+Include empty groups on the HTML report (rather than the default setting which is to report user accounts only)
 
 ### EXAMPLE 5
 ```
@@ -289,21 +289,6 @@ Aliases:
 Required: False
 Position: 3
 Default value: @('group', 'computer')
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ExcludeEmptyGroups
-Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)
-
-```yaml
-Type: System.Management.Automation.SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

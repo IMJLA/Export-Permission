@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.167
+.VERSION 0.0.168
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in Format-FolderPermission
+gh issue 38 implemented ExcludeAccountClass param and deprecated ExcludeEmptyGroups switch
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in 
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -67,11 +68,11 @@ Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in 
     - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
     Behavior:
-    - Resolves the TargetPath parameter
-      - Local folder paths become UNC paths using the administrative shares, so the computer name is shown in reports
-      - DFS folder paths become all of their UNC folder targets, including disabled ones
+    - Resolves each path in the TargetPath parameter
+      - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
+      - DFS paths become all of their UNC folder targets, including disabled ones
       - Mapped network drives become their UNC paths
-    - Gets all permissions for the target folder
+    - Gets all permissions for the resolved paths
     - Gets non-inherited permissions for subfolders (if specified)
     - Exports the permissions to a .csv file
     - Uses ADSI to get information about the accounts and groups listed in the permissions
@@ -131,11 +132,11 @@ Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in 
 
     Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -ExcludeEmptyGroups
+    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
-    Exclude empty groups from the HTML report (leaving accounts only)
+    Include empty groups on the HTML report (rather than the default setting which is to report user accounts only)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
 
@@ -248,9 +249,6 @@ param (
 
     # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount = 'user123',
-
-    # Exclude empty groups from the HTML report (this param will be replaced by ExcludeAccountClass in the future)
-    [switch]$ExcludeEmptyGroups,
 
     # Accounts whose objectClass property is in this list are excluded from the HTML report
     [string[]]$ExcludeAccountClass = @('group', 'computer'),
@@ -442,7 +440,7 @@ process {
 
     ForEach ($ThisTargetPath in $TargetPath) {
 
-        # Resolve each target path to all of its associated UNC paths (including all DFS folder targets)
+        # Resolve each target path to all of its associated paths (including all DFS folder targets)
         Write-LogMsg @LogParams -Text "Resolve-Folder -FolderPath '$ThisTargetPath'"
         $null = $ResolvedFolderTargets.AddRange([string[]](Resolve-Folder -FolderPath $ThisTargetPath))
 
@@ -752,10 +750,9 @@ end {
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
     $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeAccountClass = $ExcludeAccountClass ;
-        ExcludeEmptyGroups = $ExcludeEmptyGroups ; IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ;
-        ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoGroupMembers ;
-        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ;
-        OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
+        IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ;
+        NoGroupMembers = $NoGroupMembers ; ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ;
+        LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
         StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $ResolvedFolderTargets ; Title = $Title; NoJavaScript = $NoJavaScript
     }
     Export-FolderPermissionHtml @ExportFolderPermissionHtml

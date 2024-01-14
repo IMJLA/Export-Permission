@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.168] - 2024-01-14 - gh issue 38 implemented ExcludeAccountClass param and deprecated ExcludeEmptyGroups switch
+
 ## [0.0.167] - 2024-01-13 - Added NoJavaScript switch, bugfix CsvFilePath3 ln725, implemented @LogParams in Format-FolderPermission
 
 ## [0.0.166] - 2024-01-12 - removed trailing whitespaces in comment-based help help header
