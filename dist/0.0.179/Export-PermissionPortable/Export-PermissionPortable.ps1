@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.178
+.VERSION 0.0.179
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate new versions of PsDfs,PsDfs,PsRunspace to fix issue 46
+updated version of adsi module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -2699,7 +2700,20 @@ function Get-CurrentDomain {
     #>
     [OutputType([System.DirectoryServices.DirectoryEntry])]
     $Obj = [adsi]::new()
-    try { $null = $Obj.RefreshCache('objectSid') } catch { return }
+    try { $null = $Obj.RefreshCache('objectSid') } catch {
+        # Assume local computer/workgroup, use CIM rather than ADSI
+        # TODO: Make this more efficient.  CIM Sessions, pass in hostname via param, etc.
+        $ComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
+        $AdminAccount = Get-CimInstance -ClassName Win32_UserAccount -Filter "LocalAccount = 'True' AND SID LIKE 'S-1-5-21-%-500'"
+        $Obj = [PSCustomObject]@{
+            ObjectSid         = [PSCustomObject]@{
+                Value = $AdminAccount.Sid.Substring(0, $AdminAccount.Sid.LastIndexOf('-')) | ConvertTo-SidByteArray
+            }
+            DistinguishedName = [PSCustomObject]@{
+                Value = "DC=$(& HOSTNAME.EXE)"
+            }
+        }
+    }
     return $Obj
 }
 function Get-DirectoryEntry {

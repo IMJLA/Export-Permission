@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.179] - 2024-01-15 - updated version of adsi module
+
 ## [0.0.178] - 2024-01-15 - integrate new versions of PsDfs,PsDfs,PsRunspace to fix issue 46
 
 ## [0.0.177] - 2024-01-15 - minor updates to comment-based help
