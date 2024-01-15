@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.175
+help version: 0.0.176
 locale: en-US
 Module Name:
 online version:
@@ -312,11 +312,11 @@ Accept wildcard characters: False
 ### -GroupNamingConvention
 Valid group names that are allowed to appear in ACEs
 
-By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance
-
 Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
 
-In the scriptblock, use string comparisons on the Name property
+By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance
+
+In the ScriptBlock, use string comparisons on the Name property
 
 e.g.
 {$_.Name -like 'CONTOSO\Group1*' -or $_.Name -eq 'CONTOSO\Group23'}

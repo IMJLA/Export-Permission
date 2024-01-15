@@ -187,9 +187,9 @@
           <maml:name>GroupNamingConvention</maml:name>
           <maml:description>
             <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
-            <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
             <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
-            <maml:para>In the scriptblock, use string comparisons on the Name property</maml:para>
+            <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+            <maml:para>In the ScriptBlock, use string comparisons on the Name property</maml:para>
             <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
             <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
             <maml:para>  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
@@ -291,9 +291,9 @@
         <maml:name>GroupNamingConvention</maml:name>
         <maml:description>
           <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
-          <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
           <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
-          <maml:para>In the scriptblock, use string comparisons on the Name property</maml:para>
+          <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+          <maml:para>In the ScriptBlock, use string comparisons on the Name property</maml:para>
           <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
           <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
           <maml:para>  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>

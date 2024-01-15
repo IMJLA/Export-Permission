@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.176
+.VERSION 0.0.177
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,20 +25,11 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated comment-based help, updated version of Permission module
+minor updates to comment-based help
 
 .PRIVATEDATA
 
 #> 
-
-
-
-
-
-
-
-
-
 
 
 
@@ -319,11 +310,11 @@ param (
     <#
     Valid group names that are allowed to appear in ACEs
 
-    By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance
-
     Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
 
-    In the scriptblock, use string comparisons on the Name property
+    By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance
+
+    In the ScriptBlock, use string comparisons on the Name property
 
     e.g. {$_.Name -like 'CONTOSO\Group1*' -or $_.Name -eq 'CONTOSO\Group23'}
 
@@ -10018,7 +10009,6 @@ end {
 
     Write-Information $CsvFilePath3
 
-    #$Accounts = $FormattedSecurityPrincipals |
     $Accounts = $ExpandedAccountPermissions |
     Group-Object -Property User
 
@@ -10035,7 +10025,6 @@ end {
     $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @LogParams |
     Group-Object -Property Folder |
     Sort-Object -Property Name
-
 
     # Export two versions of the HTML report
     # The first version uses no JavaScript so it can be rendered by e-mail clients
@@ -10065,11 +10054,11 @@ end {
     Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
     $XMLOutput = Get-PrtgXmlSensorOutput -NtfsIssues $NtfsIssues
 
-    # Save the result of the custom XML sensor for Paessler PRTG Network Monitor
-    $null = Set-Content -LiteralPath $XmlFile -Value $XMLOutput
-
-    # Output the name of the report file to the Information stream
+    # Output the full path of the XML file (result of the custom XML sensor for Paessler PRTG Network Monitor) to the Information stream
     Write-Information $XmlFile
+
+    # Save the XML file to disk
+    $null = Set-Content -LiteralPath $XmlFile -Value $XMLOutput
 
     # Send the XML to a PRTG Custom XML Push sensor for tracking
     $PrtgSensorParams = @{
@@ -10087,6 +10076,10 @@ end {
         Invoke-Item $ReportFile
     }
 
+    # Output the full path of the log file to the Information stream
+    Write-Information $LogFile
+
+    # Save the log file to disk
     $LogMsgCache.Values |
     Sort-Object -Property Timestamp |
     Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
