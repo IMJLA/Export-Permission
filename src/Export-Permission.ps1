@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.177
+.VERSION 0.0.178
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-minor updates to comment-based help
+integrate new versions of PsDfs,PsDfs,PsRunspace to fix issue 46
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ minor updates to comment-based help
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#

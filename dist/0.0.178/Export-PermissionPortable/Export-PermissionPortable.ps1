@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.177
+.VERSION 0.0.178
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-minor updates to comment-based help
+integrate new versions of PsDfs,PsDfs,PsRunspace to fix issue 46
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5995,7 +5996,8 @@ function Resolve-Folder {
                 if ($MatchingNetworkDrive) {
                     # Resolve mapped network drives to their UNC path
                     $UNC = $MatchingNetworkDrive.ProviderName
-                } else {
+                }
+                else {
                     # Resolve local drive letters to their UNC paths using administrative shares
                     $UNC = $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
                 }
@@ -6005,11 +6007,12 @@ function Resolve-Folder {
                     $FQDN = ConvertTo-DnsFqdn -ComputerName $Server
                     $UNC -replace "^\\\\$Server\\", "\\$FQDN\"
                 }
-            } else {
-                # Can't use [NetApi32Dll]::NetDfsGetInfo($TargetPath) because it doesn't work if the provided path is a subfolder of a DFS folder
-                # Can't use [NetApi32Dll]::NetDfsGetClientInfo($TargetPath) because it does not return disabled folder targets
-                # Instead need to use [NetApi32Dll]::NetDfsEnum($TargetPath) then Where-Object to filter results
-                $AllDfs = Get-NetDfsEnum -Verbose -FolderPath $TargetPath -ErrorAction SilentlyContinue
+            }
+            else {
+                ## Workaround in place: Get-NetDfsEnum -Verbose parameter is not used due to errors when it is used with the PsRunspace module for multithreading
+                ## https://github.com/IMJLA/Export-Permission/issues/46
+                ## https://github.com/IMJLA/PsNtfs/issues/1
+                $AllDfs = Get-NetDfsEnum -FolderPath $TargetPath -ErrorAction SilentlyContinue
 
                 if ($AllDfs) {
                     $MatchingDfsEntryPaths = $AllDfs |
@@ -6035,7 +6038,8 @@ function Resolve-Folder {
                     ForEach-Object {
                         $_.FullOriginalQueryPath -replace [regex]::Escape($_.DfsEntryPath), $_.DfsTarget
                     }
-                } else {
+                }
+                else {
                     $Server = $TargetPath.split('\')[2]
                     $FQDN = ConvertTo-DnsFqdn -ComputerName $Server
                     $TargetPath -replace "^\\\\$Server\\", "\\$FQDN\"
@@ -7013,7 +7017,7 @@ function Open-Thread {
 
     end {
 
-        Write-Progress -Activity 'Completed' -Completed
+        Write-Progress -Activity $StatusString -Completed
 
     }
 }
@@ -7122,24 +7126,22 @@ function Split-Thread {
             WhoAmI       = $WhoAmI
         }
 
+        Write-LogMsg @LogParams -Text "`$InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault() # for '$Command'"
+        $InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+
         $CommandInfoParams = @{
             DebugOutputStream = $DebugOutputStream
             TodaysHostname    = $TodaysHostname
             WhoAmI            = $WhoAmI
             LogMsgCache       = $LogMsgCache
         }
-        Write-LogMsg @LogParams -Text " # Entered begin block for '$Command'"
-
-        Write-LogMsg @LogParams -Text "`$InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault() # for '$Command'"
-        $InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-
-        # Import the source module containing the specified Command in each thread
-
         $OriginalCommandInfo = Get-PsCommandInfo @CommandInfoParams -Command $Command
         Write-LogMsg @LogParams -Text " # Found 1 original PsCommandInfo for '$Command'"
 
         $CommandInfo = Expand-PsCommandInfo @CommandInfoParams -PsCommandInfo $OriginalCommandInfo
         Write-LogMsg @LogParams -Text " # Found $(($CommandInfo | Measure-Object).Count) nested PsCommandInfos for '$Command' ($($CommandInfo.CommandInfo.Name -join ','))"
+
+        # Import the source module containing the specified Command in each thread
 
         # Prepare our collection of PowerShell modules to import in each thread
         # This will include any modules specified by name with the -AddModule parameter
@@ -7197,12 +7199,6 @@ function Split-Thread {
     }
 
     process {
-        if ($ObjectStringProperty) {
-            $ObjectString = $InputObject.$ObjectStringProperty
-        } else {
-            $ObjectString = $InputObject.ToString()
-        }
-        Write-LogMsg @LogParams -Text " # Entered process block for '$Command' on '$ObjectString'"
 
         # Add all the input objects from the pipeline to a single collection; allows progress bars later
         ForEach ($ThisObject in $InputObject) {
@@ -7211,8 +7207,8 @@ function Split-Thread {
 
     }
     end {
-        Write-LogMsg @LogParams -Text " # Entered end block for '$Command'"
-        Write-LogMsg @LogParams -Text " # Sending $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
+
+        Write-LogMsg @LogParams -Text " # Entered end block. Sending $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
         $ThreadParameters = @{
             Command              = $Command
             InputParameter       = $InputParameter
@@ -7597,15 +7593,11 @@ Function Get-NetDfsEnum {
             $DfsLink = ""
             $Remainder = ""
 
-            <#
-            # Use the NetDfsGetInfo method instead as it does not filter out disabled folder targets
-            # But it does not work
-            #>
-            #[NetApi32Dll]::NetDfsGetClientInfo($ThisFolderPath)
+            # Can't use [NetApi32Dll]::NetDfsGetInfo($ThisFolderPath) because it doesn't work if the provided path is a subfolder of a DFS folder
+            # Can't use [NetApi32Dll]::NetDfsGetClientInfo($ThisFolderPath) because it does not return disabled folder targets
+            # Instead need to use [NetApi32Dll]::NetDfsEnum($ThisFolderPath) then Where-Object to filter results
 
             [NetApi32Dll]::NetDfsEnum($ThisFolderPath)
-
-            #[NetApi32Dll]::NetDfsGetInfo($ThisFolderPath)
 
         }
 
