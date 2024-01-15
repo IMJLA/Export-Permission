@@ -115,12 +115,13 @@
             <maml:name>System.String[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>User123</dev:defaultValue>
+          <dev:defaultValue>SYSTEM</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
           <maml:name>ExcludeAccountClass</maml:name>
           <maml:description>
             <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
+            <maml:para>Note on the 'group' class:   By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.   Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).   So the 'group' class is excluded here by default.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
@@ -159,9 +160,9 @@
           <maml:name>SubfolderLevels</maml:name>
           <maml:description>
             <maml:para>How many levels of subfolder to enumerate</maml:para>
-            <maml:para>    Set to 0 to ignore all subfolders</maml:para>
-            <maml:para>    Set to -1 (default) to recurse infinitely</maml:para>
-            <maml:para>    Set to any whole number to enumerate that many levels</maml:para>
+            <maml:para>  Set to 0 to ignore all subfolders</maml:para>
+            <maml:para>  Set to -1 (default) to recurse infinitely</maml:para>
+            <maml:para>  Set to any whole number to enumerate that many levels</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
           <dev:type>
@@ -186,12 +187,12 @@
           <maml:name>GroupNamingConvention</maml:name>
           <maml:description>
             <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
+            <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
             <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
             <maml:para>In the scriptblock, use string comparisons on the Name property</maml:para>
             <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
             <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
-            <maml:para>where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
-            <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+            <maml:para>  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
           <dev:type>
@@ -216,6 +217,7 @@
           <maml:name>NoGroupMembers</maml:name>
           <maml:description>
             <maml:para>Do not get group members (only report the groups themselves)</maml:para>
+            <maml:para>Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.   Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>System.Management.Automation.SwitchParameter</maml:name>
@@ -270,12 +272,13 @@
           <maml:name>System.String[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>User123</dev:defaultValue>
+        <dev:defaultValue>SYSTEM</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
         <maml:name>ExcludeAccountClass</maml:name>
         <maml:description>
           <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
+          <maml:para>Note on the 'group' class:   By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.   Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).   So the 'group' class is excluded here by default.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
@@ -288,12 +291,12 @@
         <maml:name>GroupNamingConvention</maml:name>
         <maml:description>
           <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
+          <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
           <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
           <maml:para>In the scriptblock, use string comparisons on the Name property</maml:para>
           <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
           <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
-          <maml:para>where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
-          <maml:para>By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
+          <maml:para>  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
         <dev:type>
@@ -320,6 +323,7 @@
         <maml:name>NoGroupMembers</maml:name>
         <maml:description>
           <maml:para>Do not get group members (only report the groups themselves)</maml:para>
+          <maml:para>Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.   Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -432,9 +436,9 @@
         <maml:name>SubfolderLevels</maml:name>
         <maml:description>
           <maml:para>How many levels of subfolder to enumerate</maml:para>
-          <maml:para>    Set to 0 to ignore all subfolders</maml:para>
-          <maml:para>    Set to -1 (default) to recurse infinitely</maml:para>
-          <maml:para>    Set to any whole number to enumerate that many levels</maml:para>
+          <maml:para>  Set to 0 to ignore all subfolders</maml:para>
+          <maml:para>  Set to -1 (default) to recurse infinitely</maml:para>
+          <maml:para>  Set to any whole number to enumerate that many levels</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
         <dev:type>
@@ -558,11 +562,20 @@
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
-          <maml:para>Include empty groups on the HTML report (rather than the default setting which is to report user accounts only)</maml:para>
+          <maml:para>Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeAccountClass @('computer')</dev:code>
+        <dev:remarks>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
+          <maml:para>Do not spend time retrieving group members</maml:para>
+          <maml:para>Include groups on the report, but exclude computers (rather than the default setting which would exclude computers and groups)</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -570,7 +583,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -580,7 +593,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -588,14 +601,14 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 10 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
@@ -603,7 +616,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 10 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 11 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
@@ -611,7 +624,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 11 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 12 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'</dev:code>
         <dev:remarks>
           <maml:para>The target path is a DFS folder with folder targets</maml:para>
@@ -619,7 +632,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 12 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 13 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'</dev:code>
         <dev:remarks>
           <maml:para>The target path is a DFS subfolder with folder targets</maml:para>
@@ -627,7 +640,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 13 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 14 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'</dev:code>
         <dev:remarks>
           <maml:para>The target path is a subfolder of a DFS subfolder with folder targets</maml:para>
@@ -635,7 +648,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 14 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 15 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
@@ -644,7 +657,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 15 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 16 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
@@ -653,7 +666,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 16 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 17 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
@@ -663,7 +676,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 17 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 18 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported.</maml:para>
@@ -673,7 +686,7 @@
         </dev:remarks>
       </command:example>
       <command:example>
-        <maml:title>-------------------------- EXAMPLE 18 --------------------------</maml:title>
+        <maml:title>-------------------------- EXAMPLE 19 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported.</maml:para>

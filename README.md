@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.174
+help version: 0.0.175
 locale: en-US
 Module Name:
 online version:
@@ -113,9 +113,20 @@ Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
-Include empty groups on the HTML report (rather than the default setting which is to report user accounts only)
+Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)
 
 ### EXAMPLE 5
+```
+Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeAccountClass @('computer')
+```
+
+Generate reports on the NTFS permissions for the folder C:\Test
+
+Do not spend time retrieving group members
+
+Include groups on the report, but exclude computers (rather than the default setting which would exclude computers and groups)
+
+### EXAMPLE 6
 ```
 Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
 ```
@@ -124,7 +135,7 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 
 Remove the CONTOSO domain prefix from associated accounts and groups
 
-### EXAMPLE 6
+### EXAMPLE 7
 ```
 Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
 ```
@@ -137,7 +148,7 @@ Across the two domains, accounts with the same samAccountNames will be considere
 
 Across the two domains, groups with the same Names will be considered equivalent
 
-### EXAMPLE 7
+### EXAMPLE 8
 ```
 Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 ```
@@ -146,14 +157,14 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 
 Redirect logs and output files to C:\Logs instead of the default location in AppData
 
-### EXAMPLE 8
+### EXAMPLE 9
 ```
 Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 
-### EXAMPLE 9
+### EXAMPLE 10
 ```
 Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
 ```
@@ -162,7 +173,7 @@ Generate reports on the NTFS permissions for the folder C:\Test
 
 Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 
-### EXAMPLE 10
+### EXAMPLE 11
 ```
 Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 ```
@@ -171,7 +182,7 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 
 Change the title of the HTML report to 'New Custom Report Title'
 
-### EXAMPLE 11
+### EXAMPLE 12
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
 ```
@@ -180,7 +191,7 @@ The target path is a DFS folder with folder targets
 
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
-### EXAMPLE 12
+### EXAMPLE 13
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
 ```
@@ -189,7 +200,7 @@ The target path is a DFS subfolder with folder targets
 
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
-### EXAMPLE 13
+### EXAMPLE 14
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
 ```
@@ -198,7 +209,7 @@ The target path is a subfolder of a DFS subfolder with folder targets
 
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
-### EXAMPLE 14
+### EXAMPLE 15
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'
 ```
@@ -210,7 +221,7 @@ The target path is the root of an AD domain
 Generate reports on the NTFS permissions for ?
 Invalid/fail param validation?
 
-### EXAMPLE 15
+### EXAMPLE 16
 ```
 Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
 ```
@@ -222,7 +233,7 @@ The target path is the root of a server
 Generate reports on the NTFS permissions for ?
 Invalid/fail param validation?
 
-### EXAMPLE 16
+### EXAMPLE 17
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
 ```
@@ -235,7 +246,7 @@ Generate reports on the NTFS permissions for the folder on the DFS namespace ser
 
 Add a warning that they are permissions from the DFS namespace server and could be confusing
 
-### EXAMPLE 17
+### EXAMPLE 18
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
 ```
@@ -248,7 +259,7 @@ Generate reports on the NTFS permissions for the folder on the DFS namespace ser
 
 Add a warning that they are permissions from the DFS namespace server and could be confusing
 
-### EXAMPLE 18
+### EXAMPLE 19
 ```
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
 ```
@@ -273,13 +284,18 @@ Aliases:
 
 Required: False
 Position: 2
-Default value: User123
+Default value: SYSTEM
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -ExcludeAccountClass
 Accounts whose objectClass property is in this list are excluded from the HTML report
+
+Note on the 'group' class:
+  By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.
+  Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).
+  So the 'group' class is excluded here by default.
 
 ```yaml
 Type: System.String[]
@@ -296,6 +312,8 @@ Accept wildcard characters: False
 ### -GroupNamingConvention
 Valid group names that are allowed to appear in ACEs
 
+By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance
+
 Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
 
 In the scriptblock, use string comparisons on the Name property
@@ -305,9 +323,7 @@ e.g.
 
 The naming format that will be used for the groups is CONTOSO\Group1
 
-where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group
-
-By default, this is a scriptblock that always evaluates to $true so it doesn't evaluate any naming convention compliance
+  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group
 
 ```yaml
 Type: System.Management.Automation.ScriptBlock
@@ -342,6 +358,10 @@ Accept wildcard characters: False
 
 ### -NoGroupMembers
 Do not get group members (only report the groups themselves)
+
+Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.
+  If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.
+  Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -486,11 +506,11 @@ Accept wildcard characters: False
 ### -SubfolderLevels
 How many levels of subfolder to enumerate
 
-    Set to 0 to ignore all subfolders
+  Set to 0 to ignore all subfolders
 
-    Set to -1 (default) to recurse infinitely
+  Set to -1 (default) to recurse infinitely
 
-    Set to any whole number to enumerate that many levels
+  Set to any whole number to enumerate that many levels
 
 ```yaml
 Type: System.Int32
