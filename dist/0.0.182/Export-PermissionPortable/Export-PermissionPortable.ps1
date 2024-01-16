@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.181
+.VERSION 0.0.182
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new adsi module 4.0.4 with fakedirectoryentry class which fixes bugs in new-fakedirectoryentry
+new adsi module 4.0.5
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -2892,19 +2893,19 @@ function Get-DirectoryEntry {
             We will create own dummy objects instead of performing the query
             #>
             '^WinNT:\/\/.*\/CREATOR OWNER$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             '^WinNT:\/\/.*\/SYSTEM$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             '^WinNT:\/\/.*\/INTERACTIVE$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             '^WinNT:\/\/.*\/Authenticated Users$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             '^WinNT:\/\/.*\/TrustedInstaller$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             # Workgroup computers do not return a DirectoryEntry with a SearchRoot Path so this ends up being an empty string
             # This is also invoked when DirectoryPath is null for any reason

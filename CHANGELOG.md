@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.182] - 2024-01-15 - new adsi module 4.0.5
+
 ## [0.0.181] - 2024-01-15 - new adsi module 4.0.4 with fakedirectoryentry class which fixes bugs in new-fakedirectoryentry
 
 ## [0.0.180] - 2024-01-15 - integrate new adsi module bugfix 54
