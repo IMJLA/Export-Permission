@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.182
+.VERSION 0.0.183
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new adsi module 4.0.5
+new psntfs version 2.0.68 adds feature to include owner in report
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ new adsi module 4.0.5
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
