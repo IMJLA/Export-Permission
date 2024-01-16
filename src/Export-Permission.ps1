@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.180
+.VERSION 0.0.181
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate new adsi module bugfix 54
+new adsi module 4.0.4 with fakedirectoryentry class which fixes bugs in new-fakedirectoryentry
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ integrate new adsi module bugfix 54
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
