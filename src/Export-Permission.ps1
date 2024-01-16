@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.185
+.VERSION 0.0.186
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-added Source column to 1st CSV file to indicate DACL vs Ownership as source of access
+updated file names and new psntfs version with updated value for source column in 1st csv (dacl is now written out instead of acronym)
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ added Source column to 1st CSV file to indicate DACL vs Ownership as source of a
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

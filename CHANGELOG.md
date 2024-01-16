@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.186] - 2024-01-15 - updated file names and new psntfs version with updated value for source column in 1st csv (dacl is now written out instead of acronym)
+
 ## [0.0.185] - 2024-01-15 - added Source column to 1st CSV file to indicate DACL vs Ownership as source of access
 
 ## [0.0.184] - 2024-01-15 - this time i really included a new ver of psntfs

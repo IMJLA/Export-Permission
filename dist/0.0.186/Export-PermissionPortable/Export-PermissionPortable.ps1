@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.185
+.VERSION 0.0.186
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-added Source column to 1st CSV file to indicate DACL vs Ownership as source of access
+updated file names and new psntfs version with updated value for source column in 1st csv (dacl is now written out instead of acronym)
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5880,7 +5881,7 @@ function Get-FolderAce {
     ForEach ($ThisAccessRule in $AccessRules) {
         $ACEProperties = @{
             SourceAccessList = $SourceAccessList
-            Source           = 'DACL'
+            Source           = 'Discretionary Access Control List'
         }
         ForEach ($ThisProperty in $ACEPropertyNames) {
             $ACEProperties[$ThisProperty] = $ThisAccessRule.$ThisProperty
