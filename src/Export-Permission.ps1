@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.183
+.VERSION 0.0.184
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new psntfs version 2.0.68 adds feature to include owner in report
+this time i really included a new ver of psntfs
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ new psntfs version 2.0.68 adds feature to include owner in report
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
