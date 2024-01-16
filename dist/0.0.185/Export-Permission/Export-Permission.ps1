@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.184
+.VERSION 0.0.185
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-this time i really included a new ver of psntfs
+added Source column to 1st CSV file to indicate DACL vs Ownership as source of access
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ this time i really included a new ver of psntfs
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -392,11 +393,11 @@ begin {
 
     #----------------[ Declarations ]----------------
 
-    $CsvFilePath1 = "$OutputDir\1-AccessControlEntries.csv"
-    $CsvFilePath2 = "$OutputDir\2-AccessControlEntriesWithResolvedIdentityReferences.csv"
-    $CsvFilePath3 = "$OutputDir\3-AccessControlEntriesWithResolvedAndExpandedIdentityReferences.csv"
+    $CsvFilePath1 = "$OutputDir\1-AccessControlList.csv"
+    $CsvFilePath2 = "$OutputDir\2-AccessControlListWithResolvedIdentityReferences.csv"
+    $CsvFilePath3 = "$OutputDir\3-AccessControlListWithResolvedAndExpandedIdentityReferences.csv"
+    $XmlFile = "$OutputDir\4-PrtgSensorResult.xml"
     $ReportFile = "$OutputDir\PermissionsReport.htm"
-    $XmlFile = "$OutputDir\PrtgSensorResult.xml"
     $LogFile = "$OutputDir\Export-Permission.log"
     $DirectoryEntryCache = [hashtable]::Synchronized(@{})
     $IdentityReferenceCache = [hashtable]::Synchronized(@{})
@@ -490,7 +491,7 @@ end {
     Select-Object -Property @{
         Label      = 'Path'
         Expression = { $_.SourceAccessList.Path }
-    }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags |
+    }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags, Source |
     Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath1
 
     Write-Information $CsvFilePath1
