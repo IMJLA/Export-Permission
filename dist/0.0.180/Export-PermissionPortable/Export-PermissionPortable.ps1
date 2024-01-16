@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.179
+.VERSION 0.0.180
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated version of adsi module
+integrate new adsi module bugfix 54
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -2606,10 +2607,9 @@ function Get-AdsiServer {
             Write-LogMsg @LogParams -Text "Get-Win32Account -AdsiProvider '$AdsiProvider' -ComputerName '$DomainFqdn' -ThisFqdn '$ThisFqdn'"
             $Win32Accounts = Get-Win32Account -ComputerName $DomainFqdn -ThisFqdn $ThisFqdn -AdsiProvider $AdsiProvider -Win32AccountsBySID $Win32AccountsBySID -ErrorAction SilentlyContinue @LoggingParams
 
-            $Win32Accounts |
-            ForEach-Object {
-                $Win32AccountsBySID["$($_.Domain)\$($_.SID)"] = $_
-                $Win32AccountsByCaption["$($_.Domain)\$($_.Caption)"] = $_
+            ForEach ($Acct in $Win32Accounts) {
+                $Win32AccountsBySID["$($Acct.Domain)\$($Acct.SID)"] = $Acct
+                $Win32AccountsByCaption[$Acct.Caption] = $Acct
             }
 
             $OutputObject = [PSCustomObject]@{
@@ -2661,10 +2661,9 @@ function Get-AdsiServer {
 
             Remove-CimSession -CimSession $CimSession
 
-            $Win32Accounts |
-            ForEach-Object {
-                $Win32AccountsBySID["$($_.Domain)\$($_.SID)"] = $_
-                $Win32AccountsByCaption["$($_.Domain)\$($_.Caption)"] = $_
+            ForEach ($Acct in $Win32Accounts) {
+                $Win32AccountsBySID["$($Acct.Domain)\$($Acct.SID)"] = $Acct
+                $Win32AccountsByCaption[$Acct.Caption] = $Acct
             }
 
             $OutputObject = [PSCustomObject]@{
@@ -3349,7 +3348,7 @@ function Get-WinNTGroupMember {
                             Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',')"
                         }
                         if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
-                            Write-LogMsg @LogParams -Text " # '$DirectoryPath' came from an ADSI server joined to the domain of '$($Matches.Domain)' but its domain is '$($Matches.Middle)' and its name is '$($Matches.Acct)'"
+                            Write-LogMsg @LogParams -Text " # '$DirectoryPath' is named '$($Matches.Acct)' and is on ADSI server '$($Matches.Middle)' joined to the domain '$($Matches.Domain)'"
                             if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
                                 $MemberDomainDn = $null
                             }
@@ -3373,7 +3372,7 @@ function Get-WinNTGroupMember {
                         # WinNT directories do not support searching so we will retrieve each member individually
                         # Use a hashtable with 'WinNTMembers' as the key and an array of WinNT directory paths as the value
                         Write-LogMsg @LogParams -Text " # '$DirectoryPath' is a local security principal"
-                        $MembersToGet['WinNTMembers'] = $DirectoryPath
+                        $MembersToGet['WinNTMembers'] += $DirectoryPath
                         ##$MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
                     }
 
@@ -4452,7 +4451,8 @@ function Resolve-IdentityReference {
             # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
             IdentityReferenceUnresolved = $null # Could parse SID to get this?
             SIDString                   = $CacheResult.SID
-            IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\"
+            IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+            # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
             IdentityReferenceDns        = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
@@ -4462,7 +4462,7 @@ function Resolve-IdentityReference {
         # Win32_Account provides a NetBIOS-resolved IdentityReference
         # NT Authority\SYSTEM would be SERVER123\SYSTEM as a Win32_Account on a server with hostname server123
         # This could also match on a domain account since those can be returned as Win32_Account, not sure if that will be a bug or what
-        $CacheResult = $Win32AccountsByCaption["$ServerNetBIOS\$ServerNetBIOS\$Name"]
+        $CacheResult = $Win32AccountsByCaption["$ServerNetBIOS\$Name"]
         if ($CacheResult) {
             # IdentityReference is an NT Account Name, and has been cached from this server
             Write-LogMsg @LogParams -Text " # Win32_Account caption cache hit for '$ServerNetBIOS\$ServerNetBIOS\$Name'"
@@ -4485,7 +4485,8 @@ function Resolve-IdentityReference {
                 # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
                 IdentityReferenceUnresolved = $IdentityReference
                 SIDString                   = $CacheResult.SID
-                IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\"
+                IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+                # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
                 IdentityReferenceDns        = "$DomainDns\$($CacheResult.Name)"
             }
         } else {
@@ -4494,14 +4495,15 @@ function Resolve-IdentityReference {
     }
     $CacheResult = $Win32AccountsByCaption["$ServerNetBIOS\$IdentityReference"]
     if ($CacheResult) {
-        # IdentityReference is an NT Account Name, and has been cached from this server
+        # IdentityReference is an NT Account Name without a \, and has been cached from this server
         Write-LogMsg @LogParams -Text " # Win32_Account caption cache hit for '$ServerNetBIOS\$IdentityReference'"
         return [PSCustomObject]@{
             IdentityReferenceOriginal   = $IdentityReference
             # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
             IdentityReferenceUnresolved = $null
             SIDString                   = $CacheResult.SID
-            IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\"
+            IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+            # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
             IdentityReferenceDns        = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
@@ -4550,7 +4552,8 @@ function Resolve-IdentityReference {
                     IdentityReferenceOriginal   = $IdentityReference
                     IdentityReferenceUnresolved = $IdentityReference
                     SIDString                   = $IdentityReference
-                    IdentityReferenceNetBios    = "$DomainNetBIOS\$IdentityReference" -replace "^$ThisHostname\\", "$ThisHostname\"
+                    IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+                    # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
                     IdentityReferenceDns        = "$DomainDns\$IdentityReference"
                 }
             } else {
@@ -4611,7 +4614,7 @@ function Resolve-IdentityReference {
                 Domain  = $ServerNetBIOS
                 Name    = $Name
             }
-            $Win32AccountsByCaption["$ServerNetBIOS\$Caption"] = $Win32Acct
+            $Win32AccountsByCaption[$Caption] = $Win32Acct
             $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
 
             return [PSCustomObject]@{
@@ -4639,7 +4642,7 @@ function Resolve-IdentityReference {
                 Domain  = $ServerNetBIOS
                 Name    = $Name
             }
-            $Win32AccountsByCaption["$ServerNetBIOS\$Caption"] = $Win32Acct
+            $Win32AccountsByCaption[$Caption] = $Win32Acct
             $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
 
             return [PSCustomObject]@{
@@ -9743,7 +9746,7 @@ end {
     $Subfolders = Expand-Folder -Folder $ResolvedFolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount @LoggingParams
 
     # Get the relevant Access Control Entries for each folder and subfolder
-    Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($Subfolders -join "',")')"
+    Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($Subfolders -join "','")')"
     $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount @LoggingParams
 
     # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
