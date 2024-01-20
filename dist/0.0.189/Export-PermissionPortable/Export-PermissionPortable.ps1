@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.188
+.VERSION 0.0.189
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix psntfs
+had psakefile add module version to portable script version that is exported
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -378,7 +379,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' is below
+# Definition of Module 'Adsi' Version '4.0.5' is below
 
 class FakeDirectoryEntry {
 
@@ -4854,7 +4855,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'SimplePrtg' is below
+# Definition of Module 'SimplePrtg' Version '1.0.12' is below
 
 function Format-PrtgXmlResult {
 
@@ -5090,7 +5091,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' is below
+# Definition of Module 'PsNtfs' Version '2.0.71' is below
 
 function GetDirectories {
     param (
@@ -5860,18 +5861,19 @@ function Get-FolderAce {
     }
 
     <#
-    Get-Acl would have already populated the Path property on the Access List so we will too
-    Creating new PSCustomObjects with all the original properties is faster than using Add-Member
+    Get-Acl would have already populated the Path property on the Access List, but [System.Security.AccessControl.DirectorySecurity] has a null Path property instead
+    Creating new PSCustomObjects with all the original properties then manually setting the Path is faster than using Add-Member
     #>
-    $AclProperties = @{
-        'Path' = $LiteralPath
-    }
+    $AclProperties = @{}
     ForEach (
         $ThisProperty in
         (Get-Member -InputObject $DirectorySecurity -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
     ) {
         $AclProperties[$ThisProperty] = $DirectorySecurity.$ThisProperty
     }
+    $AclProperties['Path'] = $LiteralPath
+
+
     $SourceAccessList = [PSCustomObject]$AclProperties
 
     # Use the same timestamp twice for efficiency through reduced calls to Get-Date, and for easy matching of the corresponding log entries
@@ -6242,7 +6244,7 @@ ForEach ($ThisScript in $ScriptFiles) {
 }
 #>
 
-# Definition of Module 'PsLogMessage' is below
+# Definition of Module 'PsLogMessage' Version '1.0.20' is below
 
 function ConvertTo-DnsFqdn {
 
@@ -6470,7 +6472,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 #$Global:LogMessages = [system.collections.generic.list[pscustomobject]]::new()
 $Global:LogMessages = [hashtable]::Synchronized(@{})
 
-# Definition of Module 'PsRunspace' is below
+# Definition of Module 'PsRunspace' Version '1.0.103' is below
 
 function Add-PsCommand {
 
@@ -7665,7 +7667,7 @@ ForEach ($ThisScript in $ScriptFiles) {
 #>
 Import-Module PsLogMessage -ErrorAction SilentlyContinue
 
-# Definition of Module 'PsDfs' is below
+# Definition of Module 'PsDfs' Version '1.0.16' is below
 
 Function Get-DfsNetInfo {
     # Wrapper for the NetDfsGetInfo([string]) method in the lmdfs.h header in NetApi32.dll for Distributed File Systems
@@ -8122,7 +8124,7 @@ public class NetApi32Dll
 
 "@
 
-# Definition of Module 'PsBootstrapCss' is below
+# Definition of Module 'PsBootstrapCss' Version '1.0.26' is below
 
 function ConvertTo-BootstrapJavaScriptTable {
     param (
@@ -8891,7 +8893,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' is below
+# Definition of Module 'Permission' Version '0.0.65' is below
 
 function Expand-Folder {
 

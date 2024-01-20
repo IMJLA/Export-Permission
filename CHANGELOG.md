@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.189] - 2024-01-20 - had psakefile add module version to portable script version that is exported
+
 ## [0.0.188] - 2024-01-20 - bugfix psntfs
 
 ## [0.0.187] - 2024-01-20 - bugfix owner feature

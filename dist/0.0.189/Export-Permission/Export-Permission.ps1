@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.188
+.VERSION 0.0.189
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix psntfs
+had psakefile add module version to portable script version that is exported
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix psntfs
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

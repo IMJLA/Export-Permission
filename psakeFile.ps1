@@ -272,7 +272,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
                 $ThisModuleDefinition = $ThisModuleDefinition -replace 'Export-ModuleMember.*\n[\S]*.*', ''
 
                 # Add this module code to our target collection
-                $null = $PortableScriptContent.Add("# Definition of Module '$ThisModuleName' is below")
+                $null = $PortableScriptContent.Add("# Definition of Module '$ThisModuleName' Version '$($ThisModule.Version)' is below")
                 $null = $PortableScriptContent.Add($ThisModuleDefinition.Trim())
 
                 # Remove the Requires statement for this module
