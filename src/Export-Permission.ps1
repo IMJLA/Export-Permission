@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.186
+.VERSION 0.0.187
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated file names and new psntfs version with updated value for source column in 1st csv (dacl is now written out instead of acronym)
+bugfix owner feature
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ updated file names and new psntfs version with updated value for source column i
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
