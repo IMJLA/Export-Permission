@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.189
+.VERSION 0.0.190
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-had psakefile add module version to portable script version that is exported
+bugfix owner feature
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5091,7 +5092,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.71' is below
+# Definition of Module 'PsNtfs' Version '2.0.73' is below
 
 function GetDirectories {
     param (
@@ -5873,8 +5874,22 @@ function Get-FolderAce {
     }
     $AclProperties['Path'] = $LiteralPath
 
+    <#
+    The creator of a folder is the Owner
+    Unless S-1-3-4 (Owner Rights) is in the DACL, the Owner is implicitly granted two standard access rights defined in WinNT.h of the Win32 API:
+      READ_CONTROL: The right to read the information in the object's security descriptor, not including the information in the system access control list (SACL).
+      WRITE_DAC: The right to modify the discretionary access control list (DACL) in the object's security descriptor.
+
+    Previously the .Owner property was already populated with the NTAccount name of the Owner,
+    but for some reason this stopped being true and now I have to call the GetOwner method.
+    This at least lets us specify the AccountType to match what is used when calling the GetAccessRules method.
+    #>
+    $AclProperties['Owner'] = $DirectorySecurity.GetOwner($AccountType).Value
 
     $SourceAccessList = [PSCustomObject]$AclProperties
+
+    # Update the OwnerCache with the Source Access List, so that Get-OwnerAce can output an object for the Owner to represent that they have Full Control
+    $OwnerCache[$LiteralPath] = $SourceAccessList
 
     # Use the same timestamp twice for efficiency through reduced calls to Get-Date, and for easy matching of the corresponding log entries
     $Timestamp = Get-Date -Format 'yyyy-MM-ddThh:mm:ss.ffff'
@@ -5896,15 +5911,6 @@ function Get-FolderAce {
         }
         [PSCustomObject]$ACEProperties
     }
-
-    <#
-    The creator of a folder is the Owner
-    Unless S-1-3-4 (Owner Rights) is in the DACL, the Owner is implicitly granted two standard access rights defined in WinNT.h of the Win32 API:
-      READ_CONTROL: The right to read the information in the object's security descriptor, not including the information in the system access control list (SACL).
-      WRITE_DAC: The right to modify the discretionary access control list (DACL) in the object's security descriptor.
-    Update the OwnerCache with the Source Access List, so that Get-OwnerAce can output an object for the Owner to represent that they have Full Control
-    #>
-    $OwnerCache['LiteralPath'] = $SourceAccessList
 
 }
 function Get-OwnerAce {
@@ -8124,7 +8130,7 @@ public class NetApi32Dll
 
 "@
 
-# Definition of Module 'PsBootstrapCss' Version '1.0.26' is below
+# Definition of Module 'PsBootstrapCss' Version '1.0.28' is below
 
 function ConvertTo-BootstrapJavaScriptTable {
     param (
@@ -8444,15 +8450,15 @@ function New-BootstrapAlert {
         )]
         [string]$Class = 'Info'
     )
-    begin{}
-    process{
+    begin {}
+    process {
         ForEach ($String in $Text) {
             #"<div class=`"alert alert-$($Class.ToLower())`"><strong>$Class!</strong> $String</div>"
             "<div class=`"alert alert-$($Class.ToLower())`">$String</div>"
         }
     }
-    end{}
-    
+    end {}
+
 }
 function New-BootstrapColumn {
     <#
@@ -8526,15 +8532,15 @@ function New-BootstrapDiv {
         )]
         [string]$Class = 'h-100 p-1 bg-light border rounded-3'
     )
-    begin{}
-    process{
+    begin {}
+    process {
         ForEach ($String in $Text) {
             #"<div class=`"alert alert-$($Class.ToLower())`"><strong>$Class!</strong> $String</div>"
             "<div class=`"alert alert-$($Class.ToLower())`">$String</div>"
         }
     }
-    end{}
-    
+    end {}
+
 }
 function New-BootstrapDivWithHeading {
     param (
@@ -8582,22 +8588,22 @@ function New-BootstrapGrid {
 
         [string]$Justify = 'Center'
     )
-    begin{
+    begin {
         $String = @()
         [decimal]$ExactWidth = 12 / ($Html | Measure-Object).Count
         [int]$Width = [Math]::Floor($ExactWidth)
         $String += "<div class=`"container`"><div class=`"row justify-content-md-$($Justify.ToLower())`">"
     }
-    process{
+    process {
         ForEach ($OldHtml in $Html) {
             $String += "<div class=`"col col-lg-$Width`">$OldHtml</div>"
         }
     }
-    end{
+    end {
         $String += "</div></div>"
         $String -join ''
     }
-    
+
 }
 Function New-BootstrapList {
     <#
@@ -8626,14 +8632,14 @@ Function New-BootstrapList {
         )]
         [System.String[]]$HtmlTable
     )
-    begin{}
-    process{
+    begin {}
+    process {
         ForEach ($Table in $HtmlTable) {
-            [String]$NewTable = $Table -replace '<table>','<table class="table table-striped">'
+            [String]$NewTable = $Table -replace '<table>', '<table class="table table-striped">'
             Write-Output $NewTable
         }
     }
-    end{}
+    end {}
 }
 function New-BootstrapPanel {
     <#
@@ -8665,26 +8671,26 @@ function New-BootstrapPanel {
 
         [string]$Footer
     )
-    begin{
+    begin {
         $String = @()
         $String += "<div class=`"panel panel-$($Class.ToLower())`">"
         if ($Heading) {
             $String += "<div class=`"panel-heading`">$Heading</div>"
         }
     }
-    process{
+    process {
         ForEach ($OldHtml in $Html) {
             $String += "<div class=`"panel-body`">$OldHtml</div>"
         }
     }
-    end{
+    end {
         if ($Footer) {
             $String += "<div class=`"panel-footer`">$Footer</div>"
         }
         $String += "</div>"
         $String -join ''
     }
-    
+
 }
 function New-BootstrapReport {
     <#
@@ -8779,16 +8785,16 @@ Function New-BootstrapTable {
         )]
         [System.String[]]$HtmlTable
     )
-    begin{}
-    process{
+    begin {}
+    process {
         ForEach ($Table in $HtmlTable) {
-            [String]$NewTable = $Table -replace '<table>','<table class="table table-striped">'
+            [String]$NewTable = $Table -replace '<table>', '<table class="table table-striped">'
             Write-Output $NewTable
         }
     }
-    end{}
+    end {}
 }
-function New-HtmlAnchor{
+function New-HtmlAnchor {
     <#
         .SYNOPSIS
             Build a new HTML anchor
@@ -8804,9 +8810,9 @@ function New-HtmlAnchor{
 
         #The text of the heading
         [Parameter(
-            Position=0,
-            ValueFromPipeline=$true,
-            Mandatory=$true
+            Position = 0,
+            ValueFromPipeline = $true,
+            Mandatory = $true
         )]
         [String[]]$Element,
 
@@ -8815,13 +8821,13 @@ function New-HtmlAnchor{
         [String]$Name
 
     )
-    begin{}
-    process{
+    begin {}
+    process {
         Write-Output "<h$Level>$Text</h$Level>"
     }
-    end{}
+    end {}
 }
-function New-HtmlHeading{
+function New-HtmlHeading {
     <#
         .SYNOPSIS
             Build a new HTML heading
@@ -8837,21 +8843,21 @@ function New-HtmlHeading{
 
         #The text of the heading
         [Parameter(
-            Position=0,
-            ValueFromPipeline=$True
+            Position = 0,
+            ValueFromPipeline = $True
         )]
         [String[]]$Text,
 
         #The heading level to generate (New-HtmlHeading can create h1, h2, h3, h4, h5, or h6 tags)
-        [ValidateRange(1,6)]
+        [ValidateRange(1, 6)]
         [Int16]$Level = 1
 
     )
-    begin{}
-    process{
+    begin {}
+    process {
         Write-Output "<h$Level>$Text</h$Level>"
     }
-    end{}
+    end {}
 }
 function New-HtmlParagraph {
     <#
@@ -8869,21 +8875,21 @@ function New-HtmlParagraph {
 
         #The text of the heading
         [Parameter(
-            Position=0,
-            ValueFromPipeline=$True
+            Position = 0,
+            ValueFromPipeline = $True
         )]
         [String[]]$Text,
 
         #The heading level to generate (New-HtmlHeading can create h1, h2, h3, h4, h5, or h6 tags)
-        [ValidateRange(1,6)]
+        [ValidateRange(1, 6)]
         [Int16]$Level = 1
 
     )
-    begin{}
-    process{
+    begin {}
+    process {
         Write-Output "<h$Level>$Text</h$Level>"
     }
-    end{}
+    end {}
 }
 <#
 # Add any custom C# classes as usable (exported) types
@@ -8893,7 +8899,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.65' is below
+# Definition of Module 'Permission' Version '0.0.67' is below
 
 function Expand-Folder {
 
@@ -9280,7 +9286,7 @@ function Get-FolderAccessList {
         $PercentComplete = $i / $Folder.Count
         Write-Progress -Activity "Get-FolderAce -IncludeInherited" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
         $i++
-        Get-FolderAce -LiteralPath $ThisFolder -IncludeInherited
+        Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache -IncludeInherited
     }
     Write-Progress -Activity "Get-FolderAce -IncludeInherited" -Completed
 
@@ -9316,7 +9322,7 @@ function Get-FolderAccessList {
 
     # Return ACEs for the item owners (if they do not match the owner of the item's parent folder)
     # First return the owner of the parent item
-    Get-OwnerAce -Item $Folder
+    Get-OwnerAce -Item $Folder -OwnerCache $OwnerCache
     # Then return the owners of any items that differ from their parents' owners
     if ($ThreadCount -eq 1) {
 
@@ -9326,7 +9332,7 @@ function Get-FolderAccessList {
             Write-Progress -Activity "Get-OwnerAce" -CurrentOperation $Child -PercentComplete $PercentComplete
             $i++
 
-            Get-OwnerAce -Item $Child
+            Get-OwnerAce -Item $Child -OwnerCache $OwnerCache
 
         }
         Write-Progress -Activity "Get-OwnerAce" -Completed
@@ -9521,7 +9527,7 @@ function Get-FolderPermissionsBlock {
         [pscustomobject]@{
             HtmlDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisTable)
             JsonDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisJsonTable)
-            JsonData    = $ObjectsForJsonData | ConvertTo-Json
+            JsonData    = $ObjectsForJsonData | ConvertTo-Json -AsArray
             JsonColumns = Get-FolderColumnJson -InputObject $ObjectsForFolderPermissionTable -PropNames Account, Access, 'Due to Membership In', Name, Department, Title
             Path        = $ThisFolder.Name
         }
