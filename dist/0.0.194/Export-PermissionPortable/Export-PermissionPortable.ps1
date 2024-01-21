@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.193
+.VERSION 0.0.194
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-enhancement-performance remove usage of select-object -first
+https://github.com/IMJLA/Export-Permission/issues/61
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5094,7 +5095,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.77' is below
+# Definition of Module 'PsNtfs' Version '2.0.78' is below
 
 function GetDirectories {
     param (
@@ -5494,14 +5495,14 @@ function Format-FolderPermission {
                         $SchemaClassName = 'user'
                     }
                 }
-                $Name = $Names | Sort-Object -Unique
-                $Dept = $Depts | Sort-Object -Unique
-                $Title = $Titles | Sort-Object -Unique
+                $Name = @($Names)[0]
+                $Dept = @($Depts)[0]
+                $Title = @($Titles)[0]
             }
             else {
-                $Name = $ThisUser.Group.name | Sort-Object -Unique
-                $Dept = $ThisUser.Group.department | Sort-Object -Unique
-                $Title = $ThisUser.Group.title | Sort-Object -Unique
+                $Name = @($ThisUser.Group.name)[0]
+                $Dept = @($ThisUser.Group.department)[0]
+                $Title = @($ThisUser.Group.title)[0]
 
                 if ($ThisUser.Group.Properties) {
                     if (
@@ -5655,8 +5656,7 @@ function Format-SecurityPrincipal {
         @{
             Label      = 'IdentityReference'
             Expression = {
-                $ThisPrincipal.Group.IdentityReferenceResolved |
-                Sort-Object -Unique
+                @($ThisPrincipal.Group.IdentityReferenceResolved)[0]
             }
         },
         @{
@@ -8894,7 +8894,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.71' is below
+# Definition of Module 'Permission' Version '0.0.72' is below
 
 function Expand-Folder {
 
@@ -9746,9 +9746,9 @@ function Select-FolderPermissionTableProperty {
             'Access'               = ($Object.Group | Sort-Object -Property IdentityReference -Unique).Access -join ' ; '
             'Due to Membership In' = $GroupString
             'Source of Access'     = ($Object.Group.AccessControlEntry.ACESource | Sort-Object -Unique) -join ' ; '
-            'Name'                 = ($Object.Group.Name | Sort-Object -Unique) -join ' ; '
-            'Department'           = ($Object.Group.Department | Sort-Object -Unique) -join ' ; '
-            'Title'                = ($Object.Group.Title | Sort-Object -Unique) -join ' ; '
+            'Name'                 = @($Object.Group.Name)[0]
+            'Department'           = @($Object.Group.Department)[0]
+            'Title'                = @($Object.Group.Title)[0]
         }
     }
 
