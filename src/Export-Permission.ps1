@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.191
+.VERSION 0.0.192
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated Permission module
+new PsNtfs and Permission module vers
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ updated Permission module
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

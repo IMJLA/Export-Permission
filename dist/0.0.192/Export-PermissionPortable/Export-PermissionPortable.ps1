@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.191
+.VERSION 0.0.192
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated Permission module
+new PsNtfs and Permission module vers
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -5093,7 +5094,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.73' is below
+# Definition of Module 'PsNtfs' Version '2.0.76' is below
 
 function GetDirectories {
     param (
@@ -5597,7 +5598,8 @@ function Format-SecurityPrincipal {
                 }
                 if ("$ThisPrincipalAccount" -eq '') {
                     $_.Name
-                } else {
+                }
+                else {
                     $ThisPrincipalAccount
                 }
             }
@@ -5619,7 +5621,8 @@ function Format-SecurityPrincipal {
                 }
                 if ("$ThisName" -eq '') {
                     $_.Name -replace [regex]::Escape("$($_.DomainNetBios)\"), ''
-                } else {
+                }
+                else {
                     $ThisName
                 }
             }
@@ -5628,18 +5631,6 @@ function Format-SecurityPrincipal {
 
         # Format and output its members if it is a group
         $ThisPrincipal.Members |
-        <#
-        # Because we have already recursively retrieved all group members, we now have all the users so we can filter out the groups from the group members.
-        Where-Object -FilterScript {
-            if ($_.DirectoryEntry.Properties) {
-                $_.DirectoryEntry.Properties['objectClass'] -notcontains 'group' -and
-                $null -eq $_.DirectoryEntry.Properties['groupType'].Value
-            } else {
-                $_.Properties['objectClass'] -notcontains 'group' -and
-                $null -eq $_.Properties['groupType'].Value
-            }
-        } |
-        #>
         Select-Object -Property @{
             Label      = 'User'
             Expression = {
@@ -5672,6 +5663,10 @@ function Format-SecurityPrincipal {
         @{
             Label      = 'NtfsAccessControlEntries'
             Expression = { $ThisPrincipal.Group }
+        },
+        @{
+            Label      = 'ObjectType'
+            Expression = { $_.SchemaClassName }
         },
         *
 
@@ -8900,7 +8895,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.69' is below
+# Definition of Module 'Permission' Version '0.0.70' is below
 
 function Expand-Folder {
 
@@ -9461,11 +9456,13 @@ function Get-FolderPermissionsBlock {
             # TODO: Research where this difference came from, should these be normalized earlier in the process?
             # A user who was found by being a member of a local group not have an ObjectType (because they are not directly part of the AccessControlEntry)
             # They should have their parent group's AccessControlEntry there...do they?  Doesn't it have a Group ObjectType there?
+
             if ($_.Group.AccessControlEntry.ObjectType) {
                 $Schema = $_.Group.AccessControlEntry.ObjectType | Select-Object -First 1
             } else {
                 $Schema = $_.Group.SchemaClassName | Select-Object -First 1
-                #TODO: Why is $_.Group.SchemaClassName 'user' for the local Administrators group?
+                # ToDo: SchemaClassName is a real property but may not exist on all objects.  ObjectType is my own property.  Need to verify+test all usage of both for accuracy.
+                # ToDo: Why is $_.Group.SchemaClassName 'user' for the local Administrators group and Authenticated Users group, and it is 'Group' for the TestPC\Owner user?
             }
 
             # Exclude the object whose classes were specified in the parameters
@@ -9482,13 +9479,6 @@ function Get-FolderPermissionsBlock {
                         $true
                     }
                 }
-            ) -and
-
-            # Exclude groups with members (the group will be reflected on the report with its members)
-            -not (
-                #$_.Group.SchemaClassName -contains 'group' -and
-                $Schema -eq 'group' -and
-                $null -eq $_.Group.IdentityReference
             )
 
         }
@@ -9525,25 +9515,25 @@ function Get-FolderPermissionsBlock {
         # Remove spaces from property titles
         $ObjectsForJsonData = $ObjectsForFolderPermissionTable |
         Select-Object -Property Account,
-            Access,
-            @{
-                    Label = 'DuetoMembershipIn'
-                    Expression = { $_.'Due to Membership In' }
-            },
-            @{
-                    Label = 'SourceofAccess'
-                    Expression = { $_.'Source of Access' }
-            },
-            Name,
-            Department,
-            Title
+        Access,
+        @{
+            Label      = 'DuetoMembershipIn'
+            Expression = { $_.'Due to Membership In' }
+        },
+        @{
+            Label      = 'SourceofAccess'
+            Expression = { $_.'Source of Access' }
+        },
+        Name,
+        Department,
+        Title
 
         [pscustomobject]@{
             HtmlDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisTable)
             JsonDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisJsonTable)
             JsonData    = $ObjectsForJsonData | ConvertTo-Json -AsArray
             JsonColumns = Get-FolderColumnJson -InputObject $ObjectsForFolderPermissionTable -PropNames Account, Access,
-                'Due to Membership In', 'Source of Access', Name, Department, Title
+            'Due to Membership In', 'Source of Access', Name, Department, Title
             Path        = $ThisFolder.Name
         }
     }
