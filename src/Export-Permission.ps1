@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.194
+.VERSION 0.0.195
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-https://github.com/IMJLA/Export-Permission/issues/61
+new adsi module ver with clean transcript for nltest errors
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ https://github.com/IMJLA/Export-Permission/issues/61
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

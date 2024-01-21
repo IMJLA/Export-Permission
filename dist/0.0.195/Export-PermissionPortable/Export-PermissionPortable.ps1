@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.194
+.VERSION 0.0.195
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-https://github.com/IMJLA/Export-Permission/issues/61
+new adsi module ver with clean transcript for nltest errors
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -384,7 +385,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.6' is below
+# Definition of Module 'Adsi' Version '4.0.7' is below
 
 class FakeDirectoryEntry {
 
@@ -3087,19 +3088,19 @@ function Get-TrustedDomain {
 
     # Redirect the error stream to null, errors are expected on non-domain-joined systems
     Write-LogMsg @LogParams -Text "$('& nltest /domain_trusts 2> $null')"
-    $nltestresults = & nltest /domain_trusts 2> $null
-    $NlTestRegEx = '[\d]*: .*'
-    $TrustRelationships = $nltestresults -match $NlTestRegEx
+    #$nltestresults = & nltest /domain_trusts 2> $null
+    $nltestresults = & nltest /domain_trusts 2>&1
 
+    #$NlTestRegEx = '[\d]*: .*'
     $RegExForEachTrust = '(?<index>[\d]*): (?<netbios>\S*) (?<dns>\S*).*'
-    foreach ($TrustRelationship in $TrustRelationships) {
-        if ($TrustRelationship -match $RegExForEachTrust) {
-            [PSCustomObject]@{
-                DomainFqdn    = $Matches.dns
-                DomainNetbios = $Matches.netbios
+    ForEach ($Result in $nltestresults) {
+        if ($Result.GetType() -eq [string]) {
+            if ($Result -match $RegExForEachTrust) {
+                [PSCustomObject]@{
+                    DomainFqdn    = $Matches.dns
+                    DomainNetbios = $Matches.netbios
+                }
             }
-        } else {
-            continue
         }
     }
 }
