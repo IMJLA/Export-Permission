@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.192
+.VERSION 0.0.193
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new PsNtfs and Permission module vers
+enhancement-performance remove usage of select-object -first
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -382,7 +383,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.5' is below
+# Definition of Module 'Adsi' Version '4.0.6' is below
 
 class FakeDirectoryEntry {
 
@@ -2931,9 +2932,8 @@ function Get-DirectoryEntry {
                     $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
                 }
 
-                $SampleUser = $DirectoryEntry.PSBase.Children |
-                Where-Object -FilterScript { $_.schemaclassname -eq 'user' } |
-                Select-Object -First 1 |
+                $SampleUser = @($DirectoryEntry.PSBase.Children |
+                    Where-Object -FilterScript { $_.schemaclassname -eq 'user' })[0] |
                 Add-SidInfo -DomainsBySid $DomainsBySid @LoggingParams
 
                 $DirectoryEntry |
@@ -5094,7 +5094,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.76' is below
+# Definition of Module 'PsNtfs' Version '2.0.77' is below
 
 function GetDirectories {
     param (
@@ -5387,14 +5387,15 @@ function Find-ServerNameInPath {
     if ($LiteralPath -match '[A-Za-z]\:\\' -or $null -eq $LiteralPath -or '' -eq $LiteralPath) {
         # For local file paths, the "server" is the local computer.  Assume the same for null paths.
         hostname
-    } else {
+    }
+    else {
         # Otherwise it must be a UNC path, so the server is the first non-empty string between backwhacks (\)
-        $ThisServer = $LiteralPath -split '\\' |
-        Where-Object -FilterScript { $_ -ne '' } |
-        Select-Object -First 1
+        $ThisServer = @($LiteralPath -split '\\' |
+            Where-Object -FilterScript { $_ -ne '' })[0]
 
         $ThisServer -replace '\?', (hostname)
     }
+
 }
 function Format-FolderPermission {
 
@@ -5515,12 +5516,10 @@ function Format-FolderPermission {
                 }
                 else {
                     if ($ThisUser.Group.DirectoryEntry.SchemaClassName) {
-                        $SchemaClassName = $ThisUser.Group.DirectoryEntry.SchemaClassName |
-                        Select-Object -First 1
+                        $SchemaClassName = @($ThisUser.Group.DirectoryEntry.SchemaClassName)[0]
                     }
                     else {
-                        $SchemaClassName = $ThisUser.Group.SchemaClassName |
-                        Select-Object -First 1
+                        $SchemaClassName = @($ThisUser.Group.SchemaClassName)[0]
                     }
                 }
             }
@@ -6076,7 +6075,7 @@ function New-NtfsAclIssueReport {
     $FoldersWithBrokenInheritance = $FolderPermissions |
     Select-Object -Skip 1 |
     Where-Object -FilterScript {
-                ($_.Group.FolderInheritanceEnabled | Select-Object -First 1) -eq $false -and
+        @($_.Group.FolderInheritanceEnabled)[0] -eq $false -and
                 (($_.Name -replace ([regex]::Escape($TargetPath)), '' -split '\\') | Measure-Object).Count -ne 2
     }
     $Count = ($FoldersWithBrokenInheritance | Measure-Object).Count
@@ -6474,7 +6473,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 #$Global:LogMessages = [system.collections.generic.list[pscustomobject]]::new()
 $Global:LogMessages = [hashtable]::Synchronized(@{})
 
-# Definition of Module 'PsRunspace' Version '1.0.103' is below
+# Definition of Module 'PsRunspace' Version '1.0.104' is below
 
 function Add-PsCommand {
 
@@ -7515,7 +7514,7 @@ function Wait-Thread {
 
         $AllThreads = [System.Collections.Generic.List[PSCustomObject]]::new()
 
-        $FirstThread = $Thread | Select-Object -First 1
+        $FirstThread = @($Thread)[0]
 
         $RunspacePool = $FirstThread.PowershellInterface.RunspacePool
 
@@ -8895,7 +8894,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.70' is below
+# Definition of Module 'Permission' Version '0.0.71' is below
 
 function Expand-Folder {
 
@@ -9436,9 +9435,8 @@ function Get-FolderPermissionsBlock {
         $ClassExclusions[$ThisClass] = $true
     }
 
-    $ShortestFolderPath = $FolderPermissions.Name |
-    Sort-Object |
-    Select-Object -First 1
+    $ShortestFolderPath = @($FolderPermissions.Name |
+        Sort-Object)[0]
 
     ForEach ($ThisFolder in $FolderPermissions) {
 
@@ -9458,9 +9456,9 @@ function Get-FolderPermissionsBlock {
             # They should have their parent group's AccessControlEntry there...do they?  Doesn't it have a Group ObjectType there?
 
             if ($_.Group.AccessControlEntry.ObjectType) {
-                $Schema = $_.Group.AccessControlEntry.ObjectType | Select-Object -First 1
+                $Schema = @($_.Group.AccessControlEntry.ObjectType)[0]
             } else {
-                $Schema = $_.Group.SchemaClassName | Select-Object -First 1
+                $Schema = @($_.Group.SchemaClassName)[0]
                 # ToDo: SchemaClassName is a real property but may not exist on all objects.  ObjectType is my own property.  Need to verify+test all usage of both for accuracy.
                 # ToDo: Why is $_.Group.SchemaClassName 'user' for the local Administrators group and Authenticated Users group, and it is 'Group' for the TestPC\Owner user?
             }
@@ -9551,7 +9549,7 @@ function Get-FolderPermissionTableHeader {
         $ParentLeaf = $ThisFolder.Name | Split-Path -Parent
     }
     if ('' -ne $ParentLeaf) {
-        if (($ThisFolder.Group.FolderInheritanceEnabled | Select-Object -First 1) -eq $true) {
+        if (@($ThisFolder.Group.FolderInheritanceEnabled)[0] -eq $true) {
             if ($ThisFolder.Name -eq $ShortestFolderPath) {
                 return "Inherited permissions from the parent folder ($ParentLeaf) are included. This folder can only be accessed by the accounts listed below:"
             } else {
@@ -9768,7 +9766,7 @@ function Select-FolderTableProperty {
     @{
         Label      = 'Inheritance'
         Expression = {
-            $Culture.TextInfo.ToTitleCase(($_.Group.FolderInheritanceEnabled | Select-Object -First 1))
+            $Culture.TextInfo.ToTitleCase(@($_.Group.FolderInheritanceEnabled)[0])
         }
     }
 }

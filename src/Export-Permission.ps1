@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.192
+.VERSION 0.0.193
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new PsNtfs and Permission module vers
+enhancement-performance remove usage of select-object -first
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ new PsNtfs and Permission module vers
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
