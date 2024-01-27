@@ -356,7 +356,13 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
     $Markdown = Get-Content -LiteralPath $MarkdownHelp.FullName -Raw
     $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
-    $NewMarkdown = $Markdown -replace 'Module Guid:', "script guid: $($MainScript.Name)"
+    $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $($MainScript.Name)"
+
+    # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS
+    $ParamToRemove = '-ProgressAction'
+    $Pattern = "### $ParamToRemove\r?\n[\S\s\r\n]*?(?=#{2,3}?)"
+    $NewMarkdown = [regex]::replace($NewMarkdown, $pattern, '')
+
     $NewMarkdown | Set-Content -LiteralPath $MarkdownHelp.FullName
 
     # Use the help for the script as the readme for the script

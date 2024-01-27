@@ -1,8 +1,8 @@
 ---
 external help file: -help.xml
-help version: 0.0.196
+help version: 0.0.197
 locale: en-US
-Module Name:
+script name: Export-Permission.ps1
 online version:
 schema: 2.0.0
 script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
@@ -415,21 +415,6 @@ Aliases:
 Required: False
 Position: 5
 Default value: "$env:AppData\Export-Permission"
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProgressAction
-{{ Fill ProgressAction Description }}
-
-```yaml
-Type: System.Management.Automation.ActionPreference
-Parameter Sets: (All)
-Aliases: proga
-
-Required: False
-Position: Named
-Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
