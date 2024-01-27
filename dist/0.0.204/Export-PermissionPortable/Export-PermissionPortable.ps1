@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.203
+.VERSION 0.0.204
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix resolve-identityreference in psadsi
+bugfix resolve-identityreference in psadsi in resolve-identityreference invalid param when calling add-domainfqdntoldappath
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -374,7 +375,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.8' is below
+# Definition of Module 'Adsi' Version '4.0.9' is below
 
 class FakeDirectoryEntry {
 
@@ -4679,7 +4680,7 @@ function Resolve-IdentityReference {
             # Try to resolve the account against the domain indicated in its NT Account Name
             # Add this domain to our list of known domains
             try {
-                $SearchPath = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$DomainDn" -ThisFqdn $ThisFqdn @LogParams
+                $SearchPath = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$DomainDn" -ThisFqdn $ThisFqdn @LoggingParams
                 $DirectoryEntry = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $SearchPath -Filter "(samaccountname=$Name)" -PropertiesToLoad @('objectClass', 'distinguishedName', 'name', 'grouptype', 'description', 'managedby', 'member', 'objectClass', 'Department', 'Title') -DomainsByNetbios $DomainsByNetbios
                 $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DomainsBySid $DomainsBySid @LoggingParams).SidString
             } catch {

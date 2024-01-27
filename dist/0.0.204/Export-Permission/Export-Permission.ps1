@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.203
+.VERSION 0.0.204
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix resolve-identityreference in psadsi
+bugfix resolve-identityreference in psadsi in resolve-identityreference invalid param when calling add-domainfqdntoldappath
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix resolve-identityreference in psadsi
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

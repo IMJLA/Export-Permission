@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.204] - 2024-01-27 - bugfix resolve-identityreference in psadsi in resolve-identityreference invalid param when calling add-domainfqdntoldappath
+
 ## [0.0.203] - 2024-01-27 - bugfix resolve-identityreference in psadsi
 
 ## [0.0.202] - 2024-01-27 - psakefile bugfix (needed to filter out ProgressAction common param)
