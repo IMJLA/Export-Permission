@@ -188,7 +188,7 @@ Describe "help for '<_.Name>'" -ForEach $MainScript {
             param ($Params)
             $commonParams = @(
                 'Debug', 'ErrorAction', 'ErrorVariable', 'InformationAction', 'InformationVariable',
-                'OutBuffer', 'OutVariable', 'PipelineVariable', 'Verbose', 'WarningAction',
+                'OutBuffer', 'OutVariable', 'PipelineVariable', 'ProgressAction', 'Verbose', 'WarningAction',
                 'WarningVariable', 'Confirm', 'Whatif'
             )
             $params | Where-Object { $_.Name -notin $commonParams } | Sort-Object -Property Name -Unique
