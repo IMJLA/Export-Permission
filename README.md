@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.200
+help version: 0.0.201
 locale: en-US
 script name: Export-Permission.ps1
 online version:
@@ -20,7 +20,7 @@ Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <Stri
  [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoGroupMembers]
  [[-SubfolderLevels] <Int32>] [[-Title] <String>] [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>]
  [-Interactive] [-NoJavaScript] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
- [[-PrtgToken] <String>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+ [[-PrtgToken] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION

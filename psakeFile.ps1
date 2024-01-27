@@ -362,7 +362,8 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
     $ParamToRemove = '-ProgressAction'
     $Pattern = "### $ParamToRemove\r?\n[\S\s\r\n]*?(?=#{2,3}?)"
     $NewMarkdown = [regex]::replace($NewMarkdown, $pattern, '')
-    #$NewMarkdown = [regex]::replace($NewMarkdown, '[-ProgressAction <ActionPreference>] ', '')
+    $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
+    $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 
     $NewMarkdown | Set-Content -LiteralPath $MarkdownHelp.FullName
 
