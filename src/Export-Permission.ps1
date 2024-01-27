@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.195
+.VERSION 0.0.196
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new adsi module ver with clean transcript for nltest errors
+param names shortened
 
 .PRIVATEDATA
 
@@ -39,24 +39,6 @@ new adsi module ver with clean transcript for nltest errors
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <#
@@ -149,13 +131,13 @@ new adsi module ver with clean transcript for nltest errors
 
     Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')
+    Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeAccountClass @('computer')
+    Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')
 
     Generate reports on the NTFS permissions for the folder C:\Test
 
@@ -283,7 +265,7 @@ param (
       Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).
       So the 'group' class is excluded here by default.
     #>
-    [string[]]$ExcludeAccountClass = @('group', 'computer'),
+    [string[]]$ExcludeClass = @('group', 'computer'),
 
     <#
     Domain(s) to ignore (they will be removed from the username)
@@ -300,9 +282,9 @@ param (
     <#
     Do not get group members (only report the groups themselves)
 
-    Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.
-      If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.
-      Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.
+    Note: By default, the -ExcludeClass parameter will exclude groups from the report.
+      If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
+      Remove the 'group' class from ExcludeClass in order to see groups on the report.
     #>
     [switch]$NoGroupMembers,
 
@@ -335,13 +317,13 @@ param (
 
       where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group
     #>
-    [scriptblock]$GroupNamingConvention = { $true },
+    [scriptblock]$GroupNameRule = { $true },
 
     # Number of asynchronous threads to use
     [uint16]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
-    [switch]$OpenReportAtEnd,
+    [switch]$Interactive,
 
     # Generate a report with only HTML and CSS but no JavaScript
     [switch]$NoJavaScript,
@@ -358,21 +340,21 @@ param (
 
     the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     #>
-    [string]$PrtgSensorProtocol,
+    [string]$PrtgProtocol,
 
     <#
     If all four of the PRTG parameters are specified,
 
     the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     #>
-    [uint16]$PrtgSensorPort,
+    [uint16]$PrtgPort,
 
     <#
     If all four of the PRTG parameters are specified,
 
     the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
     #>
-    [string]$PrtgSensorToken
+    [string]$PrtgToken
 
 )
 
@@ -406,7 +388,7 @@ begin {
     $CsvFilePath1 = "$OutputDir\1-AccessControlList.csv"
     $CsvFilePath2 = "$OutputDir\2-AccessControlListWithResolvedIdentityReferences.csv"
     $CsvFilePath3 = "$OutputDir\3-AccessControlListWithResolvedAndExpandedIdentityReferences.csv"
-    $XmlFile = "$OutputDir\4-PrtgSensorResult.xml"
+    $XmlFile = "$OutputDir\4-PrtgResult.xml"
     $ReportFile = "$OutputDir\PermissionsReport.htm"
     $LogFile = "$OutputDir\Export-Permission.log"
     $DirectoryEntryCache = [hashtable]::Synchronized(@{})
@@ -785,7 +767,7 @@ end {
     # Export two versions of the HTML report
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
-    $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeAccountClass = $ExcludeAccountClass ;
+    $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ;
         IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ;
         NoGroupMembers = $NoGroupMembers ; ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ;
         LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
@@ -796,12 +778,12 @@ end {
     # Identify common issues with permissions
     # ToDo: Users with ownership
     $NtfsIssueParams = @{
-        FolderPermissions     = $FolderPermissions
-        UserPermissions       = $Accounts
-        GroupNamingConvention = $GroupNamingConvention
-        TodaysHostname        = $ThisHostname
-        WhoAmI                = $WhoAmI
-        LogMsgCache           = $LogMsgCache
+        FolderPermissions = $FolderPermissions
+        UserPermissions   = $Accounts
+        GroupNameRule     = $GroupNameRule
+        TodaysHostname    = $ThisHostname
+        WhoAmI            = $WhoAmI
+        LogMsgCache       = $LogMsgCache
     }
     Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
@@ -817,18 +799,18 @@ end {
     $null = Set-Content -LiteralPath $XmlFile -Value $XMLOutput
 
     # Send the XML to a PRTG Custom XML Push sensor for tracking
-    $PrtgSensorParams = @{
-        XmlOutput          = $XMLOutput
-        PrtgProbe          = $PrtgProbe
-        PrtgSensorProtocol = $PrtgSensorProtocol
-        PrtgSensorPort     = $PrtgSensorPort
-        PrtgSensorToken    = $PrtgSensorToken
+    $PrtgParams = @{
+        XmlOutput    = $XMLOutput
+        PrtgProbe    = $PrtgProbe
+        PrtgProtocol = $PrtgProtocol
+        PrtgPort     = $PrtgPort
+        PrtgToken    = $PrtgToken
     }
-    Write-LogMsg @LogParams -Text "Send-PrtgXmlSensorOutput @PrtgSensorParams"
-    Send-PrtgXmlSensorOutput @PrtgSensorParams
+    Write-LogMsg @LogParams -Text "Send-PrtgXmlSensorOutput @PrtgParams"
+    Send-PrtgXmlSensorOutput @PrtgParams
 
     # Open the HTML report file (useful only interactively)
-    if ($OpenReportAtEnd) {
+    if ($Interactive) {
         Invoke-Item $ReportFile
     }
 

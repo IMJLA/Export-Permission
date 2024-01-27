@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.194
+help version: 0.0.195
 locale: en-US
 Module Name:
 online version:
@@ -17,11 +17,10 @@ Create CSV, HTML, and XML reports of permissions
 
 ```
 Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
- [[-ExcludeAccountClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoGroupMembers]
- [[-SubfolderLevels] <Int32>] [[-Title] <String>] [[-GroupNamingConvention] <ScriptBlock>]
- [[-ThreadCount] <UInt16>] [-OpenReportAtEnd] [-NoJavaScript] [[-PrtgProbe] <String>]
- [[-PrtgSensorProtocol] <String>] [[-PrtgSensorPort] <UInt16>] [[-PrtgSensorToken] <String>]
- [-ProgressAction <ActionPreference>] [<CommonParameters>]
+ [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoGroupMembers]
+ [[-SubfolderLevels] <Int32>] [[-Title] <String>] [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>]
+ [-Interactive] [-NoJavaScript] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
+ [[-PrtgToken] <String>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -108,7 +107,7 @@ Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 
 ### EXAMPLE 4
 ```
-Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')
+Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -117,7 +116,7 @@ Include empty groups on the HTML report (rather than the default setting which w
 
 ### EXAMPLE 5
 ```
-Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeAccountClass @('computer')
+Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test
@@ -289,7 +288,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ExcludeAccountClass
+### -ExcludeClass
 Accounts whose objectClass property is in this list are excluded from the HTML report
 
 Note on the 'group' class:
@@ -309,7 +308,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -GroupNamingConvention
+### -GroupNameRule
 Valid group names that are allowed to appear in ACEs
 
 Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
@@ -356,12 +355,27 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -Interactive
+Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -NoGroupMembers
 Do not get group members (only report the groups themselves)
 
-Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.
-  If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.
-  Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.
+Note: By default, the -ExcludeClass parameter will exclude groups from the report.
+  If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
+  Remove the 'group' class from ExcludeClass in order to see groups on the report.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -377,21 +391,6 @@ Accept wildcard characters: False
 
 ### -NoJavaScript
 Generate a report with only HTML and CSS but no JavaScript
-
-```yaml
-Type: System.Management.Automation.SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -OpenReportAtEnd
-Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -435,6 +434,23 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -PrtgPort
+If all four of the PRTG parameters are specified,
+
+the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
+
+```yaml
+Type: System.UInt16
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 12
+Default value: 0
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -PrtgProbe
 If all four of the PRTG parameters are specified,
 
@@ -452,24 +468,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -PrtgSensorPort
-If all four of the PRTG parameters are specified,
-
-the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
-
-```yaml
-Type: System.UInt16
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: 12
-Default value: 0
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -PrtgSensorProtocol
+### -PrtgProtocol
 If all four of the PRTG parameters are specified,
 
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor
@@ -486,7 +485,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -PrtgSensorToken
+### -PrtgToken
 If all four of the PRTG parameters are specified,
 
 the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor

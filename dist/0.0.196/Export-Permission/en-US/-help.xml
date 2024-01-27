@@ -67,7 +67,7 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
-          <maml:name>PrtgSensorProtocol</maml:name>
+          <maml:name>PrtgProtocol</maml:name>
           <maml:description>
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
             <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
@@ -80,7 +80,7 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
-          <maml:name>PrtgSensorPort</maml:name>
+          <maml:name>PrtgPort</maml:name>
           <maml:description>
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
             <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
@@ -93,7 +93,7 @@
           <dev:defaultValue>0</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="13" aliases="none">
-          <maml:name>PrtgSensorToken</maml:name>
+          <maml:name>PrtgToken</maml:name>
           <maml:description>
             <maml:para>If all four of the PRTG parameters are specified,</maml:para>
             <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
@@ -118,7 +118,7 @@
           <dev:defaultValue>SYSTEM</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
-          <maml:name>ExcludeAccountClass</maml:name>
+          <maml:name>ExcludeClass</maml:name>
           <maml:description>
             <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
             <maml:para>Note on the 'group' class:   By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.   Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).   So the 'group' class is excluded here by default.</maml:para>
@@ -184,7 +184,7 @@
           <dev:defaultValue>Permissions Report</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
-          <maml:name>GroupNamingConvention</maml:name>
+          <maml:name>GroupNameRule</maml:name>
           <maml:description>
             <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
             <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
@@ -214,10 +214,21 @@
           <dev:defaultValue>(Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Interactive</maml:name>
+          <maml:description>
+            <maml:para>Open the HTML report after the script is finished using Invoke-Item (only useful interactively)</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>NoGroupMembers</maml:name>
           <maml:description>
             <maml:para>Do not get group members (only report the groups themselves)</maml:para>
-            <maml:para>Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.   Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.</maml:para>
+            <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>System.Management.Automation.SwitchParameter</maml:name>
@@ -229,17 +240,6 @@
           <maml:name>NoJavaScript</maml:name>
           <maml:description>
             <maml:para>Generate a report with only HTML and CSS but no JavaScript</maml:para>
-          </maml:description>
-          <dev:type>
-            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>OpenReportAtEnd</maml:name>
-          <maml:description>
-            <maml:para>Open the HTML report after the script is finished using Invoke-Item (only useful interactively)</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>System.Management.Automation.SwitchParameter</maml:name>
@@ -275,7 +275,7 @@
         <dev:defaultValue>SYSTEM</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
-        <maml:name>ExcludeAccountClass</maml:name>
+        <maml:name>ExcludeClass</maml:name>
         <maml:description>
           <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
           <maml:para>Note on the 'group' class:   By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.   Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).   So the 'group' class is excluded here by default.</maml:para>
@@ -288,7 +288,7 @@
         <dev:defaultValue>@('group', 'computer')</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
-        <maml:name>GroupNamingConvention</maml:name>
+        <maml:name>GroupNameRule</maml:name>
         <maml:description>
           <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
           <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
@@ -320,10 +320,22 @@
         <dev:defaultValue>CONTOSO</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Interactive</maml:name>
+        <maml:description>
+          <maml:para>Open the HTML report after the script is finished using Invoke-Item (only useful interactively)</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>NoGroupMembers</maml:name>
         <maml:description>
           <maml:para>Do not get group members (only report the groups themselves)</maml:para>
-          <maml:para>Note: By default, the -ExcludeAccountClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeAccountClass.   Remove the 'group' class from ExcludeAccountClass in order to see groups on the report.</maml:para>
+          <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -336,18 +348,6 @@
         <maml:name>NoJavaScript</maml:name>
         <maml:description>
           <maml:para>Generate a report with only HTML and CSS but no JavaScript</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>False</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>OpenReportAtEnd</maml:name>
-        <maml:description>
-          <maml:para>Open the HTML report after the script is finished using Invoke-Item (only useful interactively)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -380,6 +380,19 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
+        <maml:name>PrtgPort</maml:name>
+        <maml:description>
+          <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+          <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
+        <dev:type>
+          <maml:name>System.UInt16</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>0</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>PrtgProbe</maml:name>
         <maml:description>
@@ -393,21 +406,8 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
-        <maml:name>PrtgSensorPort</maml:name>
-        <maml:description>
-          <maml:para>If all four of the PRTG parameters are specified,</maml:para>
-          <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
-        <dev:type>
-          <maml:name>System.UInt16</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>0</dev:defaultValue>
-      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
-        <maml:name>PrtgSensorProtocol</maml:name>
+        <maml:name>PrtgProtocol</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
           <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
@@ -420,7 +420,7 @@
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="13" aliases="none">
-        <maml:name>PrtgSensorToken</maml:name>
+        <maml:name>PrtgToken</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
           <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
@@ -559,7 +559,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccountClass @('computer')</dev:code>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)</maml:para>
@@ -567,7 +567,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeAccountClass @('computer')</dev:code>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
           <maml:para>Do not spend time retrieving group members</maml:para>

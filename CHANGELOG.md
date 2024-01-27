@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.196] - 2024-01-27 - param names shortened
+
 ## [0.0.195] - 2024-01-21 - new adsi module ver with clean transcript for nltest errors
 
 ## [0.0.194] - 2024-01-21 - https://github.com/IMJLA/Export-Permission/issues/61
