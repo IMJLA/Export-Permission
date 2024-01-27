@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.202
+.VERSION 0.0.203
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-psakefile bugfix (needed to filter out ProgressAction common param)
+bugfix resolve-identityreference in psadsi
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ psakefile bugfix (needed to filter out ProgressAction common param)
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
