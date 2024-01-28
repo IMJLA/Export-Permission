@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.204
+.VERSION 0.0.207
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,14 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix resolve-identityreference in psadsi in resolve-identityreference invalid param when calling add-domainfqdntoldappath
+bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
 
 .PRIVATEDATA
 
 #> 
+
+
+
 
 
 
@@ -375,7 +378,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.9' is below
+# Definition of Module 'Adsi' Version '4.0.10' is below
 
 class FakeDirectoryEntry {
 
@@ -454,6 +457,26 @@ class FakeDirectoryEntry {
                     objectSid   = $This.objectSid
                 }
                 $This.SchemaClassName = 'user'
+            }
+            'ALL APPLICATION PACKAGES$' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-1'
+                $This.Description = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
+                $This.Properties = @{
+                    Name        = $This.Name
+                    Description = $This.Description
+                    objectSid   = $This.objectSid
+                }
+                $This.SchemaClassName = 'group'
+            }
+            'ALL RESTRICTED APPLICATION PACKAGES$' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
+                $This.Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
+                $This.Properties = @{
+                    Name        = $This.Name
+                    Description = $This.Description
+                    objectSid   = $This.objectSid
+                }
+                $This.SchemaClassName = 'group'
             }
         }
     }
@@ -2691,6 +2714,214 @@ function Get-AdsiServer {
             Write-LogMsg @LogParams -Text "ConvertTo-DomainNetBIOS -AdsiProvider '$AdsiProvider' -DomainFQDN '$DomainFqdn'"
             $DomainNetBIOS = ConvertTo-DomainNetBIOS -DomainFQDN $DomainFqdn @CacheParams @LoggingParams
 
+            <#
+            PS C:\Users\Owner> wmic SYSACCOUNT get name,sid
+                Name                           SID
+                Everyone                       S-1-1-0
+                LOCAL                          S-1-2-0
+                CREATOR OWNER                  S-1-3-0
+                CREATOR GROUP                  S-1-3-1
+                CREATOR OWNER SERVER           S-1-3-2
+                CREATOR GROUP SERVER           S-1-3-3
+                OWNER RIGHTS                   S-1-3-4
+                DIALUP                         S-1-5-1
+                NETWORK                        S-1-5-2
+                BATCH                          S-1-5-3
+                INTERACTIVE                    S-1-5-4
+                SERVICE                        S-1-5-6
+                ANONYMOUS LOGON                S-1-5-7
+                PROXY                          S-1-5-8
+                SYSTEM                         S-1-5-18
+                ENTERPRISE DOMAIN CONTROLLERS  S-1-5-9
+                SELF                           S-1-5-10
+                Authenticated Users            S-1-5-11
+                RESTRICTED                     S-1-5-12
+                TERMINAL SERVER USER           S-1-5-13
+                REMOTE INTERACTIVE LOGON       S-1-5-14
+                IUSR                           S-1-5-17
+                LOCAL SERVICE                  S-1-5-19
+                NETWORK SERVICE                S-1-5-20
+                BUILTIN                        S-1-5-32
+
+             [System.Security.Principal.WellKnownSidType]
+
+             # PS 5.1 returns fewer results than PS 7.4
+                PS C:\Users\Owner> ForEach ($SidType in [System.Security.Principal.WellKnownSidType].GetEnumNames()) {$var = [System.Security.Principal.WellKnownSidType]::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var,$LogonDomainSid) |Add-Member -PassThru -NotePropertyMembers @{'WellKnownSidType' = $SidType}}
+
+                    WellKnownSidType                          BinaryLength AccountDomainSid                          Value
+                    ----------------                          ------------ ----------------                          -----
+                    NullSid                                             12                                           S-1-0-0
+                    WorldSid                                            12                                           S-1-1-0
+                    LocalSid                                            12                                           S-1-2-0
+                    CreatorOwnerSid                                     12                                           S-1-3-0
+                    CreatorGroupSid                                     12                                           S-1-3-1
+                    CreatorOwnerServerSid                               12                                           S-1-3-2
+                    CreatorGroupServerSid                               12                                           S-1-3-3
+                    NTAuthoritySid                                       8                                           S-1-5
+                    DialupSid                                           12                                           S-1-5-1
+                    NetworkSid                                          12                                           S-1-5-2
+                    BatchSid                                            12                                           S-1-5-3
+                    InteractiveSid                                      12                                           S-1-5-4
+                    ServiceSid                                          12                                           S-1-5-6
+                    AnonymousSid                                        12                                           S-1-5-7
+                    ProxySid                                            12                                           S-1-5-8
+                    EnterpriseControllersSid                            12                                           S-1-5-9
+                    SelfSid                                             12                                           S-1-5-10
+                    AuthenticatedUserSid                                12                                           S-1-5-11
+                    RestrictedCodeSid                                   12                                           S-1-5-12
+                    TerminalServerSid                                   12                                           S-1-5-13
+                    RemoteLogonIdSid                                    12                                           S-1-5-14
+                    Exception calling ".ctor" with "2" argument(s): "Well-known SIDs of type LogonIdsSid cannot be created.
+                    Parameter name: sidType"
+                    At line:1 char:147
+                    + ... ::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var, ...
+                    +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        + CategoryInfo          : NotSpecified: (:) [], MethodInvocationException
+                        + FullyQualifiedErrorId : ArgumentException
+
+                    LocalSystemSid                                      12                                           S-1-5-18
+                    LocalServiceSid                                     12                                           S-1-5-19
+                    NetworkServiceSid                                   12                                           S-1-5-20
+                    BuiltinDomainSid                                    12                                           S-1-5-32
+                    BuiltinAdministratorsSid                            16                                           S-1-5-32-544
+                    BuiltinUsersSid                                     16                                           S-1-5-32-545
+                    BuiltinGuestsSid                                    16                                           S-1-5-32-546
+                    BuiltinPowerUsersSid                                16                                           S-1-5-32-547
+                    BuiltinAccountOperatorsSid                          16                                           S-1-5-32-548
+                    BuiltinSystemOperatorsSid                           16                                           S-1-5-32-549
+                    BuiltinPrintOperatorsSid                            16                                           S-1-5-32-550
+                    BuiltinBackupOperatorsSid                           16                                           S-1-5-32-551
+                    BuiltinReplicatorSid                                16                                           S-1-5-32-552
+                    BuiltinPreWindows2000CompatibleAccessSid            16                                           S-1-5-32-554
+                    BuiltinRemoteDesktopUsersSid                        16                                           S-1-5-32-555
+                    BuiltinNetworkConfigurationOperatorsSid             16                                           S-1-5-32-556
+                    AccountAdministratorSid                             28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-500
+                    AccountGuestSid                                     28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-501
+                    AccountKrbtgtSid                                    28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-502
+                    AccountDomainAdminsSid                              28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-512
+                    AccountDomainUsersSid                               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-513
+                    AccountDomainGuestsSid                              28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-514
+                    AccountComputersSid                                 28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-515
+                    AccountControllersSid                               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-516
+                    AccountCertAdminsSid                                28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-517
+                    AccountSchemaAdminsSid                              28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-518
+                    AccountEnterpriseAdminsSid                          28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-519
+                    AccountPolicyAdminsSid                              28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-520
+                    AccountRasAndIasServersSid                          28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-553
+                    NtlmAuthenticationSid                               16                                           S-1-5-64-10
+                    DigestAuthenticationSid                             16                                           S-1-5-64-21
+                    SChannelAuthenticationSid                           16                                           S-1-5-64-14
+                    ThisOrganizationSid                                 12                                           S-1-5-15
+                    OtherOrganizationSid                                12                                           S-1-5-1000
+                    BuiltinIncomingForestTrustBuildersSid               16                                           S-1-5-32-557
+                    BuiltinPerformanceMonitoringUsersSid                16                                           S-1-5-32-558
+                    BuiltinPerformanceLoggingUsersSid                   16                                           S-1-5-32-559
+                    BuiltinAuthorizationAccessSid                       16                                           S-1-5-32-560
+                    WinBuiltinTerminalServerLicenseServersSid           16                                           S-1-5-32-561
+                    MaxDefined                                          16                                           S-1-5-32-561
+
+            # PS 7 returns more results
+                PS C:\Users\Owner> ForEach ($SidType in [System.Security.Principal.WellKnownSidType].GetEnumNames()) {$var = [System.Security.Principal.WellKnownSidType]::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var,$LogonDomainSid) |Add-Member -PassThru -NotePropertyMembers @{'WellKnownSidType' = $SidType}}
+
+                    WellKnownSidType                           BinaryLength AccountDomainSid                          Value
+                    ----------------                           ------------ ----------------                          -----
+                    NullSid                                              12                                           S-1-0-0
+                    WorldSid                                             12                                           S-1-1-0
+                    LocalSid                                             12                                           S-1-2-0
+                    CreatorOwnerSid                                      12                                           S-1-3-0
+                    CreatorGroupSid                                      12                                           S-1-3-1
+                    CreatorOwnerServerSid                                12                                           S-1-3-2
+                    CreatorGroupServerSid                                12                                           S-1-3-3
+                    NTAuthoritySid                                        8                                           S-1-5
+                    DialupSid                                            12                                           S-1-5-1
+                    NetworkSid                                           12                                           S-1-5-2
+                    BatchSid                                             12                                           S-1-5-3
+                    InteractiveSid                                       12                                           S-1-5-4
+                    ServiceSid                                           12                                           S-1-5-6
+                    AnonymousSid                                         12                                           S-1-5-7
+                    ProxySid                                             12                                           S-1-5-8
+                    EnterpriseControllersSid                             12                                           S-1-5-9
+                    SelfSid                                              12                                           S-1-5-10
+                    AuthenticatedUserSid                                 12                                           S-1-5-11
+                    RestrictedCodeSid                                    12                                           S-1-5-12
+                    TerminalServerSid                                    12                                           S-1-5-13
+                    RemoteLogonIdSid                                     12                                           S-1-5-14
+                    MethodInvocationException: Exception calling ".ctor" with "2" argument(s): "Well-known SIDs of type LogonIdsSid cannot be created. (Parameter 'sidType')"
+                    LocalSystemSid                                       12                                           S-1-5-18
+                    LocalServiceSid                                      12                                           S-1-5-19
+                    NetworkServiceSid                                    12                                           S-1-5-20
+                    BuiltinDomainSid                                     12                                           S-1-5-32
+                    BuiltinAdministratorsSid                             16                                           S-1-5-32-544
+                    BuiltinUsersSid                                      16                                           S-1-5-32-545
+                    BuiltinGuestsSid                                     16                                           S-1-5-32-546
+                    BuiltinPowerUsersSid                                 16                                           S-1-5-32-547
+                    BuiltinAccountOperatorsSid                           16                                           S-1-5-32-548
+                    BuiltinSystemOperatorsSid                            16                                           S-1-5-32-549
+                    BuiltinPrintOperatorsSid                             16                                           S-1-5-32-550
+                    BuiltinBackupOperatorsSid                            16                                           S-1-5-32-551
+                    BuiltinReplicatorSid                                 16                                           S-1-5-32-552
+                    BuiltinPreWindows2000CompatibleAccessSid             16                                           S-1-5-32-554
+                    BuiltinRemoteDesktopUsersSid                         16                                           S-1-5-32-555
+                    BuiltinNetworkConfigurationOperatorsSid              16                                           S-1-5-32-556
+                    AccountAdministratorSid                              28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-500
+                    AccountGuestSid                                      28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-501
+                    AccountKrbtgtSid                                     28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-502
+                    AccountDomainAdminsSid                               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-512
+                    AccountDomainUsersSid                                28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-513
+                    AccountDomainGuestsSid                               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-514
+                    AccountComputersSid                                  28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-515
+                    AccountControllersSid                                28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-516
+                    AccountCertAdminsSid                                 28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-517
+                    AccountSchemaAdminsSid                               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-518
+                    AccountEnterpriseAdminsSid                           28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-519
+                    AccountPolicyAdminsSid                               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-520
+                    AccountRasAndIasServersSid                           28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-553
+                    NtlmAuthenticationSid                                16                                           S-1-5-64-10
+                    DigestAuthenticationSid                              16                                           S-1-5-64-21
+                    SChannelAuthenticationSid                            16                                           S-1-5-64-14
+                    ThisOrganizationSid                                  12                                           S-1-5-15
+                    OtherOrganizationSid                                 12                                           S-1-5-1000
+                    BuiltinIncomingForestTrustBuildersSid                16                                           S-1-5-32-557
+                    BuiltinPerformanceMonitoringUsersSid                 16                                           S-1-5-32-558
+                    BuiltinPerformanceLoggingUsersSid                    16                                           S-1-5-32-559
+                    BuiltinAuthorizationAccessSid                        16                                           S-1-5-32-560
+                    WinBuiltinTerminalServerLicenseServersSid            16                                           S-1-5-32-561
+                    MaxDefined                                           16                                           S-1-5-32-561
+                    WinBuiltinDCOMUsersSid                               16                                           S-1-5-32-562
+                    WinBuiltinIUsersSid                                  16                                           S-1-5-32-568
+                    WinIUserSid                                          12                                           S-1-5-17
+                    WinBuiltinCryptoOperatorsSid                         16                                           S-1-5-32-569
+                    WinUntrustedLabelSid                                 12                                           S-1-16-0
+                    WinLowLabelSid                                       12                                           S-1-16-4096
+                    WinMediumLabelSid                                    12                                           S-1-16-8192
+                    WinHighLabelSid                                      12                                           S-1-16-12288
+                    WinSystemLabelSid                                    12                                           S-1-16-16384
+                    WinWriteRestrictedCodeSid                            12                                           S-1-5-33
+                    WinCreatorOwnerRightsSid                             12                                           S-1-3-4
+                    WinCacheablePrincipalsGroupSid                       28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-571
+                    WinNonCacheablePrincipalsGroupSid                    28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-572
+                    WinEnterpriseReadonlyControllersSid                  12                                           S-1-5-22
+                    WinAccountReadonlyControllersSid                     28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-521
+                    WinBuiltinEventLogReadersGroup                       16                                           S-1-5-32-573
+                    WinNewEnterpriseReadonlyControllersSid               28 S-1-5-21-1340649458-2707494813-4121304102 S-1-5-21-1340649458-2707494813-4121304102-498
+                    WinBuiltinCertSvcDComAccessGroup                     16                                           S-1-5-32-574
+                    WinMediumPlusLabelSid                                12                                           S-1-16-8448
+                    MethodInvocationException: Exception calling ".ctor" with "2" argument(s): "The parameter is incorrect. (Parameter 'sidType/domainSid')"
+                    WinConsoleLogonSid                                   12                                           S-1-2-1
+                    WinThisOrganizationCertificateSid                    16                                           S-1-5-65-1
+                    MethodInvocationException: Exception calling ".ctor" with "2" argument(s): "The parameter is incorrect. (Parameter 'sidType/domainSid')"
+                    WinBuiltinAnyPackageSid                              16                                           S-1-15-2-1
+                    WinCapabilityInternetClientSid                       16                                           S-1-15-3-1
+                    WinCapabilityInternetClientServerSid                 16                                           S-1-15-3-2
+                    WinCapabilityPrivateNetworkClientServerSid           16                                           S-1-15-3-3
+                    WinCapabilityPicturesLibrarySid                      16                                           S-1-15-3-4
+                    WinCapabilityVideosLibrarySid                        16                                           S-1-15-3-5
+                    WinCapabilityMusicLibrarySid                         16                                           S-1-15-3-6
+                    WinCapabilityDocumentsLibrarySid                     16                                           S-1-15-3-7
+                    WinCapabilitySharedUserCertificatesSid               16                                           S-1-15-3-9
+                    WinCapabilityEnterpriseAuthenticationSid             16                                           S-1-15-3-8
+                    WinCapabilityRemovableStorageSid                     16                                           S-1-15-3-10
+            #>
             Write-LogMsg @LogParams -Text "Get-Win32Account -AdsiProvider '$AdsiProvider' -ComputerName '$DomainFqdn' -ThisFqdn '$ThisFqdn'"
             $Win32Accounts = Get-Win32Account -ComputerName $DomainFqdn -ThisFqdn $ThisFqdn -AdsiProvider $AdsiProvider -Win32AccountsBySID $Win32AccountsBySID -ErrorAction SilentlyContinue @LoggingParams
 
@@ -2905,6 +3136,12 @@ function Get-DirectoryEntry {
                 $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             '^WinNT:\/\/.*\/TrustedInstaller$' {
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
+            }
+            '^WinNT:\/\/.*\/ALL APPLICATION PACKAGES$' {
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
+            }
+            '^WinNT:\/\/.*\/ALL RESTRICTED APPLICATION PACKAGES$' {
                 $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             # Workgroup computers do not return a DirectoryEntry with a SearchRoot Path so this ends up being an empty string
@@ -4319,25 +4556,24 @@ function Resolve-Ace4 {
     )
     return $InputObject
 }
-
 function Resolve-IdentityReference {
     <#
-        .SYNOPSIS
-        Use ADSI to lookup info about IdentityReferences from Access Control Entries that came from Discretionary Access Control Lists
-        .DESCRIPTION
-        Based on the IdentityReference proprety of each Access Control Entry:
-        Resolve SID to NT account name and vise-versa
-        Resolve well-known SIDs
-        Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
-        .INPUTS
-        None. Pipeline input is not accepted.
-        .OUTPUTS
-        [PSCustomObject] with UnresolvedIdentityReference and SIDString properties (each strings)
-        .EXAMPLE
-        Resolve-IdentityReference -IdentityReference 'BUILTIN\Administrator' -AdsiServer (Get-AdsiServer 'localhost')
+    .SYNOPSIS
+    Use ADSI to lookup info about IdentityReferences from Access Control Entries that came from Discretionary Access Control Lists
+    .DESCRIPTION
+    Based on the IdentityReference proprety of each Access Control Entry:
+    Resolve SID to NT account name and vise-versa
+    Resolve well-known SIDs
+    Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+    .INPUTS
+    None. Pipeline input is not accepted.
+    .OUTPUTS
+    [PSCustomObject] with UnresolvedIdentityReference and SIDString properties (each strings)
+    .EXAMPLE
+    Resolve-IdentityReference -IdentityReference 'BUILTIN\Administrator' -AdsiServer (Get-AdsiServer 'localhost')
 
-        Get information about the local Administrator account
-    #>
+    Get information about the local Administrator account
+#>
     [OutputType([PSCustomObject])]
     param (
         # IdentityReference from an Access Control Entry
@@ -4349,10 +4585,10 @@ function Resolve-IdentityReference {
         [PSObject]$AdsiServer,
 
         <#
-        Dictionary to cache directory entries to avoid redundant lookups
+    Dictionary to cache directory entries to avoid redundant lookups
 
-        Defaults to an empty thread-safe hashtable
-        #>
+    Defaults to an empty thread-safe hashtable
+    #>
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
 
         [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
@@ -4360,10 +4596,10 @@ function Resolve-IdentityReference {
         [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
 
         <#
-        Dictionary to cache known servers to avoid redundant lookups
+    Dictionary to cache known servers to avoid redundant lookups
 
-        Defaults to an empty thread-safe hashtable
-        #>
+    Defaults to an empty thread-safe hashtable
+    #>
         [hashtable]$AdsiServersByDns = [hashtable]::Synchronized(@{}),
 
         # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
@@ -4376,17 +4612,17 @@ function Resolve-IdentityReference {
         [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
 
         <#
-        Hostname of the computer running this function.
+    Hostname of the computer running this function.
 
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
+    Can be provided as a string to avoid calls to HOSTNAME.EXE
+    #>
         [string]$ThisHostName = (HOSTNAME.EXE),
 
         <#
-        FQDN of the computer running this function.
+    FQDN of the computer running this function.
 
-        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
-        #>
+    Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+    #>
         [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
 
         # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
@@ -4421,10 +4657,6 @@ function Resolve-IdentityReference {
     #}
 
     $ServerNetBIOS = $AdsiServer.Netbios
-    $split = $IdentityReference.Split('\')
-    $DomainNetBIOS = $split[0]
-    $DomainNetBIOS = $ServerNetBIOS
-    $Name = $split[1]
 
     # Many Well-Known SIDs cannot be translated with the Translate method
     # Instead we have used CIM to collect information on instances of the Win32_Account class from the AdsiServer
@@ -4446,6 +4678,10 @@ function Resolve-IdentityReference {
     } else {
         Write-LogMsg @LogParams -Text " # Win32_Account SID cache miss for '$ServerNetBIOS\$IdentityReference'"
     }
+    $split = $IdentityReference.Split('\')
+    # $DomainNetBIOS = $split[0] # This line doesn't need to execute but is a handy reminder what is on the first side of the split
+    $DomainNetBIOS = $ServerNetBIOS
+    $Name = $split[1]
     if ($Name) {
         # Win32_Account provides a NetBIOS-resolved IdentityReference
         # NT Authority\SYSTEM would be SERVER123\SYSTEM as a Win32_Account on a server with hostname server123
@@ -4498,16 +4734,17 @@ function Resolve-IdentityReference {
         Write-LogMsg @LogParams -Text " # Win32_Account caption cache miss for '$ServerNetBIOS\$IdentityReference'"
     }
 
+    # If no match was found in any cache, the path forward depends on the IdentityReference
     switch -Wildcard ($IdentityReference) {
         "S-1-*" {
             # IdentityReference is a Revision 1 SID
             <#
-            Use the SecurityIdentifier.Translate() method to translate the SID to an NT Account name
-                This .Net method makes it impossible to redirect the error stream directly
-                Wrapping it in a scriptblock (which is then executed with &) fixes the problem
-                I don't understand exactly why
-                The scriptblock will evaluate null if the SID cannot be translated, and the error stream redirection supresses the error
-            #>
+        Use the SecurityIdentifier.Translate() method to translate the SID to an NT Account name
+            This .Net method makes it impossible to redirect the error stream directly
+            Wrapping it in a scriptblock (which is then executed with &) fixes the problem
+            I don't understand exactly why
+            The scriptblock will evaluate null if the SID cannot be translated, and the error stream redirection supresses the error (except in the transcript which catches it)
+        #>
             Write-LogMsg @LogParams -Text "[System.Security.Principal.SecurityIdentifier]::new('$IdentityReference').Translate([System.Security.Principal.NTAccount])"
             $SecurityIdentifier = [System.Security.Principal.SecurityIdentifier]::new($IdentityReference)
             $UnresolvedIdentityReference = & { $SecurityIdentifier.Translate([System.Security.Principal.NTAccount]).Value } 2>$null
@@ -4517,34 +4754,44 @@ function Resolve-IdentityReference {
 
             # Search the cache of domains, first by SID, then by NetBIOS name
             $DomainCacheResult = $DomainsBySID[$DomainSid]
-            if (-not $DomainCacheResult) {
-                $split = $UnresolvedIdentityReference -split '\\'
-                $DomainCacheResult = $DomainsByNetbios[$split[0]]
-                Write-LogMsg @LogParams -Text " # Domain SID cache miss for '$DomainSid'"
-            } else {
+            if ($DomainCacheResult) {
                 Write-LogMsg @LogParams -Text " # Domain SID cache hit for '$DomainSid'"
+            } else {
+                Write-LogMsg @LogParams -Text " # Domain SID cache miss for '$DomainSid'"
+                $split = $UnresolvedIdentityReference -split '\\'
+                if (
+                    $split[0].Contains(' ') -or
+                    $split[0].Contains('BUILTIN\')
+                ) {
+                    $DomainNetBIOS = $ServerNetBIOS
+                    $Caption = "$ServerNetBIOS\$($split[1])"
+
+                    # Update the caches
+                    $Win32Acct = [PSCustomObject]@{
+                        SID     = $IdentityReference
+                        Caption = $Caption
+                        Domain  = $ServerNetBIOS
+                        Name    = $split[1]
+                    }
+                    $Win32AccountsByCaption[$Caption] = $Win32Acct
+                    $Win32AccountsBySID["$ServerNetBIOS\$IdentityReference"] = $Win32Acct
+
+                } else {
+                    $DomainNetBIOS = $split[0]
+                }
+                $DomainCacheResult = $DomainsByNetbios[$split[0]]
             }
             if ($DomainCacheResult) {
                 $DomainNetBIOS = $DomainCacheResult.Netbios
                 $DomainDns = $DomainCacheResult.Dns
             } else {
-                Write-LogMsg @LogParams -Text " # Domain SID '$DomainSid' is unknown."
-                $DomainNetBIOS = $split[0]
+                Write-LogMsg @LogParams -Text " # Domain SID '$DomainSid' is unknown. Domain NetBIOS is '$DomainNetBIOS'"
                 Write-LogMsg @LogParams -Text " # Translated NTAccount name for '$IdentityReference' is '$UnresolvedIdentityReference'"
                 $DomainDns = ConvertTo-Fqdn -NetBIOS $DomainNetBIOS -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
             }
             $AdsiServer = Get-AdsiServer -Fqdn $DomainDns -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
 
-            if ( -not $UnresolvedIdentityReference ) {
-                $Resolved = [PSCustomObject]@{
-                    IdentityReferenceOriginal   = $IdentityReference
-                    IdentityReferenceUnresolved = $IdentityReference
-                    SIDString                   = $IdentityReference
-                    IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
-                    # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
-                    IdentityReferenceDns        = "$DomainDns\$IdentityReference"
-                }
-            } else {
+            if ($UnresolvedIdentityReference) {
                 # Recursively call this function to resolve the new IdentityReference we have
                 $ResolveIdentityReferenceParams = @{
                     IdentityReference      = $UnresolvedIdentityReference
@@ -4562,6 +4809,15 @@ function Resolve-IdentityReference {
                     WhoAmI                 = $WhoAmI
                 }
                 $Resolved = Resolve-IdentityReference @ResolveIdentityReferenceParams
+            } else {
+                $Resolved = [PSCustomObject]@{
+                    IdentityReferenceOriginal   = $IdentityReference
+                    IdentityReferenceUnresolved = $IdentityReference
+                    SIDString                   = $IdentityReference
+                    IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+                    #IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase) # PS 7 more efficient
+                    IdentityReferenceDns        = "$DomainDns\$IdentityReference"
+                }
             }
 
             return $Resolved
@@ -4586,6 +4842,69 @@ function Resolve-IdentityReference {
 
             $SIDString = $ScResultProps['SERVICE SID']
             $Caption = $IdentityReference -replace 'NT SERVICE', $ServerNetBIOS -replace "^$ThisHostname\\", "$ThisHostname\"
+
+            $DomainCacheResult = $DomainsByNetbios[$ServerNetBIOS]
+            if ($DomainCacheResult) {
+                $DomainDns = $DomainCacheResult.Dns
+            }
+            if (-not $DomainDns) {
+                $DomainDns = ConvertTo-Fqdn -NetBIOS $ServerNetBIOS -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+            }
+
+            # Update the caches
+            $Win32Acct = [PSCustomObject]@{
+                SID     = $SIDString
+                Caption = $Caption
+                Domain  = $ServerNetBIOS
+                Name    = $Name
+            }
+            $Win32AccountsByCaption[$Caption] = $Win32Acct
+            $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
+
+            return [PSCustomObject]@{
+                IdentityReferenceOriginal   = $IdentityReference
+                IdentityReferenceUnresolved = $IdentityReference
+                SIDString                   = $SIDString
+                IdentityReferenceNetBios    = $Caption
+                IdentityReferenceDns        = "$DomainDns\$Name"
+            }
+        }
+        "APPLICATION PACKAGE AUTHORITY\*" {
+
+            <#
+            These SIDs cannot be resolved from the NTAccount name:
+                PS C:> [System.Security.Principal.SecurityIdentifier]::new('S-1-15-2-1').Translate([System.Security.Principal.NTAccount]).Translate([System.Security.Principal.SecurityIdentifier])
+                MethodInvocationException: Exception calling "Translate" with "1" argument(s): "Some or all identity references could not be translated."
+
+            Even though resolving the reverse direction works:
+                PS C:> [System.Security.Principal.SecurityIdentifier]::new('S-1-15-2-1').Translate([System.Security.Principal.NTAccount])
+
+                Value
+                -----
+                APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES
+            So we will instead hardcode a map of SIDs
+            #>
+            $KnownSIDs = @{ # https://learn.microsoft.com/en-us/windows/win32/secauthz/app-container-sid-constants
+                'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'                                                   = 'S-1-15-2-1'
+                'APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES'                                        = 'S-1-15-2-2'
+
+                # Capability SIDs introduced in Windows 8 https://learn.microsoft.com/en-us/windows/win32/secauthz/capability-sid-constants
+                'APPLICATION PACKAGE AUTHORITY\Your Internet connection'                                                   = 'S-1-15-3-1'
+                'APPLICATION PACKAGE AUTHORITY\Your Internet connection, including incoming connections from the Internet' = 'S-1-15-3-2'
+                'APPLICATION PACKAGE AUTHORITY\Your home or work networks'                                                 = 'S-1-15-3-3'
+                'APPLICATION PACKAGE AUTHORITY\Your pictures library'                                                      = 'S-1-15-3-4'
+                'APPLICATION PACKAGE AUTHORITY\Your videos library'                                                        = 'S-1-15-3-5'
+                'APPLICATION PACKAGE AUTHORITY\Your music library'                                                         = 'S-1-15-3-6'
+                'APPLICATION PACKAGE AUTHORITY\Your documents library'                                                     = 'S-1-15-3-7'
+                'APPLICATION PACKAGE AUTHORITY\Your Windows credentials'                                                   = 'S-1-15-3-8'
+                'APPLICATION PACKAGE AUTHORITY\Software and hardware certificates or a smart card'                         = 'S-1-15-3-9'
+                'APPLICATION PACKAGE AUTHORITY\Removable storage'                                                          = 'S-1-15-3-10'
+                'APPLICATION PACKAGE AUTHORITY\Your Appointments'                                                          = 'S-1-15-3-11'
+                'APPLICATION PACKAGE AUTHORITY\Your Contacts'                                                              = 'S-1-15-3-12'
+            }
+            $SIDString = $KnownSIDs[$IdentityReference]
+
+            $Caption = $IdentityReference -replace 'APPLICATION PACKAGE AUTHORITY', $ServerNetBIOS -replace "^$ThisHostname\\", "$ThisHostname\"
 
             $DomainCacheResult = $DomainsByNetbios[$ServerNetBIOS]
             if ($DomainCacheResult) {
@@ -4684,8 +5003,8 @@ function Resolve-IdentityReference {
                 $DirectoryEntry = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $SearchPath -Filter "(samaccountname=$Name)" -PropertiesToLoad @('objectClass', 'distinguishedName', 'name', 'grouptype', 'description', 'managedby', 'member', 'objectClass', 'Department', 'Title') -DomainsByNetbios $DomainsByNetbios
                 $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DomainsBySid $DomainsBySid @LoggingParams).SidString
             } catch {
-                Write-Warning "$(Get-Date -Format s)`t$ThisHostname`tResolve-IdentityReference`t$($StartingIdentityName) could not be resolved against its directory"
-                Write-Warning "$(Get-Date -Format s)`t$ThisHostname`tResolve-IdentityReference`t$($_.Exception.Message)"
+                Write-LogMsg @LogParams -Type Warning -Text "'$IdentityReference' could not be resolved against its directory"
+                Write-LogMsg @LogParams -Type Warning -Text $_.Exception.Message
             }
         }
 
@@ -4705,7 +5024,7 @@ function Resolve-IdentityReference {
         # This covers unresolved SIDs for deleted accounts, broken domain trusts, etc.
         if ( '' -eq "$Name" ) {
             $Name = $IdentityReference
-            Write-LogMsg @LogParams -Text " # An identity reference girl has no name ($Name)"
+            Write-LogMsg @LogParams -Text " # An IdentityReference girl has no name ($Name)"
         } else {
             Write-LogMsg @LogParams -Text " # '$IdentityReference' is named '$Name'"
         }

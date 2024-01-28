@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.207] - 2024-01-27 - bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
+
+## [0.0.206] - 2024-01-27 - bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
+
+## [0.0.205] - 2024-01-27 - bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
+
 ## [0.0.204] - 2024-01-27 - bugfix resolve-identityreference in psadsi in resolve-identityreference invalid param when calling add-domainfqdntoldappath
 
 ## [0.0.203] - 2024-01-27 - bugfix resolve-identityreference in psadsi

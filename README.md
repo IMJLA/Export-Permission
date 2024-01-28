@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.203
+help version: 0.0.206
 locale: en-US
 script name: Export-Permission.ps1
 online version:
