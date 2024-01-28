@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.207
+.VERSION 0.0.208
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
+updated progress and debug output
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -378,7 +379,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.10' is below
+# Definition of Module 'Adsi' Version '4.0.11' is below
 
 class FakeDirectoryEntry {
 
@@ -2743,7 +2744,6 @@ function Get-AdsiServer {
                 NETWORK SERVICE                S-1-5-20
                 BUILTIN                        S-1-5-32
 
-             [System.Security.Principal.WellKnownSidType]
 
              # PS 5.1 returns fewer results than PS 7.4
                 PS C:\Users\Owner> ForEach ($SidType in [System.Security.Principal.WellKnownSidType].GetEnumNames()) {$var = [System.Security.Principal.WellKnownSidType]::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var,$LogonDomainSid) |Add-Member -PassThru -NotePropertyMembers @{'WellKnownSidType' = $SidType}}
@@ -3142,6 +3142,15 @@ function Get-DirectoryEntry {
                 $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             '^WinNT:\/\/.*\/ALL RESTRICTED APPLICATION PACKAGES$' {
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
+            }
+            '^WinNT:\/\/.*\/Everyone$' {
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
+            }
+            '^WinNT:\/\/.*\/LOCAL SERVICE$' {
+                $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
+            }
+            '^WinNT:\/\/.*\/NETWORK SERVICE$' {
                 $DirectoryEntry = [FakeDirectoryEntry]::new($DirectoryPath)
             }
             # Workgroup computers do not return a DirectoryEntry with a SearchRoot Path so this ends up being an empty string
@@ -5402,7 +5411,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.79' is below
+# Definition of Module 'PsNtfs' Version '2.0.80' is below
 
 function GetDirectories {
     param (
@@ -5413,12 +5422,29 @@ function GetDirectories {
 
         [System.IO.SearchOption]$SearchOption = [System.IO.SearchOption]::AllDirectories
     )
+
+    # Try to run the command as instructed
     Write-Debug "  $(Get-Date -Format s)`t$(hostname)`tGetDirectories`t[System.IO.Directory]::GetDirectories('$TargetPath','$SearchPattern',[System.IO.SearchOption]::$SearchOption)"
     try {
-        [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, $SearchOption)
-    } catch {
+        $result = [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, $SearchOption)
+        return $result
+    }
+    catch {
         Write-Warning "$(Get-Date -Format s)`t$(hostname)`tGetDirectories`t$($_.Exception.Message)"
     }
+
+    # Sometimes access is denied to a single buried subdirectory, so we will try searching the top directory only and then recursing through results one at a time
+    try {
+        $result = [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, [System.IO.SearchOption]::TopDirectoryOnly)
+    }
+    catch {
+        Write-Warning "$(Get-Date -Format s)`t$(hostname)`tGetDirectories`t$($_.Exception.Message)"
+        return
+    }
+    ForEach ($Child in $result) {
+        GetDirectories -TargetPath $Child -SearchPattern $SearchPattern -SearchOption $SearchOption
+    }
+
 }
 function ConvertTo-SimpleProperty {
     param (
@@ -6151,7 +6177,7 @@ function Get-FolderAce {
     # Use the same timestamp twice for efficiency through reduced calls to Get-Date, and for easy matching of the corresponding log entries
     $Timestamp = Get-Date -Format 'yyyy-MM-ddThh:mm:ss.ffff'
 
-    Write-Debug "  $Timestamp`t$TodaysHostname`t$WhoAmI`t$($MyInvocation.ScriptLineNumber)`tGet-FolderAce`t$($MyInvocation.ScriptLineNumber)`tDebug`t[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections')"
+    Write-Debug "  $Timestamp`t$TodaysHostname`t$WhoAmI`t$($MyInvocation.InvocationName)`tGet-FolderAce`t$($MyInvocation.ScriptLineNumber)`tDebug`t[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections')"
     $DirectorySecurity = & { [System.Security.AccessControl.DirectorySecurity]::new(
             $LiteralPath,
             $Sections
@@ -6159,7 +6185,7 @@ function Get-FolderAce {
     } 2>$null
 
     if ($null -eq $DirectorySecurity) {
-        Write-Warning "$Timestamp`t$TodaysHostname`t$WhoAmI`t$($MyInvocation.ScriptLineNumber)`tGet-FolderAce`t$($MyInvocation.ScriptLineNumber)`tDebug`t# Found no ACL for '$LiteralPath'" -Type Warning @LogParams
+        Write-Warning "$Timestamp`t$TodaysHostname`t$WhoAmI`t$($MyInvocation.InvocationName)`tGet-FolderAce`t$($MyInvocation.ScriptLineNumber)`tDebug`t# Found no ACL for '$LiteralPath'" -Type Warning @LogParams
         return
     }
 
@@ -6185,7 +6211,9 @@ function Get-FolderAce {
     Previously the .Owner property was already populated with the NTAccount name of the Owner,
     but for some reason this stopped being true and now I have to call the GetOwner method.
     This at least lets us specify the AccountType to match what is used when calling the GetAccessRules method.
-    #>
+    #>$Timestamp = Get-Date -Format 'yyyy-MM-ddThh:mm:ss.ffff'
+
+    Write-Debug "  $Timestamp`t$TodaysHostname`t$WhoAmI`t$($MyInvocation.InvocationName)`tGet-FolderAce`t$($MyInvocation.ScriptLineNumber)`tDebug`t[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetOwner([$AccountType])"
     $AclProperties['Owner'] = $DirectorySecurity.GetOwner($AccountType).Value
 
     $SourceAccessList = [PSCustomObject]$AclProperties
@@ -6244,6 +6272,30 @@ function Get-OwnerAce {
             Source            = 'Ownership'
         }
 
+    }
+
+}
+function Get-ServerFromFilePath {
+    param (
+        [string]$FilePath,
+
+        <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName)
+    )
+
+    if ($FilePath[1] -eq '\') {
+        #UNC
+        $SkippedFirstTwoChars = $FilePath.Substring(2, $FilePath.Length - 2)
+        $NextSlashIndex = $SkippedFirstTwoChars.IndexOf('\')
+        $SkippedFirstTwoChars.Substring(0, $NextSlashIndex)
+    }
+    else {
+        #Local
+        $ThisFqdn
     }
 
 }
@@ -9201,7 +9253,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.73' is below
+# Definition of Module 'Permission' Version '0.0.74' is below
 
 function Expand-Folder {
 
@@ -9594,11 +9646,18 @@ function Get-FolderAccessList {
 
     if ($ThreadCount -eq 1) {
 
+        [int]$ProgressInterval = $Subfolder.Count / 100
+        $ProgressCounter = 0
         $i = 0
+        Write-Progress -Activity "Get-FolderAce" -CurrentOperation 'Starting' -PercentComplete 0
         ForEach ($ThisFolder in $Subfolder) {
-            $PercentComplete = $i / $Subfolder.Count
-            Write-Progress -Activity "Get-FolderAce" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $Subfolder.Count * 100
+                Write-Progress -Activity "Get-FolderAce" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
+            }
             $i++
+            $ProgressCounter++
+
             Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache
         }
         Write-Progress -Activity "Get-FolderAce" -Completed
@@ -9628,11 +9687,15 @@ function Get-FolderAccessList {
     # Then return the owners of any items that differ from their parents' owners
     if ($ThreadCount -eq 1) {
 
+        $ProgressCounter = 0
         $i = 0
         ForEach ($Child in $Subfolder) {
-            $PercentComplete = $i / $Subfolder.Count
-            Write-Progress -Activity "Get-OwnerAce" -CurrentOperation $Child -PercentComplete $PercentComplete
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $Subfolder.Count * 100
+                Write-Progress -Activity "Get-OwnerAce" -CurrentOperation $Child -PercentComplete $PercentComplete
+            }
             $i++
+            $ProgressCounter++
 
             Get-OwnerAce -Item $Child -OwnerCache $OwnerCache
 

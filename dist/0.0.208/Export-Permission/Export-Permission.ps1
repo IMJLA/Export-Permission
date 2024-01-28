@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.207
+.VERSION 0.0.208
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
+updated progress and debug output
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix for APPLICATION PACKAGE AUTHORITY identityreferences
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
