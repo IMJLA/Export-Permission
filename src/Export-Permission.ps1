@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.209
+.VERSION 0.0.210
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add and fix write-progress in 1-thread mode
+reduce calls to external executables
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ add and fix write-progress in 1-thread mode
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
