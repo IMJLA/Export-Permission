@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.212
+.VERSION 0.0.213
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix fakedirectoryentry class adsi module
+bugfix write-progress in psrunspace module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -383,7 +384,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.15' is below
+# Definition of Module 'Adsi' Version '4.0.16' is below
 
 class FakeDirectoryEntry {
 
@@ -434,7 +435,7 @@ class FakeDirectoryEntry {
                 $This.SchemaClassName = 'group'
             }
             'TrustedInstaller$' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
                 $This.Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
                 $This.SchemaClassName = 'user'
             }
@@ -1902,25 +1903,25 @@ function Expand-IdentityReference {
                         } else {
                             $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/$SamaccountnameOrSid"
                         }
+                        $GetDirectoryEntryParams['PropertiesToLoad'] = @(
+                            'members',
+                            'objectClass',
+                            'objectSid',
+                            'samAccountName',
+                            'distinguishedName',
+                            'name',
+                            'grouptype',
+                            'description',
+                            'managedby',
+                            'member',
+                            'Department',
+                            'Title',
+                            'primaryGroupToken'
+                        )
                         try {
-                            $GetDirectoryEntryParams['PropertiesToLoad'] = @(
-                                'members',
-                                'objectClass',
-                                'objectSid',
-                                'samAccountName',
-                                'distinguishedName',
-                                'name',
-                                'grouptype',
-                                'description',
-                                'managedby',
-                                'member',
-                                'Department',
-                                'Title',
-                                'primaryGroupToken'
-                            )
                             $DirectoryEntry = Get-DirectoryEntry @GetDirectoryEntryParams
                         } catch {
-                            Write-Warning "$(Get-Date -Format s)`t$ThisHostname`tExpand-IdentityReference`t$($GetDirectoryEntryParams['DirectoryPath']) could not be resolved for '$StartingIdentityName'"
+                            Write-LogMsg @LogParams -Type Warning -Text " # '$($GetDirectoryEntryParams['DirectoryPath'])' could not be resolved for '$StartingIdentityName'. Error: $($_.Exception.Message.Trim())"
                         }
                     }
                 }
@@ -1989,7 +1990,7 @@ function Expand-IdentityReference {
 
                     }
                 } else {
-                    Write-Warning "$(Get-Date -Format s)`t$ThisHostname`tExpand-IdentityReference`t # '$StartingIdentityName' could not be matched to a DirectoryEntry"
+                    Write-LogMsg @LogParams -Type Warning -Text " # '$StartingIdentityName' could not be matched to a DirectoryEntry"
                 }
 
                 Add-Member -InputObject $ThisIdentity -Force -NotePropertyMembers $PropertiesToAdd
@@ -6469,7 +6470,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 #$Global:LogMessages = [system.collections.generic.list[pscustomobject]]::new()
 $Global:LogMessages = [hashtable]::Synchronized(@{})
 
-# Definition of Module 'PsRunspace' Version '1.0.104' is below
+# Definition of Module 'PsRunspace' Version '1.0.105' is below
 
 function Add-PsCommand {
 
@@ -7176,9 +7177,10 @@ function Open-Thread {
 
             $StatusString = "Invoking thread $CurrentObjectIndex`: $Command $InputParameterStringForDebug $AdditionalParametersString $SwitchParameterString"
             $Progress = @{
-                Activity        = $StatusString
-                PercentComplete = $CurrentObjectIndex / $ThreadCount * 100
-                Status          = "$($ThreadCount - $CurrentObjectIndex) remaining"
+                Activity         = "Open-Thread"
+                CurrentOperation = $StatusString
+                PercentComplete  = $CurrentObjectIndex / $ThreadCount * 100
+                Status           = "$($ThreadCount - $CurrentObjectIndex) remaining"
             }
             Write-Progress @Progress
 
@@ -7200,7 +7202,7 @@ function Open-Thread {
 
     end {
 
-        Write-Progress -Activity $StatusString -Completed
+        Write-Progress -Activity 'Open-Thread' -Completed
 
     }
 }
@@ -7440,8 +7442,6 @@ function Split-Thread {
             throw 'Split-Thread timeout reached'
         }
 
-        Write-Progress -Activity 'Completed' -Completed
-
     }
 
 }
@@ -7574,9 +7574,10 @@ function Wait-Thread {
             }
 
             $Progress = @{
-                Activity        = "Waiting on threads - $ActiveThreadCountString`: $CommandString"
-                PercentComplete = ($($CleanedUpThreads).count) / @($Thread).Count * 100
-                Status          = "$(@($IncompleteThreads).Count) remaining - $RemainingString"
+                Activity         = 'Wait-Thread'
+                CurrentOperation = "Waiting on threads - $ActiveThreadCountString`: $CommandString"
+                PercentComplete  = ($($CleanedUpThreads).count) / @($Thread).Count * 100
+                Status           = "$(@($IncompleteThreads).Count) remaining - $RemainingString"
             }
             Write-Progress @Progress
 
@@ -7650,7 +7651,7 @@ function Wait-Thread {
         $StopWatch.Stop()
 
         Write-LogMsg @LogParams -Text " # Finished waiting for threads"
-        Write-Progress -Activity 'Completed' -Completed
+        Write-Progress -Activity 'Wait-Thread' -Completed
 
     }
 
