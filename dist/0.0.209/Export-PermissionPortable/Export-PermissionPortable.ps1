@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.208
+.VERSION 0.0.209
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated progress and debug output
+add and fix write-progress in 1-thread mode
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -379,7 +380,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.11' is below
+# Definition of Module 'Adsi' Version '4.0.12' is below
 
 class FakeDirectoryEntry {
 
@@ -3849,92 +3850,92 @@ function New-AdsiServerCimSession {
 }
 function Resolve-Ace {
     <#
-        .SYNOPSIS
-        Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
-        .DESCRIPTION
-        Based on the IdentityReference proprety of each Access Control Entry:
-        Resolve SID to NT account name and vise-versa
-        Resolve well-known SIDs
-        Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
-        Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
-        .INPUTS
-        [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
-        .OUTPUTS
-        [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
-        .EXAMPLE
-        Get-Acl |
-        Expand-Acl |
-        Resolve-Ace
+    .SYNOPSIS
+    Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
+    .DESCRIPTION
+    Based on the IdentityReference proprety of each Access Control Entry:
+    Resolve SID to NT account name and vise-versa
+    Resolve well-known SIDs
+    Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+    Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
+    .INPUTS
+    [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
+    .OUTPUTS
+    [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
+    .EXAMPLE
+    Get-Acl |
+    Expand-Acl |
+    Resolve-Ace
 
-        Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
-        This works in either Windows Powershell or in Powershell
-        Get-Acl does not support long paths (>256 characters)
-        That was why I originally used the .Net Framework method
-        .EXAMPLE
-        Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
-        Resolve-Ace
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-        $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
-        $IncludeExplicitRules = $true
-        $IncludeInheritedRules = $true
-        $AccountType = [System.Security.Principal.SecurityIdentifier]
-        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-        Resolve-Ace
+    Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
+    This works in either Windows Powershell or in Powershell
+    Get-Acl does not support long paths (>256 characters)
+    That was why I originally used the .Net Framework method
+    .EXAMPLE
+    Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
+    Resolve-Ace
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.SecurityIdentifier]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
 
-        This uses .Net Core as the source of the access list
-        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
-        [System.Security.AccessControl.AccessControlSections]::Owner -bor
-        [System.Security.AccessControl.AccessControlSections]::Group
-        $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
-        $IncludeExplicitRules = $true
-        $IncludeInheritedRules = $true
-        $AccountType = [System.Security.Principal.NTAccount]
-        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-        Resolve-Ace
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
+    [System.Security.AccessControl.AccessControlSections]::Owner -bor
+    [System.Security.AccessControl.AccessControlSections]::Group
+    $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.NTAccount]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
 
-        This uses .Net Core as the source of the access list
-        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
-        [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
-        $AuthRules | Resolve-Ace
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
+    [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
+    $AuthRules | Resolve-Ace
 
-        Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
-        Only works in Windows PowerShell
-        Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
-        This method is removed in modern versions of .Net Core
+    Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
+    Only works in Windows PowerShell
+    Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
+    This method is removed in modern versions of .Net Core
 
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-        $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
 
-        The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
-        It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
+    The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
+    It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
 
-        .NOTES
-        Dependencies:
-            Get-DirectoryEntry
-            Add-SidInfo
-            Get-TrustedDomain
-            Find-AdsiProvider
+    .NOTES
+    Dependencies:
+        Get-DirectoryEntry
+        Add-SidInfo
+        Get-TrustedDomain
+        Find-AdsiProvider
 
-        if ($FolderPath.Length -gt 255) {
-            $FolderPath = "\\?\$FolderPath"
-        }
-    #>
+    if ($FolderPath.Length -gt 255) {
+        $FolderPath = "\\?\$FolderPath"
+    }
+#>
     [OutputType([PSCustomObject])]
     param (
 
@@ -3945,10 +3946,10 @@ function Resolve-Ace {
         [PSObject[]]$InputObject,
 
         <#
-        Dictionary to cache directory entries to avoid redundant lookups
+    Dictionary to cache directory entries to avoid redundant lookups
 
-        Defaults to an empty thread-safe hashtable
-        #>
+    Defaults to an empty thread-safe hashtable
+    #>
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
 
         [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
@@ -3965,17 +3966,17 @@ function Resolve-Ace {
         [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
 
         <#
-        Hostname of the computer running this function.
+    Hostname of the computer running this function.
 
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
+    Can be provided as a string to avoid calls to HOSTNAME.EXE
+    #>
         [string]$ThisHostName = (HOSTNAME.EXE),
 
         <#
-        FQDN of the computer running this function.
+    FQDN of the computer running this function.
 
-        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
-        #>
+    Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+    #>
         [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
 
         # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
@@ -4042,13 +4043,13 @@ function Resolve-Ace {
                     }
                 }
                 "NT SERVICE\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
                 }
                 "BUILTIN\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
                 }
                 "NT AUTHORITY\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
                 }
                 default {
                     $DomainNetBios = ($IdentityReference -split '\\')[0]
@@ -4064,7 +4065,7 @@ function Resolve-Ace {
 
             if (-not $ThisServerDns) {
                 # Bug: I think this will report incorrectly for a remote domain not in the cache (trust broken or something)
-                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
             }
             Write-LogMsg @LogParams -Text " # Domain FQDN is '$ThisServerDns' for '$IdentityReference'"
 
@@ -4091,25 +4092,25 @@ function Resolve-Ace {
             Write-LogMsg @LogParams -Text " # Domain NetBIOS is '$DomainNetBios' for '$IdentityReference'"
 
             <#
-            $AdsiProvider = $null
-            if (-not $DomainNetBios) {
-                $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
-                if ($DomainCacheResult) {
-                    Write-LogMsg @LogParams -Text " # Domain FQDN cache hit for '$ThisServerDns'"
-                    $DomainNetBios = $DomainCacheResult.Netbios
-                    $AdsiProvider = $DomainCacheResult.AdsiProvider
-                } else {
-                    Write-LogMsg @LogParams -Text " # Domain FQDN cache miss for '$ThisServerDns'"
-                }
+        $AdsiProvider = $null
+        if (-not $DomainNetBios) {
+            $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
+            if ($DomainCacheResult) {
+                Write-LogMsg @LogParams -Text " # Domain FQDN cache hit for '$ThisServerDns'"
+                $DomainNetBios = $DomainCacheResult.Netbios
+                $AdsiProvider = $DomainCacheResult.AdsiProvider
+            } else {
+                Write-LogMsg @LogParams -Text " # Domain FQDN cache miss for '$ThisServerDns'"
             }
+        }
 
-            if (-not $DomainNetBios) {
-                if (-not $AdsiProvider) {
-                    $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServerDns
-                }
-                $DomainNetBios = ConvertTo-DomainNetBIOS -DomainFQDN $ThisServerDns -AdsiProvider $AdsiProvider -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid
+        if (-not $DomainNetBios) {
+            if (-not $AdsiProvider) {
+                $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServerDns
             }
-            #>
+            $DomainNetBios = ConvertTo-DomainNetBIOS -DomainFQDN $ThisServerDns -AdsiProvider $AdsiProvider -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid
+        }
+        #>
 
             $ResolveIdentityReferenceParams = @{
                 IdentityReference      = $IdentityReference
@@ -4149,92 +4150,92 @@ function Resolve-Ace {
 }
 function Resolve-Ace3 {
     <#
-        .SYNOPSIS
-        Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
-        .DESCRIPTION
-        Based on the IdentityReference proprety of each Access Control Entry:
-        Resolve SID to NT account name and vise-versa
-        Resolve well-known SIDs
-        Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
-        Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
-        .INPUTS
-        [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
-        .OUTPUTS
-        [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
-        .EXAMPLE
-        Get-Acl |
-        Expand-Acl |
-        Resolve-Ace
+    .SYNOPSIS
+    Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
+    .DESCRIPTION
+    Based on the IdentityReference proprety of each Access Control Entry:
+    Resolve SID to NT account name and vise-versa
+    Resolve well-known SIDs
+    Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+    Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
+    .INPUTS
+    [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
+    .OUTPUTS
+    [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
+    .EXAMPLE
+    Get-Acl |
+    Expand-Acl |
+    Resolve-Ace
 
-        Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
-        This works in either Windows Powershell or in Powershell
-        Get-Acl does not support long paths (>256 characters)
-        That was why I originally used the .Net Framework method
-        .EXAMPLE
-        Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
-        Resolve-Ace
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-        $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
-        $IncludeExplicitRules = $true
-        $IncludeInheritedRules = $true
-        $AccountType = [System.Security.Principal.SecurityIdentifier]
-        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-        Resolve-Ace
+    Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
+    This works in either Windows Powershell or in Powershell
+    Get-Acl does not support long paths (>256 characters)
+    That was why I originally used the .Net Framework method
+    .EXAMPLE
+    Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
+    Resolve-Ace
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.SecurityIdentifier]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
 
-        This uses .Net Core as the source of the access list
-        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
-        [System.Security.AccessControl.AccessControlSections]::Owner -bor
-        [System.Security.AccessControl.AccessControlSections]::Group
-        $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
-        $IncludeExplicitRules = $true
-        $IncludeInheritedRules = $true
-        $AccountType = [System.Security.Principal.NTAccount]
-        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-        Resolve-Ace
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
+    [System.Security.AccessControl.AccessControlSections]::Owner -bor
+    [System.Security.AccessControl.AccessControlSections]::Group
+    $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.NTAccount]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
 
-        This uses .Net Core as the source of the access list
-        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
-        [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
-        $AuthRules | Resolve-Ace
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
+    [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
+    $AuthRules | Resolve-Ace
 
-        Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
-        Only works in Windows PowerShell
-        Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
-        This method is removed in modern versions of .Net Core
+    Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
+    Only works in Windows PowerShell
+    Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
+    This method is removed in modern versions of .Net Core
 
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-        $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
 
-        The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
-        It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
+    The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
+    It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
 
-        .NOTES
-        Dependencies:
-            Get-DirectoryEntry
-            Add-SidInfo
-            Get-TrustedDomain
-            Find-AdsiProvider
+    .NOTES
+    Dependencies:
+        Get-DirectoryEntry
+        Add-SidInfo
+        Get-TrustedDomain
+        Find-AdsiProvider
 
-        if ($FolderPath.Length -gt 255) {
-            $FolderPath = "\\?\$FolderPath"
-        }
-    #>
+    if ($FolderPath.Length -gt 255) {
+        $FolderPath = "\\?\$FolderPath"
+    }
+#>
     [OutputType([PSCustomObject])]
     param (
 
@@ -4245,10 +4246,10 @@ function Resolve-Ace3 {
         [PSObject[]]$InputObject,
 
         <#
-        Dictionary to cache directory entries to avoid redundant lookups
+    Dictionary to cache directory entries to avoid redundant lookups
 
-        Defaults to an empty thread-safe hashtable
-        #>
+    Defaults to an empty thread-safe hashtable
+    #>
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
 
         [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
@@ -4265,17 +4266,17 @@ function Resolve-Ace3 {
         [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
 
         <#
-        Hostname of the computer running this function.
+    Hostname of the computer running this function.
 
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
+    Can be provided as a string to avoid calls to HOSTNAME.EXE
+    #>
         [string]$ThisHostName = (HOSTNAME.EXE),
 
         <#
-        FQDN of the computer running this function.
+    FQDN of the computer running this function.
 
-        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
-        #>
+    Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+    #>
         [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
 
         # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
@@ -4342,13 +4343,13 @@ function Resolve-Ace3 {
                     }
                 }
                 "NT SERVICE\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
                 }
                 "BUILTIN\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
                 }
                 "NT AUTHORITY\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
                 }
                 default {
                     $DomainNetBios = ($IdentityReference -split '\\')[0]
@@ -4364,7 +4365,7 @@ function Resolve-Ace3 {
 
             if (-not $ThisServerDns) {
                 # Bug: I think this will report incorrectly for a remote domain not in the cache (trust broken or something)
-                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath
+                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
             }
             Write-LogMsg @LogParams -Text " # Domain FQDN is '$ThisServerDns' for '$IdentityReference'"
 
@@ -4391,25 +4392,25 @@ function Resolve-Ace3 {
             Write-LogMsg @LogParams -Text " # Domain NetBIOS is '$DomainNetBios' for '$IdentityReference'"
 
             <#
-            $AdsiProvider = $null
-            if (-not $DomainNetBios) {
-                $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
-                if ($DomainCacheResult) {
-                    Write-LogMsg @LogParams -Text " # Domain FQDN cache hit for '$ThisServerDns'"
-                    $DomainNetBios = $DomainCacheResult.Netbios
-                    $AdsiProvider = $DomainCacheResult.AdsiProvider
-                } else {
-                    Write-LogMsg @LogParams -Text " # Domain FQDN cache miss for '$ThisServerDns'"
-                }
+        $AdsiProvider = $null
+        if (-not $DomainNetBios) {
+            $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
+            if ($DomainCacheResult) {
+                Write-LogMsg @LogParams -Text " # Domain FQDN cache hit for '$ThisServerDns'"
+                $DomainNetBios = $DomainCacheResult.Netbios
+                $AdsiProvider = $DomainCacheResult.AdsiProvider
+            } else {
+                Write-LogMsg @LogParams -Text " # Domain FQDN cache miss for '$ThisServerDns'"
             }
+        }
 
-            if (-not $DomainNetBios) {
-                if (-not $AdsiProvider) {
-                    $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServerDns
-                }
-                $DomainNetBios = ConvertTo-DomainNetBIOS -DomainFQDN $ThisServerDns -AdsiProvider $AdsiProvider -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid
+        if (-not $DomainNetBios) {
+            if (-not $AdsiProvider) {
+                $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServerDns
             }
-            #>
+            $DomainNetBios = ConvertTo-DomainNetBIOS -DomainFQDN $ThisServerDns -AdsiProvider $AdsiProvider -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid
+        }
+        #>
 
             $ResolveIdentityReferenceParams = @{
                 IdentityReference      = $IdentityReference
@@ -4446,124 +4447,6 @@ function Resolve-Ace3 {
 
     }
 
-}
-
-function Resolve-Ace4 {
-    <#
-        .SYNOPSIS
-        Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
-        .DESCRIPTION
-        Based on the IdentityReference proprety of each Access Control Entry:
-        Resolve SID to NT account name and vise-versa
-        Resolve well-known SIDs
-        Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
-        Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
-        .INPUTS
-        [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
-        .OUTPUTS
-        [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
-        .EXAMPLE
-        Get-Acl |
-        Expand-Acl |
-        Resolve-Ace
-
-        Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
-        This works in either Windows Powershell or in Powershell
-        Get-Acl does not support long paths (>256 characters)
-        That was why I originally used the .Net Framework method
-        .EXAMPLE
-        Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
-        Resolve-Ace
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-        $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
-        $IncludeExplicitRules = $true
-        $IncludeInheritedRules = $true
-        $AccountType = [System.Security.Principal.SecurityIdentifier]
-        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-        Resolve-Ace
-
-        This uses .Net Core as the source of the access list
-        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
-        [System.Security.AccessControl.AccessControlSections]::Owner -bor
-        [System.Security.AccessControl.AccessControlSections]::Group
-        $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
-        $IncludeExplicitRules = $true
-        $IncludeInheritedRules = $true
-        $AccountType = [System.Security.Principal.NTAccount]
-        $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-        Resolve-Ace
-
-        This uses .Net Core as the source of the access list
-        It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-        The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
-        [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
-        $AuthRules | Resolve-Ace
-
-        Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
-        Only works in Windows PowerShell
-        Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
-        This method is removed in modern versions of .Net Core
-
-        .EXAMPLE
-        [System.String]$FolderPath = 'C:\Test'
-        [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-        $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-        $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
-
-        The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
-        It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
-
-        .NOTES
-        Dependencies:
-            Get-DirectoryEntry
-            Add-SidInfo
-            Get-TrustedDomain
-            Find-AdsiProvider
-
-        if ($FolderPath.Length -gt 255) {
-            $FolderPath = "\\?\$FolderPath"
-        }
-    #>
-    [OutputType([PSCustomObject])]
-    param (
-
-        # Authorization Rule Collection of Access Control Entries from Discretionary Access Control Lists
-        [Parameter(
-            ValueFromPipeline
-        )]
-        [PSObject[]]$InputObject,
-
-        <#
-        Dictionary to cache directory entries to avoid redundant lookups
-
-        Defaults to an empty thread-safe hashtable
-        #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$DomainsBySID = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{}))
-
-    )
-    return $InputObject
 }
 function Resolve-IdentityReference {
     <#
@@ -5411,7 +5294,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.80' is below
+# Definition of Module 'PsNtfs' Version '2.0.81' is below
 
 function GetDirectories {
     param (
@@ -5697,37 +5580,43 @@ function Expand-Acl {
 }
 function Find-ServerNameInPath {
     <#
-        .SYNOPSIS
-        Parse a literal path to find its server
-        .DESCRIPTION
-        Currently only supports local file paths or UNC paths
-        .INPUTS
-        None. Pipeline input is not accepted.
-        .OUTPUTS
-        [System.String] representing the name of the server that was extracted from the path
-        .EXAMPLE
-        Find-ServerNameInPath -LiteralPath 'C:\Test'
+    .SYNOPSIS
+    Parse a literal path to find its server
+    .DESCRIPTION
+    Currently only supports local file paths or UNC paths
+    .INPUTS
+    None. Pipeline input is not accepted.
+    .OUTPUTS
+    [System.String] representing the name of the server that was extracted from the path
+    .EXAMPLE
+    Find-ServerNameInPath -LiteralPath 'C:\Test'
 
-        Return the hostname of the local computer because a local filepath was used
-        .EXAMPLE
-        Find-ServerNameInPath -LiteralPath '\\server123\Test\'
+    Return the hostname of the local computer because a local filepath was used
+    .EXAMPLE
+    Find-ServerNameInPath -LiteralPath '\\server123\Test\'
 
-        Return server123 because a UNC path for a folder shared on server123 was used
-    #>
+    Return server123 because a UNC path for a folder shared on server123 was used
+#>
     [OutputType([System.String])]
     param (
-        [string]$LiteralPath
+        [string]$LiteralPath,
+
+        <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName)
     )
-    if ($LiteralPath -match '[A-Za-z]\:\\' -or $null -eq $LiteralPath -or '' -eq $LiteralPath) {
-        # For local file paths, the "server" is the local computer.  Assume the same for null paths.
-        hostname
+    if ($LiteralPath[1] -eq '\') {
+        #UNC
+        $SkippedFirstTwoChars = $LiteralPath.Substring(2, $LiteralPath.Length - 2)
+        $NextSlashIndex = $SkippedFirstTwoChars.IndexOf('\')
+        $SkippedFirstTwoChars.Substring(0, $NextSlashIndex).Replace('?', $ThisFqdn)
     }
     else {
-        # Otherwise it must be a UNC path, so the server is the first non-empty string between backwhacks (\)
-        $ThisServer = @($LiteralPath -split '\\' |
-            Where-Object -FilterScript { $_ -ne '' })[0]
-
-        $ThisServer -replace '\?', (hostname)
+        #Local
+        $ThisFqdn
     }
 
 }
@@ -9253,7 +9142,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.74' is below
+# Definition of Module 'Permission' Version '0.0.75' is below
 
 function Expand-Folder {
 
@@ -9299,13 +9188,21 @@ function Expand-Folder {
         WhoAmI       = $WhoAmI
     }
 
-    if ($ThreadCount -eq 1 -or @($Folder).Count -eq 1) {
+    $FolderCount = @($Folder).Count
+    if ($ThreadCount -eq 1 -or $FolderCount -eq 1) {
 
+        [int]$ProgressInterval = [math]::max(($FolderCount / 100), 1)
+        $ProgressCounter = 0
         $i = 0
         ForEach ($ThisFolder in $Folder) {
-            $PercentComplete = $i / $Folder.Count
-            Write-Progress -Activity "Get-Subfolder" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
-            $i++
+            $ProgressCounter++
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $FolderCount * 100
+                Write-Progress -Activity "Get-Subfolder" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
+                $ProgressCounter = 0
+            }
+            $i++ # increment $i after the progress to show progress conservatively rather than optimistically
+
             $Subfolders = $null
             $Subfolders = Get-Subfolder -TargetPath $ThisFolder -FolderRecursionDepth $LevelsOfSubfolders -ErrorAction Continue
             Write-LogMsg @LogParams -Text "# Folders (including parent): $($Subfolders.Count + 1) for '$ThisFolder'"
@@ -9646,17 +9543,18 @@ function Get-FolderAccessList {
 
     if ($ThreadCount -eq 1) {
 
-        [int]$ProgressInterval = $Subfolder.Count / 100
+        [int]$ProgressInterval = [math]::max(($Subfolder.Count / 100), 1)
         $ProgressCounter = 0
         $i = 0
         Write-Progress -Activity "Get-FolderAce" -CurrentOperation 'Starting' -PercentComplete 0
         ForEach ($ThisFolder in $Subfolder) {
+            $ProgressCounter++
             if ($ProgressCounter -eq $ProgressInterval) {
                 $PercentComplete = $i / $Subfolder.Count * 100
                 Write-Progress -Activity "Get-FolderAce" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
+                $ProgressCounter = 0
             }
-            $i++
-            $ProgressCounter++
+            $i++ # increment $i after the progress to show progress conservatively rather than optimistically
 
             Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache
         }
@@ -9690,13 +9588,13 @@ function Get-FolderAccessList {
         $ProgressCounter = 0
         $i = 0
         ForEach ($Child in $Subfolder) {
+            $ProgressCounter++
             if ($ProgressCounter -eq $ProgressInterval) {
                 $PercentComplete = $i / $Subfolder.Count * 100
                 Write-Progress -Activity "Get-OwnerAce" -CurrentOperation $Child -PercentComplete $PercentComplete
+                $ProgressCounter = 0
             }
             $i++
-            $ProgressCounter++
-
             Get-OwnerAce -Item $Child -OwnerCache $OwnerCache
 
         }
@@ -10331,6 +10229,12 @@ end {
     $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount @LoggingParams
 
     # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
+    Write-LogMsg @LogParams -Text "`$Permissions |"
+    Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'Path'; Expression = { `$_.SourceAccessList.Path } }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags, Source |"
+    $Activity = "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath1'"
+    Write-LogMsg @LogParams -Text $Activity
+    Write-Progress -Activity $Activity -PercentComplete 50
+
     $Permissions |
     Select-Object -Property @{
         Label      = 'Path'
@@ -10338,28 +10242,46 @@ end {
     }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags, Source |
     Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath1
 
+    Write-Progress -Activity $Activity -Completed
     Write-Information $CsvFilePath1
 
     # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
     # This prevents repetitive queries to the same directory servers
 
-    # Identify server names from the item paths
+    # Add the FQDN of the current computer
+    Write-Progress -Activity "Build a list of known ADSI server names" -CurrentOperation 'Add the FQDN of the current computer' -Status "25%" -PercentComplete 25
     $null = $UniqueServerNames.Add($ThisFqdn)
 
-    $Permissions.SourceAccessList.Path |
-    ForEach-Object {
-        $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $_))
+    # Add server names from the ACL paths
+    Write-Progress -Activity "Build a list of known ADSI server names" -CurrentOperation 'Add server names from the ACL paths' -Status "50%" -PercentComplete 25
+    [int]$ProgressInterval = [math]::max(($Permissions.Count / 100),1)
+    $ProgressCounter = 0
+    $i = 0
+    ForEach ($ThisPath in $Permissions.SourceAccessList.Path) {
+        $ProgressCounter++
+        if ($ProgressCounter -eq $ProgressInterval) {
+            $PercentComplete = $i / $Permissions.Count * 100
+            Write-Progress -Activity "Find-ServerNameInPath" -CurrentOperation $ThisPath -PercentComplete $PercentComplete
+            $ProgressCounter = 0
+        }
+        $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
+        $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $ThisPath -ThisFqdn $ThisFqdn))
     }
+    Write-Progress -Activity "Find-ServerNameInPath" -Completed
 
-    # Add the discovered domains to our list of known ADSI server name
+    # Add the discovered domains to the list of known ADSI server name
+    Write-Progress -Activity "Build a list of known ADSI server names" -CurrentOperation 'Add the discovered domains to the list of known ADSI server name' -Status "75%" -PercentComplete 25
+
     $TrustedDomains |
     ForEach-Object {
         $null = $UniqueServerNames.Add($_.DomainFqdn)
     }
 
-    # Deduplicate our list of known ADSI server names
+    # Deduplicate the list of known ADSI server names
     $UniqueServerNames = $UniqueServerNames |
     Sort-Object -Unique
+
+    Write-Progress -Activity "Build a list of known ADSI server names" -Completed
 
     # Populate six caches:
     #   Three caches of known ADSI directory servers
@@ -10384,11 +10306,22 @@ end {
             LogMsgCache            = $LogMsgCache
         }
 
-        $UniqueServerNames |
-        ForEach-Object {
-            Write-LogMsg @LogParams -Text "Get-AdsiServer -Fqdn '$_'"
-            $null = Get-AdsiServer @GetAdsiServerParams -Fqdn $_
+        [int]$ProgressInterval = [math]::max(($UniqueServerNames.Count / 100),1)
+        $ProgressCounter = 0
+        $i = 0
+        ForEach ($ThisServerName in $UniqueServerNames) {
+            $ProgressCounter++
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $UniqueServerNames.Count * 100
+                Write-Progress -Activity "Get-AdsiServer" -CurrentOperation $ThisServerName -PercentComplete $PercentComplete
+                $ProgressCounter = 0
+            }
+            $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
+
+            Write-LogMsg @LogParams -Text "Get-AdsiServer -Fqdn '$ThisServerName'"
+            $null = Get-AdsiServer @GetAdsiServerParams -Fqdn $ThisServerName
         }
+        Write-Progress -Activity "Get-AdsiServer" -Completed
 
     } else {
         $GetAdsiServerParams = @{
@@ -10420,6 +10353,7 @@ end {
     # Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
     # The resolved name will include the domain name (or local computer name for local accounts)
     if ($ThreadCount -eq 1) {
+
         $ResolveAceParams = @{
             DirectoryEntryCache    = $DirectoryEntryCache
             Win32AccountsBySID     = $Win32AccountsBySID
@@ -10433,12 +10367,23 @@ end {
             LogMsgCache            = $LogMsgCache
         }
 
-        $PermissionsWithResolvedIdentityReferences = $Permissions |
-        ForEach-Object {
-            $ResolveAceParams['InputObject'] = $_
-            Write-LogMsg @LogParams -Text "Resolve-Ace -InputObject $($_.IdentityReference)"
+        [int]$ProgressInterval = [math]::max(($Permissions.Count / 100),1)
+        $ProgressCounter = 0
+        $i = 0
+        $PermissionsWithResolvedIdentityReferences = ForEach ($ThisPermission in $Permissions) {
+            $ProgressCounter++
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $Permissions.Count * 100
+                Write-Progress -Activity 'Resolve-Ace3' -CurrentOperation $ThisPermission.IdentityReference -PercentComplete $PercentComplete
+                $ProgressCounter = 0
+            }
+            $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
+
+            $ResolveAceParams['InputObject'] = $ThisPermission
+            Write-LogMsg @LogParams -Text "Resolve-Ace3 -InputObject $($ThisPermission.IdentityReference)"
             Resolve-Ace3 @ResolveAceParams
         }
+        Write-Progress -Activity 'Resolve-Ace3' -Completed
 
     } else {
         $ResolveAceParams = @{
@@ -10469,6 +10414,12 @@ end {
     }
 
     # Save a CSV report of the resolved identity references
+    Write-LogMsg @LogParams -Text "`$PermissionsWithResolvedIdentityReferences |"
+    Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'Path'; Expression = { `$_.SourceAccessList.Path } }, * |"
+    $Activity = "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath2'"
+    Write-LogMsg @LogParams -Text $Activity
+    Write-Progress -Activity $Activity -PercentComplete 50
+
     $PermissionsWithResolvedIdentityReferences |
     Select-Object -Property @{
         Label      = 'Path'
@@ -10476,12 +10427,15 @@ end {
     }, * |
     Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath2
 
+    Write-Progress -Activity $Activity -Completed
     Write-Information $CsvFilePath2
 
     # Group the Access Control Entries by their resolved identity references
     # This avoids repeat ADSI lookups for the same security principal
+    Write-Progress -Activity '$PermissionsWithResolvedIdentityReferences | Group IdentityReferenceResolved' -PercentComplete 50
     $GroupedIdentities = $PermissionsWithResolvedIdentityReferences |
     Group-Object -Property IdentityReferenceResolved
+    Write-Progress -Activity '$PermissionsWithResolvedIdentityReferences | Group IdentityReferenceResolved' -Completed
 
     # Use ADSI to collect more information about each resolved identity reference
     if ($ThreadCount -eq 1) {
@@ -10499,12 +10453,24 @@ end {
         if ($NoGroupMembers) {
             $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
         }
-        $SecurityPrincipals = $GroupedIdentities |
-        ForEach-Object {
-            $ExpandIdentityReferenceParams['AccessControlEntry'] = $_
-            Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($_.Name)"
+
+        [int]$ProgressInterval = [math]::max(($GroupedIdentities.Count / 100),1)
+        $ProgressCounter = 0
+        $i = 0
+        $SecurityPrincipals = ForEach ($ThisID in $GroupedIdentities) {
+            $ProgressCounter++
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $GroupedIdentities.Count * 100
+                Write-Progress -Activity 'Expand-IdentityReference' -CurrentOperation $ThisID.Name -PercentComplete $PercentComplete
+                $ProgressCounter = 0
+            }
+            $i++
+
+            $ExpandIdentityReferenceParams['AccessControlEntry'] = $ThisID
+            Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($ThisID.Name)"
             Expand-IdentityReference @ExpandIdentityReferenceParams
         }
+        Write-Progress -Activity 'Expand-IdentityReference' -Completed
 
     } else {
         $ExpandIdentityReferenceParams = @{
@@ -10538,11 +10504,23 @@ end {
     # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
     if ($ThreadCount -eq 1) {
 
-        $FormattedSecurityPrincipals = $SecurityPrincipals |
-        ForEach-Object {
-            Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($_.Name)"
-            Format-SecurityPrincipal -SecurityPrincipal $_
+        [int]$ProgressInterval = [math]::max(($SecurityPrincipals.Count / 100),1)
+        $ProgressCounter = 0
+        $i = 0
+        $FormattedSecurityPrincipals = ForEach ($ThisPrinc in $SecurityPrincipals) {
+            $ProgressCounter++
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $SecurityPrincipals.Count * 100
+                Write-Progress -Activity 'Format-SecurityPrincipal' -CurrentOperation $ThisPrinc.Name -PercentComplete $PercentComplete
+                $ProgressCounter = 0
+            }
+            $i++
+
+            Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($ThisPrinc.Name)"
+            Format-SecurityPrincipal -SecurityPrincipal $ThisPrinc
         }
+        Write-Progress -Activity 'Format-SecurityPrincipal' -Completed
+
 
     } else {
         $FormatSecurityPrincipalParams = @{
@@ -10564,11 +10542,22 @@ end {
     # back into a collection of access control entries (one per ACE per principal)
     if ($ThreadCount -eq 1) {
 
-        $ExpandedAccountPermissions = $FormattedSecurityPrincipals |
-        ForEach-Object {
-            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($_.Name)"
-            Expand-AccountPermission -AccountPermission $_
+        [int]$ProgressInterval = [math]::max(($FormattedSecurityPrincipals.Count / 100),1)
+        $ProgressCounter = 0
+        $i = 0
+        $ExpandedAccountPermissions = ForEach ($ThisPrinc in $FormattedSecurityPrincipals) {
+            $ProgressCounter++
+            if ($ProgressCounter -eq $ProgressInterval) {
+                $PercentComplete = $i / $FormattedSecurityPrincipals.Count * 100
+                Write-Progress -Activity 'Expand-AccountPermission' -CurrentOperation "$($ThisPrinc.Name)" -PercentComplete $PercentComplete
+                $ProgressCounter = 0
+            }
+            $i++
+
+            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($ThisPrinc.Name)"
+            Expand-AccountPermission -AccountPermission $ThisPrinc
         }
+        Write-Progress -Activity 'Expand-AccountPermission' -Completed
 
     } else {
         $ExpandAccountPermissionParams = @{
@@ -10592,15 +10581,20 @@ end {
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
     Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
     Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
-    Write-LogMsg @LogParams -Text "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
+    $Activity = "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
+    Write-LogMsg @LogParams -Text $Activity
+    Write-Progress -Activity $Activity -PercentComplete 50
 
     $ExpandedAccountPermissions |
     Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
 
+    Write-Progress -Activity $Activity -Completed
     Write-Information $CsvFilePath3
 
+    Write-Progress -Activity '$ExpandedAccountPermissions | Group User' -PercentComplete 50
     $Accounts = $ExpandedAccountPermissions |
     Group-Object -Property User
+    Write-Progress -Activity '$ExpandedAccountPermissions | Group User' -Completed
 
     # Filter out domain names we do not want on the report
     # This can be done when the domain is always the same and doesn't need to be displayed
@@ -10612,9 +10606,11 @@ end {
     # Group the account permissions back into folder permissions for the report
     Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
+    Write-Progress -Activity '$UniqueAccountPermissions | Group Folder | Sort Name' -PercentComplete 50
     $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @LogParams |
     Group-Object -Property Folder |
     Sort-Object -Property Name
+    Write-Progress -Activity '$UniqueAccountPermissions | Group Folder | Sort Name' -Completed
 
     # Export two versions of the HTML report
     # The first version uses no JavaScript so it can be rendered by e-mail clients
