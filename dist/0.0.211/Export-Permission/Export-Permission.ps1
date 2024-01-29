@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.210
+.VERSION 0.0.211
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-reduce calls to external executables
+fakedirectoryentry class bugfix in adsi module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ reduce calls to external executables
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -673,7 +674,7 @@ end {
                 LogMsgCache            = $LogMsgCache
             }
         }
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
+        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace3' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
         $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
     }
 
