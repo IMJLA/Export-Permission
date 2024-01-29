@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.211
+.VERSION 0.0.212
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fakedirectoryentry class bugfix in adsi module
+bugfix fakedirectoryentry class adsi module
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -382,7 +383,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.14' is below
+# Definition of Module 'Adsi' Version '4.0.15' is below
 
 class FakeDirectoryEntry {
 
@@ -415,80 +416,60 @@ class FakeDirectoryEntry {
             'CREATOR OWNER$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-3-0'
                 $This.Description = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'user'
-                }
                 $This.SchemaClassName = 'user'
             }
             'SYSTEM$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-18'
                 $This.Description = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'user'
-                }
                 $This.SchemaClassName = 'user'
             }
             'INTERACTIVE$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-4'
                 $This.Description = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'group'
-                }
                 $This.SchemaClassName = 'group'
             }
             'Authenticated Users$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
                 $This.Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'group'
-                }
                 $This.SchemaClassName = 'group'
             }
             'TrustedInstaller$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
                 $This.Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'user'
-                }
                 $This.SchemaClassName = 'user'
             }
             'ALL APPLICATION PACKAGES$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-1'
                 $This.Description = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'group'
-                }
                 $This.SchemaClassName = 'group'
             }
             'ALL RESTRICTED APPLICATION PACKAGES$' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
                 $This.Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
-                $This.Properties = @{
-                    Name            = $This.Name
-                    Description     = $This.Description
-                    objectSid       = $This.objectSid
-                    SchemaClassName = 'group'
-                }
                 $This.SchemaClassName = 'group'
             }
+            'Everyone$' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-1-0'
+                $This.Description = "A group that includes all users; aka 'World'."
+                $This.SchemaClassName = 'group'
+            }
+            'LOCAL SERVICE$' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-19'
+                $This.Description = 'A local service account'
+                $This.SchemaClassName = 'user'
+            }
+            'NETWORK SERVICE$' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-20'
+                $This.Description = 'A network service account'
+                $This.SchemaClassName = 'user'
+            }
+        }
+
+        $This.Properties = @{
+            Name            = $This.Name
+            Description     = $This.Description
+            objectSid       = $This.objectSid
+            SchemaClassName = $This.SchemaClassName
         }
     }
 
