@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.217] - 2024-01-31 - update psrunspace progress bars
+
 ## [0.0.216] - 2024-01-31 - update psrunspace progress bars and adsi bugfix
 
 ## [0.0.215] - 2024-01-31 - updated adsi module workaround to ps class limitations with psrunspace
