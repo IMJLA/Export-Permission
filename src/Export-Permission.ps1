@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.214
+.VERSION 0.0.215
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update adsi module remove write-debug/warning
+updated adsi module workaround to ps class limitations with psrunspace
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update adsi module remove write-debug/warning
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
