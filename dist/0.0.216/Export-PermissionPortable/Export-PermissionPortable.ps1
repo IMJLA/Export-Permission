@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.215
+.VERSION 0.0.216
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated adsi module workaround to ps class limitations with psrunspace
+update psrunspace progress bars and adsi bugfix
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -386,7 +387,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.19' is below
+# Definition of Module 'Adsi' Version '4.0.20' is below
 
 [NoRunspaceAffinity()] # Make this class thread-safe
 class FakeDirectoryEntry {
@@ -3119,34 +3120,34 @@ function Get-DirectoryEntry {
             We will create own dummy objects instead of performing the query
             #>
             '^WinNT:\/\/.*\/CREATOR OWNER$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/SYSTEM$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/INTERACTIVE$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/Authenticated Users$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/TrustedInstaller$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/ALL APPLICATION PACKAGES$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/ALL RESTRICTED APPLICATION PACKAGES$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/Everyone$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/LOCAL SERVICE$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             '^WinNT:\/\/.*\/NETWORK SERVICE$' {
-                $DirectoryEntry = New-FakeDirectory -DirectoryPath $DirectoryPath
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
             }
             # Workgroup computers do not return a DirectoryEntry with a SearchRoot Path so this ends up being an empty string
             # This is also invoked when DirectoryPath is null for any reason
@@ -6566,7 +6567,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 #$Global:LogMessages = [system.collections.generic.list[pscustomobject]]::new()
 $Global:LogMessages = [hashtable]::Synchronized(@{})
 
-# Definition of Module 'PsRunspace' Version '1.0.105' is below
+# Definition of Module 'PsRunspace' Version '1.0.106' is below
 
 function Add-PsCommand {
 
@@ -7273,10 +7274,10 @@ function Open-Thread {
 
             $StatusString = "Invoking thread $CurrentObjectIndex`: $Command $InputParameterStringForDebug $AdditionalParametersString $SwitchParameterString"
             $Progress = @{
-                Activity         = "Open-Thread"
+                Activity         = "Open-Thread -Command '$Command'"
                 CurrentOperation = $StatusString
                 PercentComplete  = $CurrentObjectIndex / $ThreadCount * 100
-                Status           = "$($ThreadCount - $CurrentObjectIndex) remaining"
+                Status           = "$($ThreadCount - $CurrentObjectIndex) of $ThreadCount remaining"
             }
             Write-Progress @Progress
 
@@ -7612,6 +7613,9 @@ function Wait-Thread {
 
         $CommandString = $FirstThread.Command
 
+        $Activity = "Wait-Thread '$CommandString'"
+        $ThreadCount = @($Thread).Count
+
     }
 
     process {
@@ -7670,10 +7674,10 @@ function Wait-Thread {
             }
 
             $Progress = @{
-                Activity         = 'Wait-Thread'
+                Activity         = $Activity
                 CurrentOperation = "Waiting on threads - $ActiveThreadCountString`: $CommandString"
-                PercentComplete  = ($($CleanedUpThreads).count) / @($Thread).Count * 100
-                Status           = "$(@($IncompleteThreads).Count) remaining - $RemainingString"
+                PercentComplete  = $CleanedUpThreads.Count / $ThreadCount * 100
+                Status           = "$($IncompleteThreads.Count) of $ThreadCount remaining - $RemainingString"
             }
             Write-Progress @Progress
 
@@ -7747,7 +7751,7 @@ function Wait-Thread {
         $StopWatch.Stop()
 
         Write-LogMsg @LogParams -Text " # Finished waiting for threads"
-        Write-Progress -Activity 'Wait-Thread' -Completed
+        Write-Progress -Activity $Activity -Completed
 
     }
 

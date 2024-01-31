@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.215
+.VERSION 0.0.216
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-updated adsi module workaround to ps class limitations with psrunspace
+update psrunspace progress bars and adsi bugfix
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ updated adsi module workaround to ps class limitations with psrunspace
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
