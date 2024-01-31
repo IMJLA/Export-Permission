@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.217
+.VERSION 0.0.218
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psrunspace progress bars
+update psrunspace prog bars
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -6568,7 +6569,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 #$Global:LogMessages = [system.collections.generic.list[pscustomobject]]::new()
 $Global:LogMessages = [hashtable]::Synchronized(@{})
 
-# Definition of Module 'PsRunspace' Version '1.0.107' is below
+# Definition of Module 'PsRunspace' Version '1.0.110' is below
 
 function Add-PsCommand {
 
@@ -7275,6 +7276,7 @@ function Open-Thread {
 
             $NewPercentComplete = $CurrentObjectIndex / $ThreadCount * 100
             if (($NewPercentComplete - $OldPercentComplete) -gt 1) {
+                $OldPercentComplete = $NewPercentComplete
                 $AdditionalParametersString = $AdditionalParameters -join ' '
                 $SwitchParameterString = $Switches -join ' '
 
@@ -7287,7 +7289,6 @@ function Open-Thread {
                 }
                 Write-Progress @Progress
             }
-            $OldPercentComplete = $NewPercentComplete
 
             Write-LogMsg @LogParams -Text "`$Handle = `$PowershellInterface.BeginInvoke() # for '$Command' on '$ObjectString'"
             $Handle = $PowershellInterface.BeginInvoke()
@@ -7677,7 +7678,8 @@ function Wait-Thread {
             Write-LogMsg @LogParams -Text " # $($IncompleteThreads.Count) incomplete threads for '$CommandString'"
 
             $NewPercentComplete = $CleanedUpThreads.Count / $ThreadCount * 100
-            if (($NewPercentComplete - $OldPercentComplete) -gt 1) {
+            if (($NewPercentComplete - $OldPercentComplete) -ge 1) {
+                $OldPercentComplete = $NewPercentComplete
 
                 $RemainingString = "$($IncompleteThreads.ObjectString)"
                 If ($RemainingString.Length -gt 60) {
@@ -7693,7 +7695,6 @@ function Wait-Thread {
                 Write-Progress @Progress
 
             }
-            $OldPercentComplete = $NewPercentComplete
 
             ForEach ($CompletedThread in $CompletedThreads) {
 

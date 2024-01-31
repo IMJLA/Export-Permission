@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.217
+.VERSION 0.0.218
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psrunspace progress bars
+update psrunspace prog bars
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update psrunspace progress bars
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
