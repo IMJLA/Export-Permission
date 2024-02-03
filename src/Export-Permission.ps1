@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.218
+.VERSION 0.0.219
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psrunspace prog bars
+migrated logic to permission module
 
 .PRIVATEDATA
 
@@ -39,28 +39,6 @@ update psrunspace prog bars
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <#
@@ -398,9 +376,10 @@ begin {
     # Create a folder to store logs
     $OutputDir = New-DatedSubfolder -Root $OutputDir -Suffix "_$ReportInstanceId"
 
-    # Start the PowerShell transcript
-    # PowerShell cannot redirect the Success stream of Start-Transcript to the Information stream
-    # But it can redirect it to $null, and then send the Transcript file path to Write-Information
+    <# Start the PowerShell transcript
+       PowerShell cannot redirect the Success stream of Start-Transcript to the Information stream
+       But it can redirect it to $null, and then send the Transcript file path to Write-Information
+    #>
     $TranscriptFile = "$OutputDir\PowerShellTranscript.log"
     Start-Transcript $TranscriptFile *>$null
     Write-Information $TranscriptFile
@@ -414,15 +393,13 @@ begin {
     $ReportFile = "$OutputDir\PermissionsReport.htm"
     $LogFile = "$OutputDir\Export-Permission.log"
     $DirectoryEntryCache = [hashtable]::Synchronized(@{})
-    $IdentityReferenceCache = [hashtable]::Synchronized(@{})
     $Win32AccountsBySID = [hashtable]::Synchronized(@{})
     $Win32AccountsByCaption = [hashtable]::Synchronized(@{})
     $DomainsBySID = [hashtable]::Synchronized(@{})
     $DomainsByNetbios = [hashtable]::Synchronized(@{})
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
+    $IdentityReferenceCache = [hashtable]::Synchronized(@{})
     $LogMsgCache = [hashtable]::Synchronized(@{})
-    $ResolvedFolderTargets = [System.Collections.Generic.List[string]]::new()
-    $UniqueServerNames = [System.Collections.Generic.List[string]]::new()
     $Permissions = $null
     $SecurityPrincipals = $null
     $FormattedSecurityPrincipals = $null
@@ -432,23 +409,17 @@ begin {
     # Get the hostname of the computer running the script
     $ThisHostname = HOSTNAME.EXE
 
-    # Get the NTAccount caption of the user running the script
-    $WhoAmI = whoami.exe
+    # Get the NTAccount caption of the user running the script, with the correct capitalization
+    $WhoAmI = Get-CurrentWhoAmI -LogMsgCache $LogMsgCache -ThisHostName $ThisHostname
 
-    # Prepare the cache of log-related variables to pass to various functions
+    # Prepare the cache of log-related parameters to pass to various functions
     $LoggingParams = @{
         ThisHostname = $ThisHostname
         LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
 
-    # Fix the capitalization in the all-lowercase output from whoami.exe
-    $WhoAmI = Get-CurrentWhoAmI @LoggingParams
-
-    # Update the cache with the corrected capitalization
-    $LoggingParams['WhoAmI'] = $WhoAmI
-
-    # Create an additional cache specifically for Write-LogMsg
+    # Create a cache of parameters specifically for Write-LogMsg
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = 'Debug'
@@ -458,12 +429,23 @@ begin {
 
     # These 3 events already happened but we will log them now that we have the correct capitalization of the user
     Write-LogMsg @LogParams -Text "& HOSTNAME.EXE"
-    Write-LogMsg @LogParams -Text "& whoami.exe"
     Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
     # Get the FQDN of the computer running the script
-    Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn"
+    Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn -ComputerName '$ThisHostName'"
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
+
+    # Create a cache of parameters to enable caching functionality in supported functions
+    $CacheParams = @{
+        Win32AccountsBySID     = $Win32AccountsBySID
+        Win32AccountsByCaption = $Win32AccountsByCaption
+        DirectoryEntryCache    = $DirectoryEntryCache
+        DomainsByFqdn          = $DomainsByFqdn
+        DomainsByNetbios       = $DomainsByNetbios
+        DomainsBySid           = $DomainsBySid
+        ThisFqdn               = $ThisFqdn
+        ThreadCount            = $ThreadCount
+    }
 
     Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels"
     $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $SubfolderLevels
@@ -480,11 +462,11 @@ process {
 
     #----------------[ Main Execution ]---------------
 
-    ForEach ($ThisTargetPath in $TargetPath) {
+    # Resolve each target path to all of its associated UNC paths (including all DFS folder targets)
+    [string[]]$ResolvedFolderTargets = ForEach ($ThisTargetPath in $TargetPath) {
 
-        # Resolve each target path to all of its associated paths (including all DFS folder targets)
         Write-LogMsg @LogParams -Text "Resolve-Folder -FolderPath '$ThisTargetPath'"
-        $null = $ResolvedFolderTargets.AddRange([string[]](Resolve-Folder -FolderPath $ThisTargetPath))
+        Resolve-Folder -FolderPath $ThisTargetPath
 
     }
 
@@ -496,376 +478,65 @@ end {
     Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($ResolvedFolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
     $Subfolders = Expand-Folder -Folder $ResolvedFolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount @LoggingParams
 
-    # Get the relevant Access Control Entries for each folder and subfolder
-    Write-LogMsg @LogParams -Text "Get-FolderAccessList -FolderTargets @('$($Subfolders -join "','")')"
+    # Get the relevant permissions for each folder and subfolder
+    Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -FolderTargets @('$($Subfolders -join "','")')"
     $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount @LoggingParams
 
-    # Save a CSV of the raw NTFS ACEs, showing non-inherited ACEs only except for the root folder $TargetPath
-    Write-LogMsg @LogParams -Text "`$Permissions |"
-    Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'Path'; Expression = { `$_.SourceAccessList.Path } }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags, Source |"
-    $Activity = "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath1'"
-    Write-LogMsg @LogParams -Text $Activity
-    Write-Progress -Activity $Activity -PercentComplete 50
+    # Save a CSV of the raw NTFS permissions, showing non-inherited ACEs only except for the root folder $TargetPath
+    Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
+    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @LoggingParams
 
-    $Permissions |
-    Select-Object -Property @{
-        Label      = 'Path'
-        Expression = { $_.SourceAccessList.Path }
-    }, IdentityReference, AccessControlType, FileSystemRights, IsInherited, PropagationFlags, InheritanceFlags, Source |
-    Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath1
-
-    Write-Progress -Activity $Activity -Completed
-    Write-Information $CsvFilePath1
-
-    # This prevents threads that start near the same time from finding the cache empty and attempting costly operations to populate it
-    # This prevents repetitive queries to the same directory servers
-
-    # Add the FQDN of the current computer
-    Write-Progress -Activity "Build a list of known ADSI server names" -CurrentOperation 'Add the FQDN of the current computer' -Status "25%" -PercentComplete 25
-    $null = $UniqueServerNames.Add($ThisFqdn)
-
-    # Add server names from the ACL paths
-    Write-Progress -Activity "Build a list of known ADSI server names" -CurrentOperation 'Add server names from the ACL paths' -Status "50%" -PercentComplete 25
-    [int]$ProgressInterval = [math]::max(($Permissions.Count / 100),1)
-    $ProgressCounter = 0
-    $i = 0
-    ForEach ($ThisPath in $Permissions.SourceAccessList.Path) {
-        $ProgressCounter++
-        if ($ProgressCounter -eq $ProgressInterval) {
-            $PercentComplete = $i / $Permissions.Count * 100
-            Write-Progress -Activity "Find-ServerNameInPath" -CurrentOperation $ThisPath -PercentComplete $PercentComplete
-            $ProgressCounter = 0
-        }
-        $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
-        $null = $UniqueServerNames.Add((Find-ServerNameInPath -LiteralPath $ThisPath -ThisFqdn $ThisFqdn))
+    # Discover ADSI server FQDNs: the current computer, any trusted domains, and the servers named in the Path property of the Access Lists
+    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$(@($ThisFqdn + $TrustedDomains.DomainFqdn) -join "',")') -FilePath @('$($Permissions.SourceAccessList.Path -join "',")') -ThisFqdn '$ThisFqdn'"
+    $FqdnParams = @{
+        Known    = @($ThisFqdn + $TrustedDomains.DomainFqdn)
+        FilePath = $Permissions.SourceAccessList.Path
+        ThisFqdn = $ThisFqdn
     }
-    Write-Progress -Activity "Find-ServerNameInPath" -Completed
+    [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
 
-    # Add the discovered domains to the list of known ADSI server name
-    Write-Progress -Activity "Build a list of known ADSI server names" -CurrentOperation 'Add the discovered domains to the list of known ADSI server name' -Status "75%" -PercentComplete 25
-
-    $TrustedDomains |
-    ForEach-Object {
-        $null = $UniqueServerNames.Add($_.DomainFqdn)
-    }
-
-    # Deduplicate the list of known ADSI server names
-    $UniqueServerNames = $UniqueServerNames |
-    Sort-Object -Unique
-
-    Write-Progress -Activity "Build a list of known ADSI server names" -Completed
-
-    # Populate six caches:
-    #   Three caches of known ADSI directory servers
-    #     The first cache is keyed on domain SID (e.g. S-1-5-2)
-    #     The second cache is keyed on domain FQDN (e.g. ad.contoso.com)
-    #     The first cache is keyed on domain NetBIOS name (e.g. CONTOSO)
-    #   Two caches of known Win32_Account instances
-    #     The first cache is keyed on SID (e.g. S-1-5-2)
-    #     The second cache is keyed on the Caption (NT Account name e.g. CONTOSO\user1)
-    #   Also populate a cache of DirectoryEntry objects for any domains that have them
-    if ($ThreadCount -eq 1) {
-        $GetAdsiServerParams = @{
-            Win32AccountsBySID     = $Win32AccountsBySID
-            Win32AccountsByCaption = $Win32AccountsByCaption
-            DirectoryEntryCache    = $DirectoryEntryCache
-            DomainsByFqdn          = $DomainsByFqdn
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsBySid           = $DomainsBySid
-            ThisHostName           = $ThisHostName
-            ThisFqdn               = $ThisFqdn
-            WhoAmI                 = $WhoAmI
-            LogMsgCache            = $LogMsgCache
-        }
-
-        [int]$ProgressInterval = [math]::max(($UniqueServerNames.Count / 100),1)
-        $ProgressCounter = 0
-        $i = 0
-        ForEach ($ThisServerName in $UniqueServerNames) {
-            $ProgressCounter++
-            if ($ProgressCounter -eq $ProgressInterval) {
-                $PercentComplete = $i / $UniqueServerNames.Count * 100
-                Write-Progress -Activity "Get-AdsiServer" -CurrentOperation $ThisServerName -PercentComplete $PercentComplete
-                $ProgressCounter = 0
-            }
-            $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
-
-            Write-LogMsg @LogParams -Text "Get-AdsiServer -Fqdn '$ThisServerName'"
-            $null = Get-AdsiServer @GetAdsiServerParams -Fqdn $ThisServerName
-        }
-        Write-Progress -Activity "Get-AdsiServer" -Completed
-
-    } else {
-        $GetAdsiServerParams = @{
-            Command        = 'Get-AdsiServer'
-            InputObject    = $UniqueServerNames
-            InputParameter = 'Fqdn'
-            TodaysHostname = $ThisHostname
-            WhoAmI         = $WhoAmI
-            LogMsgCache    = $LogMsgCache
-            Timeout        = 600
-            Threads        = $ThreadCount
-            AddParam       = @{
-                Win32AccountsBySID     = $Win32AccountsBySID
-                Win32AccountsByCaption = $Win32AccountsByCaption
-                DirectoryEntryCache    = $DirectoryEntryCache
-                DomainsByFqdn          = $DomainsByFqdn
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsBySid           = $DomainsBySid
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                WhoAmI                 = $WhoAmI
-                LogMsgCache            = $LogMsgCache
-            }
-        }
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($UniqueServerNames -join "',")')"
-        $null = Split-Thread @GetAdsiServerParams
-    }
+    # Use the list of known ADSI server FQDNs to pre-populate the cache, preventing concurrent threads from finding an empty cache and performing costly operations to populate it
+    Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
+    Initialize-Cache -Fqdn $ServerFqdns @LoggingParams @CacheParams
 
     # Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
     # The resolved name will include the domain name (or local computer name for local accounts)
-    if ($ThreadCount -eq 1) {
-
-        $ResolveAceParams = @{
-            DirectoryEntryCache    = $DirectoryEntryCache
-            Win32AccountsBySID     = $Win32AccountsBySID
-            Win32AccountsByCaption = $Win32AccountsByCaption
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsByFqdn          = $DomainsByFqdn
-            ThisHostName           = $ThisHostName
-            ThisFqdn               = $ThisFqdn
-            WhoAmI                 = $WhoAmI
-            LogMsgCache            = $LogMsgCache
-        }
-
-        [int]$ProgressInterval = [math]::max(($Permissions.Count / 100),1)
-        $ProgressCounter = 0
-        $i = 0
-        $PermissionsWithResolvedIdentityReferences = ForEach ($ThisPermission in $Permissions) {
-            $ProgressCounter++
-            if ($ProgressCounter -eq $ProgressInterval) {
-                $PercentComplete = $i / $Permissions.Count * 100
-                Write-Progress -Activity 'Resolve-Ace3' -CurrentOperation $ThisPermission.IdentityReference -PercentComplete $PercentComplete
-                $ProgressCounter = 0
-            }
-            $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
-
-            $ResolveAceParams['InputObject'] = $ThisPermission
-            Write-LogMsg @LogParams -Text "Resolve-Ace3 -InputObject $($ThisPermission.IdentityReference)"
-            Resolve-Ace3 @ResolveAceParams
-        }
-        Write-Progress -Activity 'Resolve-Ace3' -Completed
-
-    } else {
-        $ResolveAceParams = @{
-            Command              = 'Resolve-Ace3'
-            InputObject          = $Permissions
-            InputParameter       = 'InputObject'
-            ObjectStringProperty = 'IdentityReference'
-            TodaysHostname       = $ThisHostname
-            #DebugOutputStream    = 'Debug'
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-            AddParam             = @{
-                DirectoryEntryCache    = $DirectoryEntryCache
-                Win32AccountsBySID     = $Win32AccountsBySID
-                Win32AccountsByCaption = $Win32AccountsByCaption
-                DomainsBySID           = $DomainsBySID
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsByFqdn          = $DomainsByFqdn
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                WhoAmI                 = $WhoAmI
-                LogMsgCache            = $LogMsgCache
-            }
-        }
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace3' -InputParameter InputObject -InputObject `$Permissions -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
-        $PermissionsWithResolvedIdentityReferences = Split-Thread @ResolveAceParams
-    }
+    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity -Permission $Permissions'
+    $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions
 
     # Save a CSV report of the resolved identity references
-    Write-LogMsg @LogParams -Text "`$PermissionsWithResolvedIdentityReferences |"
-    Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'Path'; Expression = { `$_.SourceAccessList.Path } }, * |"
-    $Activity = "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath2'"
-    Write-LogMsg @LogParams -Text $Activity
-    Write-Progress -Activity $Activity -PercentComplete 50
+    Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
+    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2
 
-    $PermissionsWithResolvedIdentityReferences |
-    Select-Object -Property @{
-        Label      = 'Path'
-        Expression = { $_.SourceAccessList.Path }
-    }, * |
-    Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath2
-
-    Write-Progress -Activity $Activity -Completed
-    Write-Information $CsvFilePath2
-
-    # Group the Access Control Entries by their resolved identity references
-    # This avoids repeat ADSI lookups for the same security principal
+    # Group the Access Control Entries by their resolved identity references to avoid repeat ADSI lookups for the same security principal
     Write-Progress -Activity '$PermissionsWithResolvedIdentityReferences | Group IdentityReferenceResolved' -PercentComplete 50
-    $GroupedIdentities = $PermissionsWithResolvedIdentityReferences |
-    Group-Object -Property IdentityReferenceResolved
+    $GroupedIdentities = $PermissionsWithResolvedIdentityReferences | Group-Object -Property IdentityReferenceResolved
     Write-Progress -Activity '$PermissionsWithResolvedIdentityReferences | Group IdentityReferenceResolved' -Completed
 
     # Use ADSI to collect more information about each resolved identity reference
-    if ($ThreadCount -eq 1) {
-        $ExpandIdentityReferenceParams = @{
-            DirectoryEntryCache    = $DirectoryEntryCache
-            IdentityReferenceCache = $IdentityReferenceCache
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsByFqdn          = $DomainsByFqdn
-            ThisHostName           = $ThisHostName
-            ThisFqdn               = $ThisFqdn
-            WhoAmI                 = $WhoAmI
-            LogMsgCache            = $LogMsgCache
-        }
-        if ($NoGroupMembers) {
-            $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
-        }
+    Write-LogMsg @LogParams -Text "`$SecurityPrincipals = Expand-PermissionIdentity -Identity `$GroupedIdentities -NoGroupMembers $NoGroupMembers"
+    $SecurityPrincipals = Expand-PermissionIdentity -Identity $GroupedIdentities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams
 
-        [int]$ProgressInterval = [math]::max(($GroupedIdentities.Count / 100),1)
-        $ProgressCounter = 0
-        $i = 0
-        $SecurityPrincipals = ForEach ($ThisID in $GroupedIdentities) {
-            $ProgressCounter++
-            if ($ProgressCounter -eq $ProgressInterval) {
-                $PercentComplete = $i / $GroupedIdentities.Count * 100
-                Write-Progress -Activity 'Expand-IdentityReference' -CurrentOperation $ThisID.Name -PercentComplete $PercentComplete
-                $ProgressCounter = 0
-            }
-            $i++
+    # Format the Security Principals (distinguish group members from accounts directly listed in the ACLs)
+    Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals -ThreadCount $ThreadCount"
+    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals -ThreadCount $ThreadCount @LoggingParams
 
-            $ExpandIdentityReferenceParams['AccessControlEntry'] = $ThisID
-            Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($ThisID.Name)"
-            Expand-IdentityReference @ExpandIdentityReferenceParams
-        }
-        Write-Progress -Activity 'Expand-IdentityReference' -Completed
-
-    } else {
-        $ExpandIdentityReferenceParams = @{
-            Command              = 'Expand-IdentityReference'
-            InputObject          = $GroupedIdentities
-            InputParameter       = 'AccessControlEntry'
-            TodaysHostname       = $ThisHostname
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-            AddParam             = @{
-                DirectoryEntryCache    = $DirectoryEntryCache
-                IdentityReferenceCache = $IdentityReferenceCache
-                DomainsBySID           = $DomainsBySID
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsByFqdn          = $DomainsByFqdn
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                WhoAmI                 = $WhoAmI
-                LogMsgCache            = $LogMsgCache
-            }
-            ObjectStringProperty = 'Name'
-        }
-        if ($NoGroupMembers) {
-            $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
-        }
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter 'AccessControlEntry' -InputObject `$GroupedIdentities"
-        $SecurityPrincipals = Split-Thread @ExpandIdentityReferenceParams
-    }
-
-    # Format Security Principals (distinguish group members from users directly listed in the NTFS DACLs)
-    if ($ThreadCount -eq 1) {
-
-        [int]$ProgressInterval = [math]::max(($SecurityPrincipals.Count / 100),1)
-        $ProgressCounter = 0
-        $i = 0
-        $FormattedSecurityPrincipals = ForEach ($ThisPrinc in $SecurityPrincipals) {
-            $ProgressCounter++
-            if ($ProgressCounter -eq $ProgressInterval) {
-                $PercentComplete = $i / $SecurityPrincipals.Count * 100
-                Write-Progress -Activity 'Format-SecurityPrincipal' -CurrentOperation $ThisPrinc.Name -PercentComplete $PercentComplete
-                $ProgressCounter = 0
-            }
-            $i++
-
-            Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($ThisPrinc.Name)"
-            Format-SecurityPrincipal -SecurityPrincipal $ThisPrinc
-        }
-        Write-Progress -Activity 'Format-SecurityPrincipal' -Completed
-
-
-    } else {
-        $FormatSecurityPrincipalParams = @{
-            Command              = 'Format-SecurityPrincipal'
-            InputObject          = $SecurityPrincipals
-            InputParameter       = 'SecurityPrincipal'
-            Timeout              = 1200
-            ObjectStringProperty = 'Name'
-            TodaysHostname       = $ThisHostname
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-        }
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipals -ObjectStringProperty 'Name'"
-        $FormattedSecurityPrincipals = Split-Thread @FormatSecurityPrincipalParams
-    }
-
-    # Expand the collection of security principals from Format-SecurityPrincipal
-    # back into a collection of access control entries (one per ACE per principal)
-    if ($ThreadCount -eq 1) {
-
-        [int]$ProgressInterval = [math]::max(($FormattedSecurityPrincipals.Count / 100),1)
-        $ProgressCounter = 0
-        $i = 0
-        $ExpandedAccountPermissions = ForEach ($ThisPrinc in $FormattedSecurityPrincipals) {
-            $ProgressCounter++
-            if ($ProgressCounter -eq $ProgressInterval) {
-                $PercentComplete = $i / $FormattedSecurityPrincipals.Count * 100
-                Write-Progress -Activity 'Expand-AccountPermission' -CurrentOperation "$($ThisPrinc.Name)" -PercentComplete $PercentComplete
-                $ProgressCounter = 0
-            }
-            $i++
-
-            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($ThisPrinc.Name)"
-            Expand-AccountPermission -AccountPermission $ThisPrinc
-        }
-        Write-Progress -Activity 'Expand-AccountPermission' -Completed
-
-    } else {
-        $ExpandAccountPermissionParams = @{
-            Command              = 'Expand-AccountPermission'
-            InputObject          = $FormattedSecurityPrincipals
-            InputParameter       = 'AccountPermission'
-            TodaysHostname       = $ThisHostname
-            ObjectStringProperty = 'Name'
-            Timeout              = 1200
-            Threads              = $ThreadCount
-            AddParam             = @{
-                WhoAmI      = $WhoAmI
-                LogMsgCache = $LogMsgCache
-            }
-        }
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-AccountPermission' -InputParameter 'AccountPermission' -InputObject `$FormattedSecurityPrincipals -ObjectStringProperty 'Name'"
-        $ExpandedAccountPermissions = Split-Thread @ExpandAccountPermissionParams
-    }
+    # Expand the collection of security principals back into a collection of permissions (one per ACE per principal)
+    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals -ThreadCount $ThreadCount"
+    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals -ThreadCount $ThreadCount @LoggingParams
 
     # Save a CSV report of the expanded account permissions
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions |"
-    Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
-    $Activity = "Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
+    #Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
+    $Activity = "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
     Write-LogMsg @LogParams -Text $Activity
     Write-Progress -Activity $Activity -PercentComplete 50
-
-    $ExpandedAccountPermissions |
-    Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
-
+    $ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
     Write-Progress -Activity $Activity -Completed
     Write-Information $CsvFilePath3
 
     Write-Progress -Activity '$ExpandedAccountPermissions | Group User' -PercentComplete 50
-    $Accounts = $ExpandedAccountPermissions |
-    Group-Object -Property User
+    $Accounts = $ExpandedAccountPermissions | Group-Object -Property User
     Write-Progress -Activity '$ExpandedAccountPermissions | Group User' -Completed
 
     # Filter out domain names we do not want on the report
