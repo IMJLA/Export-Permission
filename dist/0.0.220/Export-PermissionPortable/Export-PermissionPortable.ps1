@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.219
+.VERSION 0.0.220
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-migrated logic to permission module
+removed unnecessary comment for property that already exists on object negating need for select-object
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -10988,7 +10989,6 @@ end {
 
     # Save a CSV report of the expanded account permissions
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-    #Write-LogMsg @LogParams -Text "`Select-Object -Property @{ Label = 'SourceAclPath'; Expression = { `$_.ACESourceAccessList.Path } }, * |"
     $Activity = "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
     Write-LogMsg @LogParams -Text $Activity
     Write-Progress -Activity $Activity -PercentComplete 50

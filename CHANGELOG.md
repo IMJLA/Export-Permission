@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.220] - 2024-02-02 - removed unnecessary comment for property that already exists on object negating need for select-object
+
 ## [0.0.219] - 2024-02-02 - migrated logic to permission module
 
 ## [0.0.218] - 2024-01-31 - update psrunspace prog bars
