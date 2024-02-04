@@ -10,13 +10,8 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Benefits: - Presents complex nested permissions and group memberships in a report that is easy to read</maml:para>
-      <maml:para>- Provides additional information about each account such as Name, Department, Title</maml:para>
-      <maml:para>- Multithreaded with caching for fast results</maml:para>
-      <maml:para>- Works as a scheduled task</maml:para>
-      <maml:para>- Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
-      <maml:para></maml:para>
-      <maml:para>Supports these scenarios: - Local folder paths</maml:para>
+      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read Provide additional information about each account such as Name, Department, Title Multithreaded with caching for fast results Works as a scheduled task Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
+      <maml:para>Supports: - Local folder paths</maml:para>
       <maml:para>- UNC folder paths</maml:para>
       <maml:para>- DFS folder paths</maml:para>
       <maml:para>- Mapped network drives</maml:para>
@@ -51,7 +46,7 @@
             <maml:name>System.IO.DirectoryInfo[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>C:\Test</dev:defaultValue>
+          <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
           <maml:name>PrtgProbe</maml:name>
@@ -433,7 +428,7 @@
           <maml:name>System.IO.DirectoryInfo[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>C:\Test</dev:defaultValue>
+        <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
         <maml:name>ThreadCount</maml:name>

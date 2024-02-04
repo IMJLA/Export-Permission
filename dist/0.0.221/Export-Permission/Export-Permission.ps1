@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.220
+.VERSION 0.0.221
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,14 +18,14 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES Adsi,SimplePrtg,PsNtfs,PsLogMessage,PsRunspace,PsDfs,PsBootstrapCss,Permission 
+.EXTERNALMODULEDEPENDENCIES 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-removed unnecessary comment for property that already exists on object negating need for select-object
+remove improper use of externalmoduledependencies
 
 .PRIVATEDATA
 
@@ -41,19 +41,17 @@ removed unnecessary comment for property that already exists on object negating 
 #Requires -Module Permission
 
 
-
 <#
 .SYNOPSIS
     Create CSV, HTML, and XML reports of permissions
 .DESCRIPTION
-    Benefits:
-    - Presents complex nested permissions and group memberships in a report that is easy to read
-    - Provides additional information about each account such as Name, Department, Title
-    - Multithreaded with caching for fast results
-    - Works as a scheduled task
-    - Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
+    Present complex nested permissions and group memberships in a report that is easy to read
+    Provide additional information about each account such as Name, Department, Title
+    Multithreaded with caching for fast results
+    Works as a scheduled task
+    Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 
-    Supports these scenarios:
+    Supports:
     - Local folder paths
     - UNC folder paths
     - DFS folder paths
@@ -253,7 +251,7 @@ param (
     # Path to the NTFS folder whose permissions to export
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
-    [System.IO.DirectoryInfo[]]$TargetPath = 'C:\Test',
+    [System.IO.DirectoryInfo[]]$TargetPath,
 
     # Regular expressions matching names of security principals to exclude from the HTML report
     [string[]]$ExcludeAccount = 'SYSTEM',
@@ -361,6 +359,15 @@ param (
 
 begin {
 
+    # Create a splat of the constant Write-Progress parameters for script readability
+    $Progress = @{
+        Activity = 'Export-Permission'
+        Id       = 0
+    }
+
+    Write-Progress -Status '0% (step 1 of 20) Initializing' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
+    Start-Sleep -Seconds 5
+
     #----------------[ Functions ]------------------
 
     # This is where the function definitions will be inserted in the portable version of this script
@@ -413,14 +420,14 @@ begin {
     # Get the NTAccount caption of the user running the script, with the correct capitalization
     $WhoAmI = Get-CurrentWhoAmI -LogMsgCache $LogMsgCache -ThisHostName $ThisHostname
 
-    # Prepare the cache of log-related parameters to pass to various functions
+    # Create a splat of log-related parameters to pass to various functions for script readability
     $LoggingParams = @{
         ThisHostname = $ThisHostname
         LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
 
-    # Create a cache of parameters specifically for Write-LogMsg
+    # Create a splat of constant Write-LogMsg parameters for script readability
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = 'Debug'
@@ -436,7 +443,7 @@ begin {
     Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn -ComputerName '$ThisHostName'"
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
 
-    # Create a cache of parameters to enable caching functionality in supported functions
+    # Create a map of parameters to enable caching functionality in supported functions
     $CacheParams = @{
         Win32AccountsBySID     = $Win32AccountsBySID
         Win32AccountsByCaption = $Win32AccountsByCaption
@@ -463,101 +470,105 @@ process {
 
     #----------------[ Main Execution ]---------------
 
-    # Resolve each target path to all of its associated UNC paths (including all DFS folder targets)
-    [string[]]$ResolvedFolderTargets = ForEach ($ThisTargetPath in $TargetPath) {
-
-        Write-LogMsg @LogParams -Text "Resolve-Folder -FolderPath '$ThisTargetPath'"
-        Resolve-Folder -FolderPath $ThisTargetPath
-
-    }
+    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve each target path to all of its associated UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
+    Start-Sleep -Seconds 5
+    [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath @LoggingParams
 
 }
 
 end {
 
-    # Expand each resolved folder path into the paths of its subfolders
+    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand each resolved folder path into the paths of its subfolders' -PercentComplete 10 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($ResolvedFolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
-    $Subfolders = Expand-Folder -Folder $ResolvedFolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount @LoggingParams
+    $Subfolders = Expand-Folder -Folder $ResolvedFolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
 
-    # Get the relevant permissions for each folder and subfolder
+    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get the relevant permissions for each folder and subfolder' -PercentComplete 15 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -FolderTargets @('$($Subfolders -join "','")')"
-    $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount @LoggingParams
+    $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
 
-    # Save a CSV of the raw NTFS permissions, showing non-inherited ACEs only except for the root folder $TargetPath
+    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV of the raw NTFS permissions, showing non-inherited ACEs only except for the root folder $TargetPath' -PercentComplete 20 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
-    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @LoggingParams
+    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 -ProgressParentId 0 @LoggingParams
 
-    # Discover ADSI server FQDNs: the current computer, any trusted domains, and the servers named in the Path property of the Access Lists
+    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Discover ADSI server FQDNs: the current computer, any trusted domains, and the servers named in the Path property of the access control lists' -PercentComplete 25 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$(@($ThisFqdn + $TrustedDomains.DomainFqdn) -join "',")') -FilePath @('$($Permissions.SourceAccessList.Path -join "',")') -ThisFqdn '$ThisFqdn'"
     $FqdnParams = @{
-        Known    = @($ThisFqdn + $TrustedDomains.DomainFqdn)
-        FilePath = $Permissions.SourceAccessList.Path
-        ThisFqdn = $ThisFqdn
+        Known            = @($ThisFqdn + $TrustedDomains.DomainFqdn)
+        FilePath         = $Permissions.SourceAccessList.Path
+        ThisFqdn         = $ThisFqdn
+        ProgressParentId = 0
     }
     [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
 
-    # Use the list of known ADSI server FQDNs to pre-populate the cache, preventing concurrent threads from finding an empty cache and performing costly operations to populate it
+    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Use the list of discovered ADSI server FQDNs to pre-populate the cache, preventing concurrent threads from finding an empty cache and performing costly operations to populate it' -PercentComplete 30 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
-    Initialize-Cache -Fqdn $ServerFqdns @LoggingParams @CacheParams
+    Initialize-Cache -Fqdn $ServerFqdns -ProgressParentId 0 @LoggingParams @CacheParams
 
-    # Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names
     # The resolved name will include the domain name (or local computer name for local accounts)
+    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names' -PercentComplete 35 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions
+    $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
 
-    # Save a CSV report of the resolved identity references
+    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation '# Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
-    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2
+    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 -ProgressParentId 0
 
-    # Group the Access Control Entries by their resolved identity references to avoid repeat ADSI lookups for the same security principal
-    Write-Progress -Activity '$PermissionsWithResolvedIdentityReferences | Group IdentityReferenceResolved' -PercentComplete 50
+    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the Access Control Entries by their resolved identity references to avoid repeat ADSI lookups for the same security principal' -PercentComplete 45 @Progress
+    Start-Sleep -Seconds 5
     $GroupedIdentities = $PermissionsWithResolvedIdentityReferences | Group-Object -Property IdentityReferenceResolved
-    Write-Progress -Activity '$PermissionsWithResolvedIdentityReferences | Group IdentityReferenceResolved' -Completed
 
-    # Use ADSI to collect more information about each resolved identity reference
-    Write-LogMsg @LogParams -Text "`$SecurityPrincipals = Expand-PermissionIdentity -Identity `$GroupedIdentities -NoGroupMembers $NoGroupMembers"
-    $SecurityPrincipals = Expand-PermissionIdentity -Identity $GroupedIdentities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams
+    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to collect more information about each resolved identity reference' -PercentComplete 50 @Progress
+    Start-Sleep -Seconds 5
+    $SecurityPrincipals = Expand-PermissionIdentity -Identity $GroupedIdentities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams -ProgressParentId 0
 
-    # Format the Security Principals (distinguish group members from accounts directly listed in the ACLs)
+    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the Security Principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals -ThreadCount $ThreadCount"
-    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals -ThreadCount $ThreadCount @LoggingParams
+    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals -ThreadCount $ThreadCount @LoggingParams -ProgressParentId 0
 
-    # Expand the collection of security principals back into a collection of permissions (one per ACE per principal)
+    Write-Progress -Status '60% (step 13 of 20)' -CurrentOperation 'Expand the array of security principals back into an array of permissions (one per ACE per principal)' -PercentComplete 60 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals -ThreadCount $ThreadCount"
-    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals -ThreadCount $ThreadCount @LoggingParams
+    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals -ThreadCount $ThreadCount @LoggingParams -ProgressParentId 0
 
-    # Save a CSV report of the expanded account permissions
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-    $Activity = "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
-    Write-LogMsg @LogParams -Text $Activity
-    Write-Progress -Activity $Activity -PercentComplete 50
+    Write-Progress -Status '65% (step 14 of 20)' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
+    Start-Sleep -Seconds 5
+    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
     $ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
-    Write-Progress -Activity $Activity -Completed
     Write-Information $CsvFilePath3
 
-    Write-Progress -Activity '$ExpandedAccountPermissions | Group User' -PercentComplete 50
+    Write-Progress -Status '70% (step 15 of 20)' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
+    Start-Sleep -Seconds 5
     $Accounts = $ExpandedAccountPermissions | Group-Object -Property User
-    Write-Progress -Activity '$ExpandedAccountPermissions | Group User' -Completed
 
-    # Filter out domain names we do not want on the report
     # This can be done when the domain is always the same and doesn't need to be displayed
     # This can also be done to ensure accounts only appear once on the report if they exist in multiple domains
+    Write-Progress -Status '75% (step 16 of 20)' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
+    Start-Sleep -Seconds 5
     $IgnoreDomainString = "@('$($IgnoreDomain -join "',")')"
     Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain $IgnoreDomainString"
     $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
 
-    # Group the account permissions back into folder permissions for the report
+    Write-Progress -Status '80% (step 17 of 20)' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-    Write-Progress -Activity '$UniqueAccountPermissions | Group Folder | Sort Name' -PercentComplete 50
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @LogParams |
+    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions -ProgressParentId 0 @LogParams |
     Group-Object -Property Folder |
     Sort-Object -Property Name
-    Write-Progress -Activity '$UniqueAccountPermissions | Group Folder | Sort Name' -Completed
 
-    # Export two versions of the HTML report
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
+    Write-Progress -Status '85% (step 18 of 20)' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
+    Start-Sleep -Seconds 5
     $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ;
         IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ;
         NoGroupMembers = $NoGroupMembers ; ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ;
@@ -566,7 +577,6 @@ end {
     }
     Export-FolderPermissionHtml @ExportFolderPermissionHtml
 
-    # Identify common issues with permissions
     # ToDo: Users with ownership
     $NtfsIssueParams = @{
         FolderPermissions = $FolderPermissions
@@ -576,8 +586,13 @@ end {
         WhoAmI            = $WhoAmI
         LogMsgCache       = $LogMsgCache
     }
+    Write-Progress -Status '90% (step 19 of 20)' -CurrentOperation 'Identify common issues with permissions' -PercentComplete 90 @Progress
+    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "New-NtfsAclIssueReport @NtfsIssueParams"
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
+
+    Write-Progress -Status '95% (step 20 of 20)' -CurrentOperation 'Output results' -PercentComplete 95 @Progress
+    Start-Sleep -Seconds 5
 
     # Format the issues as a custom XML sensor for Paessler PRTG Network Monitor
     Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
@@ -614,6 +629,8 @@ end {
     Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
 
     Stop-Transcript  *>$null
+
+    Write-Progress @Progress -Completed
 
     # Output the XML so the script can be directly used as a PRTG sensor
     # Caution: This use may be a problem for a PRTG probe because of how long the script can run on large folders/domains

@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.219
+help version: 0.0.220
 locale: en-US
 script name: Export-Permission.ps1
 online version:
@@ -24,14 +24,13 @@ Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <Stri
 ```
 
 ## DESCRIPTION
-Benefits:
-- Presents complex nested permissions and group memberships in a report that is easy to read
-- Provides additional information about each account such as Name, Department, Title
-- Multithreaded with caching for fast results
-- Works as a scheduled task
-- Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
+Present complex nested permissions and group memberships in a report that is easy to read
+Provide additional information about each account such as Name, Department, Title
+Multithreaded with caching for fast results
+Works as a scheduled task
+Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 
-Supports these scenarios:
+Supports:
 - Local folder paths
 - UNC folder paths
 - DFS folder paths
@@ -518,7 +517,7 @@ Aliases:
 
 Required: False
 Position: 1
-Default value: C:\Test
+Default value: None
 Accept pipeline input: True (ByValue)
 Accept wildcard characters: False
 ```
