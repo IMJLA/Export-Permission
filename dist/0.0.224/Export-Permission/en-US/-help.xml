@@ -100,6 +100,18 @@
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
+          <maml:name>OutputMode</maml:name>
+          <maml:description>
+            <maml:para>Type of output returned to the output stream</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>PassThru</dev:defaultValue>
+        </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
           <maml:name>ExcludeAccount</maml:name>
           <maml:description>
@@ -129,15 +141,14 @@
           <maml:name>IgnoreDomain</maml:name>
           <maml:description>
             <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
-            <maml:para>Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.</maml:para>
-            <maml:para>Can also be used to remove all domains simply for brevity in the report.</maml:para>
+            <maml:para>Can be used:   to ensure accounts only appear once on the report when they have matching SamAccountNames in multiple domains.   when the domain is often the same and doesn't need to be displayed</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
             <maml:name>System.String[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>CONTOSO</dev:defaultValue>
+          <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
           <maml:name>OutputDir</maml:name>
@@ -152,12 +163,10 @@
           <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
-          <maml:name>SubfolderLevels</maml:name>
+          <maml:name>RecurseDepth</maml:name>
           <maml:description>
-            <maml:para>How many levels of subfolder to enumerate</maml:para>
-            <maml:para>  Set to 0 to ignore all subfolders</maml:para>
-            <maml:para>  Set to -1 (default) to recurse infinitely</maml:para>
-            <maml:para>  Set to any whole number to enumerate that many levels</maml:para>
+            <maml:para>How many levels of children to enumerate</maml:para>
+            <maml:para>  Set to 0 to ignore all children   Set to -1 (default) to recurse through all children   Set to any whole number to enumerate that many levels of children</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
           <dev:type>
@@ -220,10 +229,9 @@
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>NoGroupMembers</maml:name>
+          <maml:name>NoJavaScript</maml:name>
           <maml:description>
-            <maml:para>Do not get group members (only report the groups themselves)</maml:para>
-            <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
+            <maml:para>Generate a report with only HTML and CSS but no JavaScript</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>System.Management.Automation.SwitchParameter</maml:name>
@@ -232,9 +240,10 @@
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>NoJavaScript</maml:name>
+          <maml:name>NoMembers</maml:name>
           <maml:description>
-            <maml:para>Generate a report with only HTML and CSS but no JavaScript</maml:para>
+            <maml:para>Do not get group members (only report the groups themselves)</maml:para>
+            <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>System.Management.Automation.SwitchParameter</maml:name>
@@ -292,33 +301,19 @@
         <maml:name>IgnoreDomain</maml:name>
         <maml:description>
           <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
-          <maml:para>Intended when a user has matching SamAccountNames in multiple domains but you only want them to appear once on the report.</maml:para>
-          <maml:para>Can also be used to remove all domains simply for brevity in the report.</maml:para>
+          <maml:para>Can be used:   to ensure accounts only appear once on the report when they have matching SamAccountNames in multiple domains.   when the domain is often the same and doesn't need to be displayed</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
           <maml:name>System.String[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>CONTOSO</dev:defaultValue>
+        <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>Interactive</maml:name>
         <maml:description>
           <maml:para>Open the HTML report after the script is finished using Invoke-Item (only useful interactively)</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>False</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>NoGroupMembers</maml:name>
-        <maml:description>
-          <maml:para>Do not get group members (only report the groups themselves)</maml:para>
-          <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -339,6 +334,19 @@
         </dev:type>
         <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoMembers</maml:name>
+        <maml:description>
+          <maml:para>Do not get group members (only report the groups themselves)</maml:para>
+          <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>OutputDir</maml:name>
         <maml:description>
@@ -350,6 +358,18 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
+        <maml:name>OutputMode</maml:name>
+        <maml:description>
+          <maml:para>Type of output returned to the output stream</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>PassThru</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
         <maml:name>PrtgPort</maml:name>
@@ -404,12 +424,10 @@
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
-        <maml:name>SubfolderLevels</maml:name>
+        <maml:name>RecurseDepth</maml:name>
         <maml:description>
-          <maml:para>How many levels of subfolder to enumerate</maml:para>
-          <maml:para>  Set to 0 to ignore all subfolders</maml:para>
-          <maml:para>  Set to -1 (default) to recurse infinitely</maml:para>
-          <maml:para>  Set to any whole number to enumerate that many levels</maml:para>
+          <maml:para>How many levels of children to enumerate</maml:para>
+          <maml:para>  Set to 0 to ignore all children   Set to -1 (default) to recurse through all children   Set to any whole number to enumerate that many levels of children</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
         <dev:type>
