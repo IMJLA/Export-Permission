@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.222
+.VERSION 0.0.223
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate ps 5.1 workarounds so ps 7 not required
+fixed incorrect verb usage in member modules
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -371,7 +372,7 @@ begin {
         Id       = 0
     }
 
-    Write-Progress -Status '0% (step 1 of 20) Initializing' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
+    Write-Progress -Status '0% (step 1 of 20)' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
     Start-Sleep -Seconds 5
 
     #----------------[ Functions ]------------------
@@ -8930,7 +8931,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.151' is below
+# Definition of Module 'Permission' Version '0.0.152' is below
 
 function Expand-AcctPermission {
 
@@ -9146,179 +9147,6 @@ function Expand-Folder {
     }
 
     Start-Sleep -Seconds 5
-    Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
-
-}
-function Expand-PermissionIdentity {
-
-    param (
-
-        # Permission objects from Get-FolderAccessList whose IdentityReference to resolve
-        [Parameter(ValueFromPipeline)]
-        [object[]]$Identity,
-
-        # Output stream to send the log messages to
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug',
-
-        # Maximum number of concurrent threads to allow
-        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
-
-        # Cache of known Win32_Account instances keyed by domain and SID
-        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
-
-        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
-        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
-
-        <#
-        Dictionary to cache directory entries to avoid redundant lookups
-
-        Defaults to an empty thread-safe hashtable
-        #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
-        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
-        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName,AdsiProvider,Win32Accounts properties as values
-        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
-
-        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
-        [hashtable]$IdentityReferenceCache = ([hashtable]::Synchronized(@{})),
-
-        <#
-        Hostname of the computer running this function.
-
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
-        [string]$ThisHostName = (HOSTNAME.EXE),
-
-        <#
-        FQDN of the computer running this function.
-
-        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
-        #>
-        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
-
-        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$WhoAmI = (whoami.EXE),
-
-        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages,
-
-        <#
-        Do not get group members (only report the groups themselves)
-
-        Note: By default, the -ExcludeClass parameter will exclude groups from the report.
-          If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
-          Remove the 'group' class from ExcludeClass in order to see groups on the report.
-        #>
-        [switch]$NoGroupMembers,
-
-        # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
-
-    )
-
-    $Progress = @{
-        Activity = 'Expand-PermissionIdentity'
-    }
-    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
-        $Progress['ParentId'] = $ProgressParentId
-        $Progress['Id'] = $ProgressParentId + 1
-    } else {
-        $Progress['Id'] = 0
-    }
-
-    Write-Progress @Progress -Status '0% (step 1 of 2)' -CurrentOperation 'Flattening the raw access control entries for CSV export' -PercentComplete 0
-    Start-Sleep -Seconds 5
-
-    $LogParams = @{
-        LogMsgCache  = $LogMsgCache
-        ThisHostname = $ThisHostname
-        Type         = $DebugOutputStream
-        WhoAmI       = $WhoAmI
-    }
-
-    if ($ThreadCount -eq 1) {
-
-        $ExpandIdentityReferenceParams = @{
-            DirectoryEntryCache    = $DirectoryEntryCache
-            IdentityReferenceCache = $IdentityReferenceCache
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsByFqdn          = $DomainsByFqdn
-            ThisHostName           = $ThisHostName
-            ThisFqdn               = $ThisFqdn
-            WhoAmI                 = $WhoAmI
-            LogMsgCache            = $LogMsgCache
-            DebugOutputStream      = $DebugOutputStream
-        }
-
-        if ($NoGroupMembers) {
-            $ExpandIdentityReferenceParams['NoGroupMembers'] = $true
-        }
-
-        [int]$ProgressInterval = [math]::max(($Identity.Count / 100), 1)
-        $IntervalCounter = 0
-        $i = 0
-
-        ForEach ($ThisID in $Identity) {
-
-            $IntervalCounter++
-
-            if ($IntervalCounter -eq $ProgressInterval) {
-
-                [int]$PercentComplete = $i / $Identity.Count * 100
-                Write-Progress @Progress -Status "$PercentComplete%" -CurrentOperation "Expand-IdentityReference '$($ThisID.Name)'" -PercentComplete $PercentComplete
-                $IntervalCounter = 0
-
-            }
-
-            $i++
-
-            Write-LogMsg @LogParams -Text "Expand-IdentityReference -AccessControlEntry $($ThisID.Name)"
-            Expand-IdentityReference -AccessControlEntry $ThisID @ExpandIdentityReferenceParams
-        }
-
-    } else {
-
-        $ExpandIdentityReferenceParams = @{
-            Command              = 'Expand-IdentityReference'
-            InputObject          = $Identity
-            InputParameter       = 'AccessControlEntry'
-            ObjectStringProperty = 'Name'
-            TodaysHostname       = $ThisHostname
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-            AddParam             = @{
-                DirectoryEntryCache    = $DirectoryEntryCache
-                IdentityReferenceCache = $IdentityReferenceCache
-                DomainsBySID           = $DomainsBySID
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsByFqdn          = $DomainsByFqdn
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                WhoAmI                 = $WhoAmI
-                LogMsgCache            = $LogMsgCache
-                DebugOutputStream      = $DebugOutputStream
-            }
-        }
-
-        if ($NoGroupMembers) {
-            $ExpandIdentityReferenceParams['AddSwitch'] = 'NoGroupMembers'
-        }
-
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-IdentityReference' -InputParameter 'AccessControlEntry' -InputObject `$Identity"
-        Split-Thread @ExpandIdentityReferenceParams
-
-    }
-
     Write-Progress @Progress -Completed
     Start-Sleep -Seconds 5
 
@@ -10535,6 +10363,180 @@ Report instance: $ReportInstanceId
 "@
     New-BootstrapAlert -Class Light -Text $Text
 }
+function Get-PermissionSecurityPrincipal {
+
+    param (
+
+        # Objects from Resolve-PermissionIdentity whose corresponding ADSI security principals to retrieve
+        [Parameter(ValueFromPipeline)]
+        [object[]]$Identity,
+
+        # Output stream to send the log messages to
+        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
+        [string]$DebugOutputStream = 'Debug',
+
+        # Maximum number of concurrent threads to allow
+        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
+
+        # Cache of known Win32_Account instances keyed by domain and SID
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName,AdsiProvider,Win32Accounts properties as values
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
+        [hashtable]$IdentityReferenceCache = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        <#
+        Do not get group members (only report the groups themselves)
+
+        Note: By default, the -ExcludeClass parameter will exclude groups from the report.
+          If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
+          Remove the 'group' class from ExcludeClass in order to see groups on the report.
+        #>
+        [switch]$NoGroupMembers,
+
+        # ID of the parent progress bar under which to show progres
+        [int]$ProgressParentId
+
+    )
+
+    $Progress = @{
+        Activity = 'Get-PermissionSecurityPrincipal'
+    }
+    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
+        $Progress['ParentId'] = $ProgressParentId
+        $Progress['Id'] = $ProgressParentId + 1
+    } else {
+        $Progress['Id'] = 0
+    }
+
+    Write-Progress @Progress -Status '0% (step 1 of 2)' -CurrentOperation 'Flattening the raw access control entries for CSV export' -PercentComplete 0
+    Start-Sleep -Seconds 5
+
+    $LogParams = @{
+        LogMsgCache  = $LogMsgCache
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        WhoAmI       = $WhoAmI
+    }
+
+    if ($ThreadCount -eq 1) {
+
+        $ADSIConversionParams = @{
+            DirectoryEntryCache    = $DirectoryEntryCache
+            IdentityReferenceCache = $IdentityReferenceCache
+            DomainsBySID           = $DomainsBySID
+            DomainsByNetbios       = $DomainsByNetbios
+            DomainsByFqdn          = $DomainsByFqdn
+            ThisHostName           = $ThisHostName
+            ThisFqdn               = $ThisFqdn
+            WhoAmI                 = $WhoAmI
+            LogMsgCache            = $LogMsgCache
+            DebugOutputStream      = $DebugOutputStream
+        }
+
+        if ($NoGroupMembers) {
+            $ADSIConversionParams['NoGroupMembers'] = $true
+        }
+
+        [int]$ProgressInterval = [math]::max(($Identity.Count / 100), 1)
+        $IntervalCounter = 0
+        $i = 0
+
+        ForEach ($ThisID in $Identity) {
+
+            $IntervalCounter++
+
+            if ($IntervalCounter -eq $ProgressInterval) {
+
+                [int]$PercentComplete = $i / $Identity.Count * 100
+                Write-Progress @Progress -Status "$PercentComplete% (identity $($i + 1) of $Count)" -CurrentOperation "ConvertFrom-IdentityReferenceResolved for '$($ThisID.Name)'" -PercentComplete $PercentComplete
+                $IntervalCounter = 0
+
+            }
+
+            $i++
+
+            Write-LogMsg @LogParams -Text "ConvertFrom-IdentityReferenceResolved -IdentityReference $($ThisID.Name)"
+            ConvertFrom-IdentityReferenceResolved -IdentityReference $ThisID @ADSIConversionParams
+
+        }
+
+    } else {
+
+        $ADSIConversionParams = @{
+            Command              = 'ConvertFrom-IdentityReferenceResolved'
+            InputObject          = $Identity
+            InputParameter       = 'IdentityReference'
+            ObjectStringProperty = 'Name'
+            TodaysHostname       = $ThisHostname
+            WhoAmI               = $WhoAmI
+            LogMsgCache          = $LogMsgCache
+            Threads              = $ThreadCount
+            AddParam             = @{
+                DirectoryEntryCache    = $DirectoryEntryCache
+                IdentityReferenceCache = $IdentityReferenceCache
+                DomainsBySID           = $DomainsBySID
+                DomainsByNetbios       = $DomainsByNetbios
+                DomainsByFqdn          = $DomainsByFqdn
+                ThisHostName           = $ThisHostName
+                ThisFqdn               = $ThisFqdn
+                WhoAmI                 = $WhoAmI
+                LogMsgCache            = $LogMsgCache
+                DebugOutputStream      = $DebugOutputStream
+            }
+        }
+
+        if ($NoGroupMembers) {
+            $ADSIConversionParams['AddSwitch'] = 'NoGroupMembers'
+        }
+
+        Write-LogMsg @LogParams -Text "Split-Thread -Command 'ConvertFrom-IdentityReferenceResolved' -InputParameter 'IdentityReference' -InputObject `$Identity"
+        Split-Thread @ADSIConversionParams
+
+    }
+
+    Write-Progress @Progress -Completed
+    Start-Sleep -Seconds 5
+
+}
 function Get-PrtgXmlSensorOutput {
     param (
         $NtfsIssues
@@ -11232,7 +11234,7 @@ ForEach ($ThisFile in $CSharpFiles) {
         WhoAmI       = $WhoAmI
     }
 
-    # These 3 events already happened but we will log them now that we have the correct capitalization of the user
+    # These events already happened but we will log them now that we have the correct capitalization of the user
     Write-LogMsg @LogParams -Text "& HOSTNAME.EXE"
     Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
@@ -11301,31 +11303,32 @@ end {
     }
     [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
 
-    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate the caches to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
+    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
     Initialize-Cache -Fqdn $ServerFqdns -ProgressParentId 0 @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
-    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the identity reference in permission to its associated SID and NTAccount name' -PercentComplete 35 @Progress
+    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
     Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
+    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -Permission $Permissions'
+    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
 
     Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
     Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 -ProgressParentId 0
 
-    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the permissions their resolved identity references to avoid repeat lookups for the same security principal' -PercentComplete 45 @Progress
+    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group permissions by their resolved identity references' -PercentComplete 45 @Progress
     Start-Sleep -Seconds 5
-    $GroupedIdentities = $PermissionsWithResolvedIdentityReferences | Group-Object -Property IdentityReferenceResolved
+    Write-LogMsg @LogParams -Text "`$Identities = `$PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved"
+    $Identities = $PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved
 
-    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to collect more information about each resolved identity reference' -PercentComplete 50 @Progress
+    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
     Start-Sleep -Seconds 5
-    $SecurityPrincipals = Expand-PermissionIdentity -Identity $GroupedIdentities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams -ProgressParentId 0
+    $SecurityPrincipals = Get-PermissionSecurityPrincipal -Identity $Identities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams -ProgressParentId 0
 
-    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the Security Principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
+    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the ADSI security principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals -ThreadCount $ThreadCount"
     $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals -ThreadCount $ThreadCount @LoggingParams -ProgressParentId 0

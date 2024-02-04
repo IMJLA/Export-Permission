@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.222
+.VERSION 0.0.223
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate ps 5.1 workarounds so ps 7 not required
+fixed incorrect verb usage in member modules
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ integrate ps 5.1 workarounds so ps 7 not required
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -366,7 +367,7 @@ begin {
         Id       = 0
     }
 
-    Write-Progress -Status '0% (step 1 of 20) Initializing' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
+    Write-Progress -Status '0% (step 1 of 20)' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
     Start-Sleep -Seconds 5
 
     #----------------[ Functions ]------------------
@@ -436,7 +437,7 @@ begin {
         WhoAmI       = $WhoAmI
     }
 
-    # These 3 events already happened but we will log them now that we have the correct capitalization of the user
+    # These events already happened but we will log them now that we have the correct capitalization of the user
     Write-LogMsg @LogParams -Text "& HOSTNAME.EXE"
     Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
 
@@ -505,31 +506,32 @@ end {
     }
     [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
 
-    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate the caches to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
+    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
     Initialize-Cache -Fqdn $ServerFqdns -ProgressParentId 0 @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
-    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the identity reference in permission to its associated SID and NTAccount name' -PercentComplete 35 @Progress
+    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
     Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
+    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -Permission $Permissions'
+    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
 
     Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
     Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 -ProgressParentId 0
 
-    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the permissions their resolved identity references to avoid repeat lookups for the same security principal' -PercentComplete 45 @Progress
+    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group permissions by their resolved identity references' -PercentComplete 45 @Progress
     Start-Sleep -Seconds 5
-    $GroupedIdentities = $PermissionsWithResolvedIdentityReferences | Group-Object -Property IdentityReferenceResolved
+    Write-LogMsg @LogParams -Text "`$Identities = `$PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved"
+    $Identities = $PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved
 
-    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to collect more information about each resolved identity reference' -PercentComplete 50 @Progress
+    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
     Start-Sleep -Seconds 5
-    $SecurityPrincipals = Expand-PermissionIdentity -Identity $GroupedIdentities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams -ProgressParentId 0
+    $SecurityPrincipals = Get-PermissionSecurityPrincipal -Identity $Identities -NoGroupMembers:$NoGroupMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams -ProgressParentId 0
 
-    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the Security Principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
+    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the ADSI security principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals -ThreadCount $ThreadCount"
     $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals -ThreadCount $ThreadCount @LoggingParams -ProgressParentId 0
