@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.221
+.VERSION 0.0.222
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove improper use of externalmoduledependencies
+integrate ps 5.1 workarounds so ps 7 not required
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ remove improper use of externalmoduledependencies
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -470,7 +471,7 @@ process {
 
     #----------------[ Main Execution ]---------------
 
-    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve each target path to all of its associated UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
+    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
     Start-Sleep -Seconds 5
     [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath @LoggingParams
 
@@ -478,22 +479,22 @@ process {
 
 end {
 
-    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand each resolved folder path into the paths of its subfolders' -PercentComplete 10 @Progress
+    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($ResolvedFolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
     $Subfolders = Expand-Folder -Folder $ResolvedFolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
 
-    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get the relevant permissions for each folder and subfolder' -PercentComplete 15 @Progress
+    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get raw permissions on the expanded paths' -PercentComplete 15 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -FolderTargets @('$($Subfolders -join "','")')"
     $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
 
-    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV of the raw NTFS permissions, showing non-inherited ACEs only except for the root folder $TargetPath' -PercentComplete 20 @Progress
+    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
     Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 -ProgressParentId 0 @LoggingParams
 
-    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Discover ADSI server FQDNs: the current computer, any trusted domains, and the servers named in the Path property of the access control lists' -PercentComplete 25 @Progress
+    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Get FQDNs of the current computer, trusted domains, and the servers in the UNC paths' -PercentComplete 25 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$(@($ThisFqdn + $TrustedDomains.DomainFqdn) -join "',")') -FilePath @('$($Permissions.SourceAccessList.Path -join "',")') -ThisFqdn '$ThisFqdn'"
     $FqdnParams = @{
@@ -504,23 +505,23 @@ end {
     }
     [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
 
-    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Use the list of discovered ADSI server FQDNs to pre-populate the cache, preventing concurrent threads from finding an empty cache and performing costly operations to populate it' -PercentComplete 30 @Progress
+    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate the caches to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
     Initialize-Cache -Fqdn $ServerFqdns -ProgressParentId 0 @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
-    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names' -PercentComplete 35 @Progress
+    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the identity reference in permission to its associated SID and NTAccount name' -PercentComplete 35 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity -Permission $Permissions'
     $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
 
-    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation '# Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
+    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
     Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 -ProgressParentId 0
 
-    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the Access Control Entries by their resolved identity references to avoid repeat ADSI lookups for the same security principal' -PercentComplete 45 @Progress
+    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the permissions their resolved identity references to avoid repeat lookups for the same security principal' -PercentComplete 45 @Progress
     Start-Sleep -Seconds 5
     $GroupedIdentities = $PermissionsWithResolvedIdentityReferences | Group-Object -Property IdentityReferenceResolved
 

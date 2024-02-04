@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.221
+.VERSION 0.0.222
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove improper use of externalmoduledependencies
+integrate ps 5.1 workarounds so ps 7 not required
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -375,9 +376,9 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.26' is below
+# Definition of Module 'Adsi' Version '4.0.28' is below
 
-[NoRunspaceAffinity()] # Make this class thread-safe
+#[NoRunspaceAffinity()] # Make this class thread-safe (requires PS 7+)
 class FakeDirectoryEntry {
 
     <#
@@ -1236,7 +1237,9 @@ function ConvertTo-DomainSidString {
     if ($DomainSid) {
         return $DomainSid
     } else {
-        Write-LogMsg @LogParams -Type Warning -Text " # LDAP Domain: '$DomainDnsName' has an invalid SID - $($_.Exception.Message)"
+        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+        Write-LogMsg @LogParams -Text " # LDAP Domain: '$DomainDnsName' has an invalid SID - $($_.Exception.Message)"
+        $LogParams['Type'] = $DebugOutputStream
     }
 
 }
@@ -1797,8 +1800,9 @@ function Expand-IdentityReference {
                     try {
                         $DirectoryEntry = Search-Directory @SearchDirectoryParams
                     } catch {
-                        Write-LogMsg @LogParams -Type Warning -Text " # '$StartingIdentityName' could not be resolved against its directory"
-                        Write-LogMsg @LogParams -Type Warning -Text " # $($_.Exception.Message) for '$StartingIdentityName"
+                        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                        Write-LogMsg @LogParams -Text " # '$StartingIdentityName' could not be resolved against its directory: $($_.Exception.Message)"
+                        $LogParams['Type'] = $DebugOutputStream
                     }
 
                 } elseif (
@@ -1844,8 +1848,9 @@ function Expand-IdentityReference {
                     try {
                         $DirectoryEntry = Search-Directory @SearchDirectoryParams
                     } catch {
-                        Write-LogMsg @LogParams -Type Warning -Text " # '$StartingIdentityName' could not be resolved against its directory"
-                        Write-LogMsg @LogParams -Type Warning -Text " # $($_.Exception.Message) for '$StartingIdentityName'"
+                        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                        Write-LogMsg @LogParams -Text " # '$StartingIdentityName' could not be resolved against its director. Error: $($_.Exception.Message.Trim())"
+                        $LogParams['Type'] = $DebugOutputStream
                     }
 
                 } else {
@@ -1880,8 +1885,9 @@ function Expand-IdentityReference {
                         try {
                             $UsersGroup = Get-DirectoryEntry @GetDirectoryEntryParams
                         } catch {
-                            Write-LogMsg @LogParams -Type Warning -Text "Could not get '$($GetDirectoryEntryParams['DirectoryPath'])' using PSRemoting"
-                            Write-LogMsg @LogParams -Type Warning -Text "$_"
+                            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                            Write-LogMsg @LogParams -Text "Could not get '$($GetDirectoryEntryParams['DirectoryPath'])' using PSRemoting. Error: $_"
+                            $LogParams['Type'] = $DebugOutputStream
                         }
                         $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
 
@@ -1934,7 +1940,9 @@ function Expand-IdentityReference {
                         try {
                             $DirectoryEntry = Get-DirectoryEntry @GetDirectoryEntryParams
                         } catch {
-                            Write-LogMsg @LogParams -Type Warning -Text " # '$($GetDirectoryEntryParams['DirectoryPath'])' could not be resolved for '$StartingIdentityName'. Error: $($_.Exception.Message.Trim())"
+                            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                            Write-LogMsg @LogParams -Text " # '$($GetDirectoryEntryParams['DirectoryPath'])' could not be resolved for '$StartingIdentityName'. Error: $($_.Exception.Message.Trim())"
+                            $LogParams['Type'] = $DebugOutputStream
                         }
                     }
                 }
@@ -2003,7 +2011,9 @@ function Expand-IdentityReference {
 
                     }
                 } else {
-                    Write-LogMsg @LogParams -Type Warning -Text " # '$StartingIdentityName' could not be matched to a DirectoryEntry"
+                    $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                    Write-LogMsg @LogParams -Text " # '$StartingIdentityName' could not be matched to a DirectoryEntry"
+                    $LogParams['Type'] = $DebugOutputStream
                 }
 
                 Add-Member -InputObject $ThisIdentity -Force -NotePropertyMembers $PropertiesToAdd
@@ -2105,7 +2115,9 @@ function Expand-WinNTGroupMember {
         ForEach ($ThisEntry in $DirectoryEntry) {
 
             if (!($ThisEntry.Properties)) {
-                Write-LogMsg @LogParams -Type Warning -Text "'$ThisEntry' has no properties"
+                $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                Write-LogMsg @LogParams -Text "'$ThisEntry' has no properties"
+                $LogParams['Type'] = $DebugOutputStream
             } elseif ($ThisEntry.Properties['objectClass'] -contains 'group') {
 
                 Write-LogMsg @LogParams -Text "'$($ThisEntry.Path)' is an ADSI group"
@@ -3230,12 +3242,13 @@ function Get-DirectoryEntry {
             $null = $DirectoryEntry.RefreshCache($PropertiesToLoad)
 
         } catch {
-            Write-LogMsg @LogParams -Type Warning -Text "'$DirectoryPath' could not be retrieved."
+            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
 
             # Ensure that the error message appears on 1 line
             # Use .Trim() to remove leading and trailing whitespace
             # Use -replace to remove an errant line break in the following specific error I encountered: The following exception occurred while retrieving member "RefreshCache": "The group name could not be found.`r`n"
-            Write-LogMsg @LogParams -Type Warning -Text "'$($_.Exception.Message.Trim() -replace '\s"',' "')"
+            Write-LogMsg @LogParams -Text "'$DirectoryPath' could not be retrieved. Error: $($_.Exception.Message.Trim() -replace '\s"',' "')"
+
             return
         }
     }
@@ -4748,8 +4761,9 @@ function Resolve-IdentityReference {
                 $DirectoryEntry = Search-Directory -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $SearchPath -Filter "(samaccountname=$Name)" -PropertiesToLoad @('objectClass', 'distinguishedName', 'name', 'grouptype', 'description', 'managedby', 'member', 'objectClass', 'Department', 'Title') -DomainsByNetbios $DomainsByNetbios
                 $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DomainsBySid $DomainsBySid @LoggingParams).SidString
             } catch {
-                Write-LogMsg @LogParams -Type Warning -Text "'$IdentityReference' could not be resolved against its directory"
-                Write-LogMsg @LogParams -Type Warning -Text $_.Exception.Message
+                $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                Write-LogMsg @LogParams -Text "'$IdentityReference' could not be resolved against its directory. Error: $($_.Exception.Message)"
+                $LogParams['Type'] = $DebugOutputStream
             }
         }
 
@@ -5151,7 +5165,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.151' is below
+# Definition of Module 'PsNtfs' Version '2.0.152' is below
 
 function GetDirectories {
 
@@ -5191,7 +5205,9 @@ function GetDirectories {
         return $result
     }
     catch {
-        Write-LogMsg @LogParams -Type Warning -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+        Write-LogMsg @LogParams -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+        $LogParams['Type'] = $DebugOutputStream
     }
 
     # Sometimes access is denied to a single buried subdirectory, so we will try searching the top directory only and then recursing through results one at a time
@@ -5200,7 +5216,8 @@ function GetDirectories {
         $result = [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, [System.IO.SearchOption]::TopDirectoryOnly)
     }
     catch {
-        Write-LogMsg @LogParams -Type Warning -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+        Write-LogMsg @LogParams -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
         return
     }
 
@@ -5796,7 +5813,9 @@ function Get-FolderAce {
     } 2>$null
 
     if ($null -eq $DirectorySecurity) {
-        Write-LogMsg @LogParams -Type Warning -Text "# Found no ACL for '$LiteralPath'"
+        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+        Write-LogMsg @LogParams -Text "# Found no ACL for '$LiteralPath'"
+        $LogParams['Type'] = $DebugOutputStream
         return
     }
 
@@ -8911,7 +8930,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.149' is below
+# Definition of Module 'Permission' Version '0.0.151' is below
 
 function Expand-AcctPermission {
 
@@ -10107,7 +10126,7 @@ function Get-FolderAccessList {
         [int]$PercentComplete = $i / $Count * 100
         Write-Progress @ChildProgress -Status "$PercentComplete% (parent $($i + 1) of $Count)" -CurrentOperation "Get-FolderAce -IncludeInherited '$ThisFolder'" -PercentComplete $PercentComplete
         $i++
-        Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache -LogMsgCache $LogMsgCache -IncludeInherited @GetFolderAceParams
+        Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache -IncludeInherited @GetFolderAceParams
     }
 
     Write-Progress @ChildProgress -Completed
@@ -10131,7 +10150,7 @@ function Get-FolderAccessList {
             }
             $i++ # increment $i after the progress to show progress conservatively rather than optimistically
 
-            Get-FolderAce -LiteralPath $ThisFolder -LogMsgCache $LogMsgCache -OwnerCache $OwnerCache @GetFolderAceParams
+            Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache @GetFolderAceParams
         }
 
         Write-Progress @ChildProgress -Completed
@@ -10404,7 +10423,8 @@ function Get-FolderPermissionsBlock {
         [pscustomobject]@{
             HtmlDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisTable)
             JsonDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisJsonTable)
-            JsonData    = $ObjectsForJsonData | ConvertTo-Json -AsArray
+            #JsonData    = $ObjectsForJsonData | ConvertTo-Json -AsArray # requires PS6+
+            JsonData    = ConvertTo-Json -InputObject @($ObjectsForJsonData)
             JsonColumns = Get-FolderColumnJson -InputObject $ObjectsForFolderPermissionTable -PropNames Account, Access,
             'Due to Membership In', 'Source of Access', Name, Department, Title
             Path        = $ThisFolder.Name
@@ -11247,7 +11267,7 @@ process {
 
     #----------------[ Main Execution ]---------------
 
-    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve each target path to all of its associated UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
+    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
     Start-Sleep -Seconds 5
     [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath @LoggingParams
 
@@ -11255,22 +11275,22 @@ process {
 
 end {
 
-    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand each resolved folder path into the paths of its subfolders' -PercentComplete 10 @Progress
+    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($ResolvedFolderTargets -join "',")') -LevelsOfSubfolders $SubfolderLevels"
     $Subfolders = Expand-Folder -Folder $ResolvedFolderTargets -LevelsOfSubfolders $SubfolderLevels -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
 
-    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get the relevant permissions for each folder and subfolder' -PercentComplete 15 @Progress
+    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get raw permissions on the expanded paths' -PercentComplete 15 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -FolderTargets @('$($Subfolders -join "','")')"
     $Permissions = Get-FolderAccessList -Folder $ResolvedFolderTargets -Subfolder $Subfolders -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
 
-    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV of the raw NTFS permissions, showing non-inherited ACEs only except for the root folder $TargetPath' -PercentComplete 20 @Progress
+    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
     Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 -ProgressParentId 0 @LoggingParams
 
-    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Discover ADSI server FQDNs: the current computer, any trusted domains, and the servers named in the Path property of the access control lists' -PercentComplete 25 @Progress
+    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Get FQDNs of the current computer, trusted domains, and the servers in the UNC paths' -PercentComplete 25 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$(@($ThisFqdn + $TrustedDomains.DomainFqdn) -join "',")') -FilePath @('$($Permissions.SourceAccessList.Path -join "',")') -ThisFqdn '$ThisFqdn'"
     $FqdnParams = @{
@@ -11281,23 +11301,23 @@ end {
     }
     [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
 
-    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Use the list of discovered ADSI server FQDNs to pre-populate the cache, preventing concurrent threads from finding an empty cache and performing costly operations to populate it' -PercentComplete 30 @Progress
+    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate the caches to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
     Initialize-Cache -Fqdn $ServerFqdns -ProgressParentId 0 @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
-    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the IdentityReference in each Access Control Entry (e.g. CONTOSO\user1, or a SID) to their associated SIDs/Names' -PercentComplete 35 @Progress
+    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve the identity reference in permission to its associated SID and NTAccount name' -PercentComplete 35 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity -Permission $Permissions'
     $PermissionsWithResolvedIdentityReferences = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
 
-    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation '# Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
+    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
     Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
     Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 -ProgressParentId 0
 
-    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the Access Control Entries by their resolved identity references to avoid repeat ADSI lookups for the same security principal' -PercentComplete 45 @Progress
+    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group the permissions their resolved identity references to avoid repeat lookups for the same security principal' -PercentComplete 45 @Progress
     Start-Sleep -Seconds 5
     $GroupedIdentities = $PermissionsWithResolvedIdentityReferences | Group-Object -Property IdentityReferenceResolved
 

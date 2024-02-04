@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.222] - 2024-02-04 - integrate ps 5.1 workarounds so ps 7 not required
+
 ## [0.0.221] - 2024-02-03 - remove improper use of externalmoduledependencies
 
 ## [0.0.220] - 2024-02-02 - removed unnecessary comment for property that already exists on object negating need for select-object
