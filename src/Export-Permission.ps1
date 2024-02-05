@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.226
+.VERSION 0.0.227
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add cim caching
+working on CIM caching
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ add cim caching
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -513,12 +514,12 @@ end {
 
     Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
-    Initialize-Cache -Fqdn $ServerFqdns @ProgressParent @LoggingParams @CacheParams
+    Initialize-Cache -Fqdn $ServerFqdns -CimCache $CimCache @ProgressParent @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
     Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
     Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions @ProgressParent
+    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -CimCache $CimCache @LoggingParams @CacheParams -Permission $Permissions @ProgressParent
 
     Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
@@ -530,7 +531,7 @@ end {
 
     Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
     Write-LogMsg @LogParams -Text "`$SecurityPrincipals = Get-PermissionPrincipal -Identity `$Identities -NoGroupMembers:`$$NoMembers"
-    $SecurityPrincipals = Get-PermissionPrincipal -Identity $Identities -NoGroupMembers:$NoMembers @LoggingParams @CacheParams @ProgressParent
+    $SecurityPrincipals = Get-PermissionPrincipal -Identity $Identities -NoGroupMembers:$NoMembers -CimCache $CimCache @LoggingParams @CacheParams @ProgressParent
 
     Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the ADSI security principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
     Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals @Threads"
@@ -621,6 +622,9 @@ end {
     # Save the log file to disk
     $LogCache.Values | Sort-Object -Property Timestamp |
     Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
+
+    # Remove any CIM Sessions
+    Remove-CachedCimSession -CimCache $CimCache
 
     Stop-Transcript  *>$null
 
