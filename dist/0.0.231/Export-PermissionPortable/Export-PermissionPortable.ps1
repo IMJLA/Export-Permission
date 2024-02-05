@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.230
+.VERSION 0.0.231
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-oops prev build used old adsi module ver
+bugfix cim cache misses
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -8934,7 +8935,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.166' is below
+# Definition of Module 'Permission' Version '0.0.167' is below
 
 function Expand-AcctPermission {
 
@@ -9959,7 +9960,7 @@ function Get-CachedCimInstance {
         }
 
         if ($CimInstance) {
-            $CimCache[$ComputerName][$ClassName] = $CimInstance
+            $CimCache[$ComputerName][$CacheKey] = $CimInstance
             return $CimInstance
         }
 
