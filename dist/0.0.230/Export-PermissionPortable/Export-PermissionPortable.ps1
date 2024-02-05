@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.229
+.VERSION 0.0.230
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-troubleshoot
+oops prev build used old adsi module ver
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -378,7 +379,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.34' is below
+# Definition of Module 'Adsi' Version '4.0.35' is below
 
 #[NoRunspaceAffinity()] # Make this class thread-safe (requires PS 7+)
 class FakeDirectoryEntry {
@@ -2312,7 +2313,7 @@ function Find-LocalAdsiServerSid {
         return
     }
 
-    return $LocalAdminAccount.SID.Substring(0, $LocalAdminAccount.LastIndexOf("-"))
+    return $LocalAdminAccount.SID.Substring(0, $LocalAdminAccount.SID.LastIndexOf("-"))
 
 }
 function Get-AdsiGroup {

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.229
+.VERSION 0.0.230
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-troubleshoot
+oops prev build used old adsi module ver
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ troubleshoot
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
