@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.232
+.VERSION 0.0.233
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new adsi module version
+more cim caching
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ new adsi module version
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

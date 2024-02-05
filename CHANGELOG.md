@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.233] - 2024-02-05 - more cim caching
+
 ## [0.0.232] - 2024-02-05 - new adsi module version
 
 ## [0.0.231] - 2024-02-05 - bugfix cim cache misses
