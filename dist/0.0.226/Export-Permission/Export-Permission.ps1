@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.225
+.VERSION 0.0.226
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-removed start-sleep from prog bar debugging
+add cim caching
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ removed start-sleep from prog bar debugging
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
@@ -411,11 +412,7 @@ begin {
     $DomainsByNetbios = [hashtable]::Synchronized(@{})
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
     $LogCache = [hashtable]::Synchronized(@{})
-    $Permissions = $null
-    $SecurityPrincipals = $null
-    $FormattedSecurityPrincipals = $null
-    $UniqueAccountPermissions = $null
-    $FolderPermissions = $null
+    $CimCache = [hashtable]::Synchronized(@{})
     $UNCPaths = [System.Collections.Generic.List[String]]::new()
 
     # Get the hostname of the computer running the script
@@ -486,7 +483,7 @@ process {
 
     Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
     Write-LogMsg @LogParams -Text "Resolve-PermissionTarget -TargetPath @('$($TargetPath -join "',")')))"
-    [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath @LoggingParams
+    [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath -CimCache $CimCache @LoggingParams
     $UNCPaths.AddRange($ResolvedFolderTargets)
 
 }
