@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.227
+.VERSION 0.0.228
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-working on CIM caching
+add cim caching
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -381,7 +382,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.32' is below
+# Definition of Module 'Adsi' Version '4.0.33' is below
 
 #[NoRunspaceAffinity()] # Make this class thread-safe (requires PS 7+)
 class FakeDirectoryEntry {
@@ -2778,6 +2779,13 @@ function Get-AdsiServer {
             DomainsBySid        = $DomainsBySid
         }
 
+        $CimParams = @{
+            CimCache          = $CimCache
+            ComputerName      = $ThisHostName
+            DebugOutputStream = $DebugOutputStream
+            ThisFqdn          = $ThisFqdn
+        }
+
     }
     process {
 
@@ -3011,8 +3019,10 @@ function Get-AdsiServer {
                     WinCapabilityEnterpriseAuthenticationSid             16                                           S-1-15-3-8
                     WinCapabilityRemovableStorageSid                     16                                           S-1-15-3-10
             #>
-            Write-LogMsg @LogParams -Text "Get-Win32Account -ComputerName '$DomainFqdn' -ThisFqdn '$ThisFqdn' -AdsiProvider '$AdsiProvider'"
-            $Win32Accounts = Get-Win32Account -ComputerName $DomainFqdn -ThisFqdn $ThisFqdn -AdsiProvider $AdsiProvider -Win32AccountsBySID $Win32AccountsBySID -ErrorAction SilentlyContinue @LoggingParams
+            Write-LogMsg @LogParams -Text "Get-Win32Account -ComputerName '$DomainFqdn' -ThisFqdn '$ThisFqdn'"
+            #$Win32Accounts = Get-Win32Account -ComputerName $DomainFqdn -ThisFqdn $ThisFqdn -Win32AccountsBySID $Win32AccountsBySID -ErrorAction SilentlyContinue @LoggingParams
+            Write-LogMsg @LogParams -Text "Get-CachedCimInstance -ComputerName '$DomainFqdn' -ClassName 'Win32_Account'"
+            $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainFqdn -ClassName 'Win32_Account' @CimParams @LoggingParams
 
             ForEach ($Acct in $Win32Accounts) {
                 $Win32AccountsBySID["$($Acct.Domain)\$($Acct.SID)"] = $Acct
@@ -3063,8 +3073,10 @@ function Get-AdsiServer {
             Write-LogMsg @LogParams -Text "ConvertTo-DomainSidString -DomainDnsName '$DomainFqdn' -AdsiProvider '$AdsiProvider' -ThisFqdn '$ThisFqdn' # for '$DomainNetbios'"
             $DomainSid = ConvertTo-DomainSidString -DomainDnsName $DomainDnsName -ThisFqdn $ThisFqdn -CimCache $CimCache @CacheParams @LoggingParams
 
-            Write-LogMsg @LogParams -Text "Get-Win32Account -ComputerName '$DomainDnsName' -AdsiProvider '$AdsiProvider' -ThisFqdn '$ThisFqdn' # for '$DomainNetbios'"
-            $Win32Accounts = Get-Win32Account -ComputerName $DomainDnsName -ThisFqdn $ThisFqdn -AdsiProvider $AdsiProvider -Win32AccountsBySID $Win32AccountsBySID -CimSession $CimSession -ErrorAction SilentlyContinue @LoggingParams
+            #Write-LogMsg @LogParams -Text "Get-Win32Account -ComputerName '$DomainDnsName' -ThisFqdn '$ThisFqdn' # for '$DomainNetbios'"
+            #$Win32Accounts = Get-Win32Account -ComputerName $DomainDnsName -ThisFqdn $ThisFqdn -Win32AccountsBySID $Win32AccountsBySID -CimSession $CimSession -ErrorAction SilentlyContinue @LoggingParams
+            Write-LogMsg @LogParams -Text "Get-CachedCimInstance -ComputerName '$DomainDnsName' -ClassName 'Win32_Account' # for '$DomainNetbios'"
+            $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainFqdn -ClassName 'Win32_Account' @CimParams @LoggingParams
 
             Remove-CimSession -CimSession $CimSession
 
@@ -3505,15 +3517,6 @@ function Get-Win32Account {
         #>
         [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
 
-        <#
-        AdsiProvider (WinNT or LDAP) of the servers associated with the provided FQDNs or NetBIOS names
-
-        This parameter can be used to reduce calls to Find-AdsiProvider
-
-        Useful when that has been done already but the DomainsByFqdn and DomainsByNetbios caches have not been updated yet
-        #>
-        [string]$AdsiProvider,
-
         # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
         [string]$WhoAmI = (whoami.EXE),
 
@@ -3555,9 +3558,6 @@ function Get-Win32Account {
                 [string]::IsNullOrEmpty($ThisServer)
             ) {
                 $ThisServer = $ThisHostName
-            }
-            if (-not $PSBoundParameters.ContainsKey('AdsiProvider')) {
-                $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServer @LoggingParams
             }
             # Return matching objects from the cache if possible rather than performing a CIM query
             # The cache is based on the Caption of the Win32 accounts which conatins only NetBios names
@@ -9004,7 +9004,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.160' is below
+# Definition of Module 'Permission' Version '0.0.165' is below
 
 function Expand-AcctPermission {
 
@@ -9049,7 +9049,8 @@ function Expand-AcctPermission {
         $Progress['Id'] = 0
     }
 
-    Write-Progress @Progress -Status '0% (step 1 of 1)' -CurrentOperation 'Initializing' -PercentComplete 0
+    $Count = $SecurityPrincipal.Count
+    Write-Progress @Progress -Status "0% (account 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -9057,8 +9058,6 @@ function Expand-AcctPermission {
         Type         = $DebugOutputStream
         WhoAmI       = $WhoAmI
     }
-
-    $Count = $SecurityPrincipal.Count
 
     if ($ThreadCount -eq 1) {
 
@@ -9073,7 +9072,7 @@ function Expand-AcctPermission {
             if ($IntervalCounter -eq $ProgressInterval) {
 
                 [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete%" -CurrentOperation "Expand-AccountPermission '$($ThisPrinc.Name)'" -PercentComplete $PercentComplete
+                Write-Progress @Progress -Status "$PercentComplete% (account $($i+1) of $Count)" -CurrentOperation "Expand-AccountPermission '$($ThisPrinc.Name)'" -PercentComplete $PercentComplete
                 $IntervalCounter = 0
 
             }
@@ -9081,6 +9080,7 @@ function Expand-AcctPermission {
             $i++
             Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($ThisPrinc.Name)"
             Expand-AccountPermission -AccountPermission $ThisPrinc
+
         }
 
     } else {
@@ -9093,10 +9093,6 @@ function Expand-AcctPermission {
             ObjectStringProperty = 'Name'
             Timeout              = 1200
             Threads              = $ThreadCount
-            AddParam             = @{
-                WhoAmI      = $WhoAmI
-                LogMsgCache = $LogMsgCache
-            }
         }
 
         Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-AccountPermission' -InputParameter 'AccountPermission' -InputObject `$SecurityPrincipal -ObjectStringProperty 'Name'"
@@ -10008,10 +10004,10 @@ function Get-CachedCimInstance {
         $CimCacheSubresult = $CimCacheResult[$CacheKey]
 
         if ($CimCacheSubresult) {
-            Write-LogMsg @LogParams -Text " # CIM instance cache hit for '$ClassName' on '$ComputerName'"
+            Write-LogMsg @LogParams -Text " # CIM instance cache hit for '$CacheKey' on '$ComputerName'"
             return $CimCacheSubresult
         } else {
-            Write-LogMsg @LogParams -Text " # CIM instance cache miss for '$ClassName' on '$ComputerName'"
+            Write-LogMsg @LogParams -Text " # CIM instance cache miss for '$CacheKey' on '$ComputerName'"
         }
 
     } else {
@@ -10669,7 +10665,7 @@ function Get-PermissionPrincipal {
     )
 
     $Progress = @{
-        Activity = 'Get-PermissionSecurityPrincipal'
+        Activity = 'Get-PermissionPrincipal'
     }
     if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
         $Progress['ParentId'] = $ProgressParentId
@@ -10687,27 +10683,28 @@ function Get-PermissionPrincipal {
         WhoAmI       = $WhoAmI
     }
 
-    if ($ThreadCount -eq 1) {
+    $ADSIConversionParams = @{
+        DirectoryEntryCache    = $DirectoryEntryCache
+        IdentityReferenceCache = $IdentityCache
+        DomainsBySID           = $DomainsBySID
+        DomainsByNetbios       = $DomainsByNetbios
+        DomainsByFqdn          = $DomainsByFqdn
+        ThisHostName           = $ThisHostName
+        ThisFqdn               = $ThisFqdn
+        WhoAmI                 = $WhoAmI
+        LogMsgCache            = $LogMsgCache
+        CimCache               = $CimCache
+        DebugOutputStream      = $DebugOutputStream
+    }
 
-        $ADSIConversionParams = @{
-            DirectoryEntryCache    = $DirectoryEntryCache
-            IdentityReferenceCache = $IdentityCache
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsByFqdn          = $DomainsByFqdn
-            ThisHostName           = $ThisHostName
-            ThisFqdn               = $ThisFqdn
-            WhoAmI                 = $WhoAmI
-            LogMsgCache            = $LogMsgCache
-            CimCache               = $CimCache
-            DebugOutputStream      = $DebugOutputStream
-        }
+    if ($ThreadCount -eq 1) {
 
         if ($NoGroupMembers) {
             $ADSIConversionParams['NoGroupMembers'] = $true
         }
 
-        [int]$ProgressInterval = [math]::max(($Identity.Count / 100), 1)
+        $Count = $Identity.Count
+        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
         $IntervalCounter = 0
         $i = 0
 
@@ -10717,14 +10714,13 @@ function Get-PermissionPrincipal {
 
             if ($IntervalCounter -eq $ProgressInterval) {
 
-                [int]$PercentComplete = $i / $Identity.Count * 100
+                [int]$PercentComplete = $i / $Count * 100
                 Write-Progress @Progress -Status "$PercentComplete% (identity $($i + 1) of $Count)" -CurrentOperation "ConvertFrom-IdentityReferenceResolved for '$($ThisID.Name)'" -PercentComplete $PercentComplete
                 $IntervalCounter = 0
 
             }
 
             $i++
-
             Write-LogMsg @LogParams -Text "ConvertFrom-IdentityReferenceResolved -IdentityReference $($ThisID.Name)"
             ConvertFrom-IdentityReferenceResolved -IdentityReference $ThisID @ADSIConversionParams
 
@@ -10732,7 +10728,7 @@ function Get-PermissionPrincipal {
 
     } else {
 
-        $ADSIConversionParams = @{
+        $SplitThreadParams = @{
             Command              = 'ConvertFrom-IdentityReferenceResolved'
             InputObject          = $Identity
             InputParameter       = 'IdentityReference'
@@ -10741,19 +10737,7 @@ function Get-PermissionPrincipal {
             WhoAmI               = $WhoAmI
             LogMsgCache          = $LogMsgCache
             Threads              = $ThreadCount
-            AddParam             = @{
-                DirectoryEntryCache    = $DirectoryEntryCache
-                IdentityReferenceCache = $IdentityCache
-                DomainsBySID           = $DomainsBySID
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsByFqdn          = $DomainsByFqdn
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                WhoAmI                 = $WhoAmI
-                LogMsgCache            = $LogMsgCache
-                DebugOutputStream      = $DebugOutputStream
-                CimCache               = $CimCache
-            }
+            AddParam             = $ADSIConversionParams
         }
 
         if ($NoGroupMembers) {
@@ -10761,7 +10745,7 @@ function Get-PermissionPrincipal {
         }
 
         Write-LogMsg @LogParams -Text "Split-Thread -Command 'ConvertFrom-IdentityReferenceResolved' -InputParameter 'IdentityReference' -InputObject `$Identity"
-        Split-Thread @ADSIConversionParams
+        Split-Thread @SplitThreadParams
 
     }
 

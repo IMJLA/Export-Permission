@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.227
+.VERSION 0.0.228
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-working on CIM caching
+add cim caching
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ working on CIM caching
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
