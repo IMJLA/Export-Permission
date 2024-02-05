@@ -36,7 +36,7 @@
     <command:syntax>
       <command:syntaxItem>
         <maml:name>Export-Permission.ps1</maml:name>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
           <maml:name>TargetPath</maml:name>
           <maml:description>
             <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
@@ -436,7 +436,7 @@
         </dev:type>
         <dev:defaultValue>-1</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
         <maml:name>TargetPath</maml:name>
         <maml:description>
           <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
@@ -591,14 +591,14 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0</dev:code>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 10 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2</dev:code>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
           <maml:para>Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)</maml:para>

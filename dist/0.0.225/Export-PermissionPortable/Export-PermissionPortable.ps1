@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.224
+.VERSION 0.0.225
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-latest module versions and param name updates
+removed start-sleep from prog bar debugging
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -171,11 +172,11 @@ latest module versions and param name updates
 
     Redirect logs and output files to C:\Logs instead of the default location in AppData
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 0
+    Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0
 
     Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -LevelsOfSubfolders 2
+    Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2
 
     Generate reports on the NTFS permissions for the folder C:\Test
 
@@ -254,7 +255,7 @@ latest module versions and param name updates
 param (
 
     # Path to the NTFS folder whose permissions to export
-    [Parameter(ValueFromPipeline)]
+    [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
 
@@ -375,7 +376,6 @@ begin {
     }
 
     Write-Progress -Status '0% (step 1 of 20)' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
-    Start-Sleep -Seconds 5
 
     #----------------[ Functions ]------------------
 
@@ -6266,7 +6266,7 @@ ForEach ($ThisScript in $ScriptFiles) {
 }
 #>
 
-# Definition of Module 'PsLogMessage' Version '1.0.31' is below
+# Definition of Module 'PsLogMessage' Version '1.0.32' is below
 
 function ConvertTo-DnsFqdn {
 
@@ -6311,7 +6311,7 @@ function Get-CurrentHostName {
 }
 function Get-CurrentWhoAmI {
 
-    # Output the results of whoami.exe after editing them to correct capitalization
+    # Output the results of whoami.exe after editing them to correct capitalization of both the hostname and the account name
 
     # whoami.exe returns lowercase but we want to honor the correct capitalization
 
@@ -6341,9 +6341,9 @@ function Get-CurrentWhoAmI {
             LogMsgCache  = $LogMsgCache
             WhoAmI       = $WhoAmI
         }
-        # Technically this exe has already been run, but it is advantageous to offer it as a parameter
-        # Also, this way the log will use the correct capitalization
-        Write-LogMsg @LogParams -Text "& whoami.exe"
+        # This exe has already been run as the default value for the parameter if it was not specified
+        # Log it now, with the correct capitalization
+        Write-LogMsg @LogParams -Text 'whoami.exe # This command was already run but is now being logged'
     }
 }
 function New-DatedSubfolder {
@@ -8933,7 +8933,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.152' is below
+# Definition of Module 'Permission' Version '0.0.155' is below
 
 function Expand-AcctPermission {
 
@@ -8979,7 +8979,6 @@ function Expand-AcctPermission {
     }
 
     Write-Progress @Progress -Status '0% (step 1 of 1)' -CurrentOperation 'Initializing' -PercentComplete 0
-    Start-Sleep -Seconds 5
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -9035,7 +9034,6 @@ function Expand-AcctPermission {
     }
 
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
 
 }
 function Expand-Folder {
@@ -9056,7 +9054,7 @@ function Expand-Folder {
 
             Set to any whole number to enumerate that many levels
         #>
-        $LevelsOfSubfolders,
+        $RecurseDepth,
 
         # Number of asynchronous threads to use
         [uint16]$ThreadCount = ((Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum),
@@ -9088,8 +9086,8 @@ function Expand-Folder {
         $Progress['Id'] = 0
     }
 
-    Write-Progress @Progress -Status "0%" -CurrentOperation "Initializing..." -PercentComplete 0
-    Start-Sleep -Seconds 5
+    $FolderCount = @($Folder).Count
+    Write-Progress @Progress -Status "0% (item 0 of $FolderCount)" -CurrentOperation "Initializing..." -PercentComplete 0
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -9105,7 +9103,6 @@ function Expand-Folder {
         WhoAmI            = $WhoAmI
     }
 
-    $FolderCount = @($Folder).Count
     if ($ThreadCount -eq 1 -or $FolderCount -eq 1) {
 
         [int]$ProgressInterval = [math]::max(($FolderCount / 100), 1)
@@ -9121,7 +9118,7 @@ function Expand-Folder {
             $i++ # increment $i after the progress to show progress conservatively rather than optimistically
 
             $Subfolders = $null
-            $Subfolders = Get-Subfolder -TargetPath $ThisFolder -FolderRecursionDepth $LevelsOfSubfolders -ErrorAction Continue @GetSubfolderParams
+            $Subfolders = Get-Subfolder -TargetPath $ThisFolder -FolderRecursionDepth $RecurseDepth -ErrorAction Continue @GetSubfolderParams
             Write-LogMsg @LogParams -Text "# Folders (including parent): $($Subfolders.Count + 1) for '$ThisFolder'"
             $Subfolders
         }
@@ -9148,9 +9145,7 @@ function Expand-Folder {
 
     }
 
-    Start-Sleep -Seconds 5
-    Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
+        Write-Progress @Progress -Completed
 
 }
 function Export-FolderPermissionHtml {
@@ -9445,7 +9440,6 @@ function Export-RawPermissionCsv {
     }
 
     Write-Progress @Progress -Status '0% (step 1 of 2)' -CurrentOperation 'Flattening the raw access control entries for CSV export' -PercentComplete 0
-    Start-Sleep -Seconds 5
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -9490,19 +9484,15 @@ function Export-RawPermissionCsv {
 
     }
 
-    Start-Sleep -Seconds 5
-    Write-Progress @ChildProgress -Completed
-    Start-Sleep -Seconds 5
-    Write-Progress @Progress -Status '50% (step 2 of 2)' -CurrentOperation "Saving '$LiteralPath'" -PercentComplete 50
-    Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text "`$Formatted | Export-Csv -NoTypeInformation -LiteralPath '$LiteralPath'"
+        Write-Progress @ChildProgress -Completed
+        Write-Progress @Progress -Status '50% (step 2 of 2)' -CurrentOperation "Saving '$LiteralPath'" -PercentComplete 50
+        Write-LogMsg @LogParams -Text "`$Formatted | Export-Csv -NoTypeInformation -LiteralPath '$LiteralPath'"
 
     $Formatted |
     Export-Csv -NoTypeInformation -LiteralPath $LiteralPath
 
     Write-Information $LiteralPath
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
 
 }
 function Export-ResolvedPermissionCsv {
@@ -9552,7 +9542,6 @@ function Export-ResolvedPermissionCsv {
 
     Write-LogMsg @LogParams -Text "`$PermissionsWithResolvedIdentityReferences | `Select-Object -Property @{ Label = 'Path'; Expression = { `$_.SourceAccessList.Path } }, * | Export-Csv -NoTypeInformation -LiteralPath '$LiteralPath'"
     Write-Progress @Progress -Status '0% (step 1 of 1)' -CurrentOperation "Export-Csv '$LiteralPath'" -PercentComplete 50
-    Start-Sleep -Seconds 5
 
     $Permission |
     Select-Object -Property @{
@@ -9562,8 +9551,7 @@ function Export-ResolvedPermissionCsv {
     Export-Csv -NoTypeInformation -LiteralPath $LiteralPath
 
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
-    Write-Information $LiteralPath
+        Write-Information $LiteralPath
 
 }
 function Format-FolderPermission {
@@ -9613,8 +9601,7 @@ function Format-FolderPermission {
         $Progress['Id'] = 0
     }
     Write-Progress @Progress -Status '0% (step 1 of 1)' -CurrentOperation 'Initializing' -PercentComplete 0
-    Start-Sleep -Seconds 5
-    $i = 0
+        $i = 0
     $IntervalCounter = 0
 
     $Count = ($UserPermission | Measure-Object).Count
@@ -9761,7 +9748,6 @@ function Format-FolderPermission {
     }
 
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
 
 }
 function Format-PermissionAccount {
@@ -9808,7 +9794,6 @@ function Format-PermissionAccount {
     }
 
     Write-Progress @Progress -Status '0% (step 1 of 1)' -CurrentOperation 'Initializing' -PercentComplete 0
-    Start-Sleep -Seconds 5
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -9863,7 +9848,6 @@ function Format-PermissionAccount {
     }
 
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
 
 }
 function Format-TimeSpan {
@@ -9938,7 +9922,6 @@ function Get-FolderAccessList {
     }
 
     Write-Progress @Progress -Status '0% (step 1 of 4)' -CurrentOperation 'Get parent access control lists' -PercentComplete 0
-    Start-Sleep -Seconds 5
 
     $GetFolderAceParams = @{
         LogMsgCache       = $LogMsgCache
@@ -9960,11 +9943,9 @@ function Get-FolderAccessList {
     }
 
     Write-Progress @ChildProgress -Completed
-    Start-Sleep -Seconds 5
-    $ChildProgress['Activity'] = 'Get-FolderAccessList (child DACLs)'
+        $ChildProgress['Activity'] = 'Get-FolderAccessList (child DACLs)'
     Write-Progress @Progress -Status '25% (step 2 of 4)' -CurrentOperation $ChildProgress['Activity'] -PercentComplete 25
-    Start-Sleep -Seconds 5
-    $SubfolderCount = $Subfolder.Count
+        $SubfolderCount = $Subfolder.Count
 
     if ($ThreadCount -eq 1) {
         Write-Progress @ChildProgress -Status '0%' -CurrentOperation 'Initializing'
@@ -9984,9 +9965,7 @@ function Get-FolderAccessList {
         }
 
         Write-Progress @ChildProgress -Completed
-        Start-Sleep -Seconds 5
-        Write-Progress @Progress -Status '50% (step 3 of 4)' -CurrentOperation 'Parent Owners' -PercentComplete 50
-        Start-Sleep -Seconds 5
+                Write-Progress @Progress -Status '50% (step 3 of 4)' -CurrentOperation 'Parent Owners' -PercentComplete 50
 
     } else {
 
@@ -10027,10 +10006,8 @@ function Get-FolderAccessList {
         Get-OwnerAce -Item $ThisFolder -OwnerCache $OwnerCache
     }
     Write-Progress @ChildProgress -Completed
-    Start-Sleep -Seconds 5
-    Write-Progress @Progress -Status '75% (step 4 of 4)' -CurrentOperation 'Child Owners' -PercentComplete 75
-    Start-Sleep -Seconds 5
-    $ChildProgress['Activity'] = 'Get-FolderAccessList (child owners)'
+        Write-Progress @Progress -Status '75% (step 4 of 4)' -CurrentOperation 'Child Owners' -PercentComplete 75
+        $ChildProgress['Activity'] = 'Get-FolderAccessList (child owners)'
 
     # Then return the owners of any items that differ from their parents' owners
     if ($ThreadCount -eq 1) {
@@ -10050,7 +10027,6 @@ function Get-FolderAccessList {
 
         }
         Write-Progress @ChildProgress -Completed
-        Start-Sleep -Seconds 5
 
     } else {
 
@@ -10073,7 +10049,6 @@ function Get-FolderAccessList {
     }
 
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
 
 }
 function Get-FolderBlock {
@@ -10288,9 +10263,9 @@ function Get-FolderPermissionTableHeader {
     }
 }
 function Get-FolderTableHeader {
-    param ($LevelsOfSubfolders)
+    param ($RecurseDepth)
 
-    switch ($LevelsOfSubfolders ) {
+    switch ($RecurseDepth ) {
         0 {
             'Includes the target folder only (option to report on subfolders was declined)'
         }
@@ -10298,7 +10273,7 @@ function Get-FolderTableHeader {
             'Includes the target folder and all subfolders with unique permissions'
         }
         default {
-            "Includes the target folder and $LevelsOfSubfolders levels of subfolders with unique permissions"
+            "Includes the target folder and $RecurseDepth levels of subfolders with unique permissions"
         }
     }
 }
@@ -10365,7 +10340,7 @@ Report instance: $ReportInstanceId
 "@
     New-BootstrapAlert -Class Light -Text $Text
 }
-function Get-PermissionSecurityPrincipal {
+function Get-PermissionPrincipal {
 
     param (
 
@@ -10403,7 +10378,7 @@ function Get-PermissionSecurityPrincipal {
         [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
 
         # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
-        [hashtable]$IdentityReferenceCache = ([hashtable]::Synchronized(@{})),
+        [hashtable]$IdentityCache = ([hashtable]::Synchronized(@{})),
 
         <#
         Hostname of the computer running this function.
@@ -10450,7 +10425,6 @@ function Get-PermissionSecurityPrincipal {
     }
 
     Write-Progress @Progress -Status '0% (step 1 of 2)' -CurrentOperation 'Flattening the raw access control entries for CSV export' -PercentComplete 0
-    Start-Sleep -Seconds 5
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -10463,7 +10437,7 @@ function Get-PermissionSecurityPrincipal {
 
         $ADSIConversionParams = @{
             DirectoryEntryCache    = $DirectoryEntryCache
-            IdentityReferenceCache = $IdentityReferenceCache
+            IdentityReferenceCache = $IdentityCache
             DomainsBySID           = $DomainsBySID
             DomainsByNetbios       = $DomainsByNetbios
             DomainsByFqdn          = $DomainsByFqdn
@@ -10514,7 +10488,7 @@ function Get-PermissionSecurityPrincipal {
             Threads              = $ThreadCount
             AddParam             = @{
                 DirectoryEntryCache    = $DirectoryEntryCache
-                IdentityReferenceCache = $IdentityReferenceCache
+                IdentityReferenceCache = $IdentityCache
                 DomainsBySID           = $DomainsBySID
                 DomainsByNetbios       = $DomainsByNetbios
                 DomainsByFqdn          = $DomainsByFqdn
@@ -10536,7 +10510,6 @@ function Get-PermissionSecurityPrincipal {
     }
 
     Write-Progress @Progress -Completed
-    Start-Sleep -Seconds 5
 
 }
 function Get-PrtgXmlSensorOutput {
@@ -10599,9 +10572,9 @@ function Get-PrtgXmlSensorOutput {
 
 }
 function Get-ReportDescription {
-    param ($LevelsOfSubfolders)
+    param ($RecurseDepth)
 
-    switch ($LevelsOfSubfolders ) {
+    switch ($RecurseDepth ) {
         0 {
             'Does not include permissions on subfolders (option was declined)'
         }
@@ -10609,7 +10582,7 @@ function Get-ReportDescription {
             'Includes all subfolders with unique permissions (including ∞ levels of subfolders)'
         }
         default {
-            "Includes all subfolders with unique permissions (down to $LevelsOfSubfolders levels of subfolders)"
+            "Includes all subfolders with unique permissions (down to $RecurseDepth levels of subfolders)"
         }
     }
 }
@@ -10661,7 +10634,9 @@ function Get-UniqueServerFqdn {
 
     Write-Progress @Progress -Status '0%' -CurrentOperation 'Initializing' -PercentComplete 0
 
-    $UniqueValues = @{}
+    $UniqueValues = @{
+        $ThisFqdn = $null
+    }
 
     ForEach ($Value in $Known) {
         $UniqueValues[$Value] = $null
@@ -10851,6 +10826,38 @@ function Initialize-Cache {
     }
 
     Write-Progress @Progress -Completed
+
+}
+function Invoke-PermissionCommand {
+
+    param (
+
+        [string]$Command
+
+    )
+
+    $Steps = [System.Collections.Specialized.OrderedDictionary]::New()
+    $Steps.Add(
+        'Get the NTAccount caption of the user running the script, with the correct capitalization',
+        { HOSTNAME.EXE }
+    )
+    $Steps.Add(
+        'Get the hostname of the computer running the script',
+        { Get-CurrentWhoAmI -LogMsgCache $LogMsgCache -ThisHostName $ThisHostname }
+    )
+
+    $LogParams = @{
+        LogMsgCache  = $LogMsgCache
+        ThisHostname = $ThisHostname
+        #Type         = $DebugOutputStream
+        WhoAmI       = $WhoAmI
+    }
+
+    $StepCount = $Steps.Count
+    Write-LogMsg @LogParams -Type Verbose -Text $Command
+    $ScriptBlock = $Steps[$Command]
+    Write-LogMsg @LogParams -Type Debug -Text $ScriptBlock
+    Invoke-Command -ScriptBlock $ScriptBlock
 
 }
 function Resolve-PermissionIdentity {
@@ -11197,7 +11204,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 
     $CsvFilePath1 = "$OutputDir\1-AccessControlList.csv"
     $CsvFilePath2 = "$OutputDir\2-AccessControlListWithResolvedIdentityReferences.csv"
-    $CsvFilePath3 = "$OutputDir\3-AccessControlListWithResolvedAndExpandedIdentityReferences.csv"
+    $CsvFilePath3 = "$OutputDir\3-AccessControlListWithADSISecurityPrincipals.csv"
     $XmlFile = "$OutputDir\4-PrtgResult.xml"
     $ReportFile = "$OutputDir\PermissionsReport.htm"
     $LogFile = "$OutputDir\Export-Permission.log"
@@ -11207,8 +11214,7 @@ ForEach ($ThisFile in $CSharpFiles) {
     $DomainsBySID = [hashtable]::Synchronized(@{})
     $DomainsByNetbios = [hashtable]::Synchronized(@{})
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
-    $IdentityReferenceCache = [hashtable]::Synchronized(@{})
-    $LogMsgCache = [hashtable]::Synchronized(@{})
+    $LogCache = [hashtable]::Synchronized(@{})
     $Permissions = $null
     $SecurityPrincipals = $null
     $FormattedSecurityPrincipals = $null
@@ -11220,12 +11226,22 @@ ForEach ($ThisFile in $CSharpFiles) {
     $ThisHostname = HOSTNAME.EXE
 
     # Get the NTAccount caption of the user running the script, with the correct capitalization
-    $WhoAmI = Get-CurrentWhoAmI -LogMsgCache $LogMsgCache -ThisHostName $ThisHostname
+    $WhoAmI = Get-CurrentWhoAmI -LogMsgCache $LogCache -ThisHostName $ThisHostname
+
+    # Create a splat of the parent progress bar ID to pass to various functions for script readability
+    $ProgressParent = @{
+        ProgressParentId = 0
+    }
+
+    # Create a splat of the ThreadCount parameter to pass to various functions for script readability
+    $Threads = @{
+        ThreadCount = $ThreadCount
+    }
 
     # Create a splat of log-related parameters to pass to various functions for script readability
     $LoggingParams = @{
         ThisHostname = $ThisHostname
-        LogMsgCache  = $LogMsgCache
+        LogMsgCache  = $LogCache
         WhoAmI       = $WhoAmI
     }
 
@@ -11233,13 +11249,13 @@ ForEach ($ThisFile in $CSharpFiles) {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = 'Debug'
-        LogMsgCache  = $LogMsgCache
+        LogMsgCache  = $LogCache
         WhoAmI       = $WhoAmI
     }
 
     # These events already happened but we will log them now that we have the correct capitalization of the user
-    Write-LogMsg @LogParams -Text "& HOSTNAME.EXE"
-    Write-LogMsg @LogParams -Text "Get-CurrentWhoAmI"
+    Write-LogMsg @LogParams -Text 'HOSTNAME.EXE # This command was already run but is now being logged'
+    Write-LogMsg @LogParams -Text 'Get-CurrentWhoAmI # This command was already run but is now being logged'
 
     # Get the FQDN of the computer running the script
     Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn -ComputerName '$ThisHostName'"
@@ -11257,11 +11273,11 @@ ForEach ($ThisFile in $CSharpFiles) {
         ThreadCount            = $ThreadCount
     }
 
-    Write-LogMsg @LogParams -Text "Get-ReportDescription -LevelsOfSubfolders $RecurseDepth"
-    $ReportDescription = Get-ReportDescription -LevelsOfSubfolders $RecurseDepth
+    Write-LogMsg @LogParams -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
+    $ReportDescription = Get-ReportDescription -RecurseDepth $RecurseDepth
 
-    Write-LogMsg @LogParams -Text "Get-FolderTableHeader -LevelsOfSubfolders $RecurseDepth"
-    $FolderTableHeader = Get-FolderTableHeader -LevelsOfSubfolders $RecurseDepth
+    Write-LogMsg @LogParams -Text "Get-FolderTableHeader -RecurseDepth $RecurseDepth"
+    $FolderTableHeader = Get-FolderTableHeader -RecurseDepth $RecurseDepth
 
     Write-LogMsg @LogParams -Text "Get-TrustedDomain"
     $TrustedDomains = Get-TrustedDomain @LoggingParams
@@ -11273,7 +11289,6 @@ process {
     #----------------[ Main Execution ]---------------
 
     Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Resolve-PermissionTarget -TargetPath @('$($TargetPath -join "',")')))"
     [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath @LoggingParams
     $UNCPaths.AddRange($ResolvedFolderTargets)
@@ -11283,96 +11298,80 @@ process {
 end {
 
     Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
-    Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($UNCPaths -join "',")') -LevelsOfSubfolders $RecurseDepth"
-    $Subfolders = Expand-Folder -Folder $UNCPaths -LevelsOfSubfolders $RecurseDepth -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
+    Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($UNCPaths -join "',")') -RecurseDepth $RecurseDepth"
+    $Subfolders = Expand-Folder -Folder $UNCPaths -RecurseDepth $RecurseDepth @Threads @ProgressParent @LoggingParams
 
     Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get raw permissions on the expanded paths' -PercentComplete 15 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -Folder @('$($UNCPaths -join "','")') -Subfolder @('$($Subfolders -join "','")')"
-    $Permissions = Get-FolderAccessList -Folder $UNCPaths -Subfolder $Subfolders -ThreadCount $ThreadCount -ProgressParentId 0 @LoggingParams
+    $Permissions = Get-FolderAccessList -Folder $UNCPaths -Subfolder $Subfolders @Threads @ProgressParent @LoggingParams
 
     Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
-    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 -ProgressParentId 0 @LoggingParams
+    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @ProgressParent @LoggingParams
 
     Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Get FQDNs of the current computer, trusted domains, and the servers in the UNC paths' -PercentComplete 25 @Progress
-    Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$(@($ThisFqdn + $TrustedDomains.DomainFqdn) -join "',")') -FilePath @('$($Permissions.SourceAccessList.Path -join "',")') -ThisFqdn '$ThisFqdn'"
     $FqdnParams = @{
-        Known            = @($ThisFqdn + $TrustedDomains.DomainFqdn)
-        FilePath         = $Permissions.SourceAccessList.Path
-        ThisFqdn         = $ThisFqdn
-        ProgressParentId = 0
+        Known    = $TrustedDomains.DomainFqdn
+        FilePath = $Permissions.SourceAccessList.Path
+        ThisFqdn = $ThisFqdn
     }
-    [string[]]$ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams
+    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$($FqdnParams['Known'] -join "',")') -FilePath @('$($FqdnParams['FilePath'] -join "',")') -ThisFqdn '$ThisFqdn'"
+    $ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams @ProgressParent
 
     Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
-    Initialize-Cache -Fqdn $ServerFqdns -ProgressParentId 0 @LoggingParams @CacheParams
+    Initialize-Cache -Fqdn $ServerFqdns @ProgressParent @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
     Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions -ProgressParentId 0
+    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity @LoggingParams @CacheParams -Permission $Permissions @ProgressParent
 
     Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
-    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 -ProgressParentId 0
+    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 @ProgressParent
 
     Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group permissions by their resolved identity references' -PercentComplete 45 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$Identities = `$PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved"
     $Identities = $PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved
 
     Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
-    Start-Sleep -Seconds 5
-    $SecurityPrincipals = Get-PermissionSecurityPrincipal -Identity $Identities -NoGroupMembers:$NoMembers -IdentityReferenceCache $IdentityReferenceCache @LoggingParams @CacheParams -ProgressParentId 0
+    Write-LogMsg @LogParams -Text "`$SecurityPrincipals = Get-PermissionPrincipal -Identity `$Identities -NoGroupMembers:`$$NoMembers"
+    $SecurityPrincipals = Get-PermissionPrincipal -Identity $Identities -NoGroupMembers:$NoMembers @LoggingParams @CacheParams @ProgressParent
 
     Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the ADSI security principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
-    Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals -ThreadCount $ThreadCount"
-    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals -ThreadCount $ThreadCount @LoggingParams -ProgressParentId 0
+    Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals @Threads"
+    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals @Threads @LoggingParams @ProgressParent
 
     Write-Progress -Status '60% (step 13 of 20)' -CurrentOperation 'Expand the security principals back into their permissions (one per ACE per principal)' -PercentComplete 60 @Progress
-    Start-Sleep -Seconds 5
-    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals -ThreadCount $ThreadCount"
-    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals -ThreadCount $ThreadCount @LoggingParams -ProgressParentId 0
+    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals @Threads"
+    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals @Threads @LoggingParams @ProgressParent
 
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
     Write-Progress -Status '65% (step 14 of 20)' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
     $ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
     Write-Information $CsvFilePath3
 
     Write-Progress -Status '70% (step 15 of 20)' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "`$Accounts = `$ExpandedAccountPermissions | Group-Object -Property User"
     $Accounts = $ExpandedAccountPermissions | Group-Object -Property user
 
     Write-Progress -Status '75% (step 16 of 20)' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
-    Start-Sleep -Seconds 5
     $IgnoreDomainString = "@('$($IgnoreDomain -join "',")')"
     Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain $IgnoreDomainString"
     $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
 
     Write-Progress -Status '80% (step 17 of 20)' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions -ProgressParentId 0 @LogParams |
+    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams |
     Group-Object -Property Folder |
     Sort-Object -Property Name
 
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
     Write-Progress -Status '85% (step 18 of 20)' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
-    Start-Sleep -Seconds 5
     $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ;
         IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ;
         NoGroupMembers = $NoMembers ; ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ;
@@ -11389,15 +11388,13 @@ end {
         GroupNameRule     = $GroupNameRule
         TodaysHostname    = $ThisHostname
         WhoAmI            = $WhoAmI
-        LogMsgCache       = $LogMsgCache
+        LogMsgCache       = $LogCache
     }
     Write-Progress -Status '90% (step 19 of 20)' -CurrentOperation 'Identify common issues with permissions' -PercentComplete 90 @Progress
-    Start-Sleep -Seconds 5
     Write-LogMsg @LogParams -Text 'New-NtfsAclIssueReport @NtfsIssueParams'
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
     Write-Progress -Status '95% (step 20 of 20)' -CurrentOperation 'Output results' -PercentComplete 95 @Progress
-    Start-Sleep -Seconds 5
 
     # Format the issues as a custom XML sensor for Paessler PRTG Network Monitor
     Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
@@ -11429,8 +11426,7 @@ end {
     Write-Information $LogFile
 
     # Save the log file to disk
-    $LogMsgCache.Values |
-    Sort-Object -Property Timestamp |
+    $LogCache.Values | Sort-Object -Property Timestamp |
     Export-Csv -Delimiter "`t" -NoTypeInformation -LiteralPath $LogFile
 
     Stop-Transcript  *>$null
