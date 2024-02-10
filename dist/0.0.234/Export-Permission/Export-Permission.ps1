@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.233
+.VERSION 0.0.234
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-more cim caching
+added output formatting
 
 .PRIVATEDATA
 
@@ -39,10 +39,6 @@ more cim caching
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
-
 
 
 <#
@@ -360,7 +356,7 @@ param (
     <#
     Type of output returned to the output stream
     #>
-    [ValidateSet('PassThru', 'PrtgXml', 'None')]
+    [ValidateSet('PassThru', 'GroupByAccount', 'GroupByFolder', 'PrtgXml', 'Silent')]
     [string]$OutputMode = 'PassThru'
 
 )
@@ -507,7 +503,7 @@ end {
     Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Get FQDNs of the current computer, trusted domains, and the servers in the UNC paths' -PercentComplete 25 @Progress
     $FqdnParams = @{
         Known    = $TrustedDomains.DomainFqdn
-        FilePath = $Permissions.SourceAccessList.Path
+        FilePath = $UNCPaths
         ThisFqdn = $ThisFqdn
     }
     Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$($FqdnParams['Known'] -join "',")') -FilePath @('$($FqdnParams['FilePath'] -join "',")') -ThisFqdn '$ThisFqdn'"
@@ -560,25 +556,28 @@ end {
     Write-Progress -Status '80% (step 17 of 20)' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
     Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
 
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams |
-    Group-Object -Property Folder |
+    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams
+    #$GroupedPermissions = $FolderPermissions |
+    #Group-Object -Property Folder |
+    #Sort-Object -Property Name
+    $GroupedPermissions = Group-Permission -InputObject $FolderPermissions -Property Folder |
     Sort-Object -Property Name
 
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
     Write-Progress -Status '85% (step 18 of 20)' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
-    $ExportFolderPermissionHtml = @{ FolderPermissions = $FolderPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ;
-        IgnoreDomain = $IgnoreDomain ; TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ;
-        NoGroupMembers = $NoMembers ; ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ;
-        LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ;
-        StopWatch = $StopWatch ; Subfolders = $Subfolders ; ResolvedFolderTargets = $UNCPaths ; Title = $Title; NoJavaScript = $NoJavaScript
+    $ExportFolderPermissionHtml = @{ FolderPermissions = $GroupedPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; IgnoreDomain = $IgnoreDomain ;
+        TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoMembers ;
+        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; $ExpandedAccountPermissions = $ExpandedAccountPermissions;
+        LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ; StopWatch = $StopWatch ;
+        Subfolders = $Subfolders ; ResolvedFolderTargets = $UNCPaths ; Title = $Title; NoJavaScript = $NoJavaScript; $FormattedSecurityPrincipals = $FormattedSecurityPrincipals
     }
     Write-LogMsg @LogParams -Text 'Export-FolderPermissionHtml @ExportFolderPermissionHtml'
     Export-FolderPermissionHtml @ExportFolderPermissionHtml
 
     # ToDo: Users with ownership
     $NtfsIssueParams = @{
-        FolderPermissions = $FolderPermissions
+        FolderPermissions = $GroupedPermissions
         UserPermissions   = $Accounts
         GroupNameRule     = $GroupNameRule
         TodaysHostname    = $ThisHostname
@@ -630,11 +629,54 @@ end {
     Stop-Transcript  *>$null
 
     Write-Progress @Progress -Completed
+    switch ($OutputMode) {
+        'PassThru' {
+            $TypeData = @{
+                TypeName                  = 'Permission.PassThruPermission'
+                DefaultDisplayPropertySet = 'Folder', 'Account', 'Access'
+                ErrorAction               = 'SilentlyContinue'
+            }
+            Update-TypeData @TypeData
+            return $FolderPermissions
+        }
+        'GroupByFolder' {
+            Update-TypeData -MemberName Folder -Value { $This.Name } -TypeName 'Permission.FolderPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue
+            Update-TypeData -MemberName Access -TypeName 'Permission.FolderPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue -Value {
+                $Access = ForEach ($Permission in $This.Group) {
+                    [pscustomobject]@{
+                        Account = $Permission.Account
+                        Access  = $Permission.Access
+                    }
+                }
+                $Access
+            }
+            Update-TypeData -DefaultDisplayPropertySet ('Folder', 'Access') -TypeName 'Permission.FolderPermission' -ErrorAction SilentlyContinue
+            return $GroupedPermissions
+        }
+        'PrtgXml' {
+            # Output the XML so the script can be directly used as a PRTG sensor
+            # Caution: This use may be a problem for a PRTG probe because of how long the script can run on large folders/domains
+            # Recommendation: Specify the appropriate parameters to run this as a PRTG push sensor instead
+            return $XMLOutput
+        }
+        'GroupByAccount' {
+            Update-TypeData -MemberName Account -Value { $This.Name } -TypeName 'Permission.AccountPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue
+            Update-TypeData -MemberName Access -TypeName 'Permission.AccountPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue -Value {
+                $Access = ForEach ($Permission in $This.Group) {
+                    [pscustomobject]@{
+                        Folder = $Permission.Folder
+                        Access = $Permission.Access
+                    }
+                }
+                $Access
+            }
+            Update-TypeData -DefaultDisplayPropertySet ('Account', 'Access') -TypeName 'Permission.AccountPermission' -ErrorAction SilentlyContinue
 
-    # Output the XML so the script can be directly used as a PRTG sensor
-    # Caution: This use may be a problem for a PRTG probe because of how long the script can run on large folders/domains
-    # Recommendation: Specify the appropriate parameters to run this as a PRTG push sensor instead
-
-    return $XMLOutput
+            Group-Permission -InputObject $FolderPermissions -Property Account |
+            Sort-Object -Property Name
+            return
+        }
+        Default { return }
+    }
 
 }
