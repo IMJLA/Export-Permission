@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.237
+.VERSION 0.0.238
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix fake directory entry noteproperties getting dropped with get-member
+bugfix access rights and scope in report
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -396,7 +397,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.99' is below
+# Definition of Module 'Adsi' Version '4.0.100' is below
 
 #[NoRunspaceAffinity()] # Make this class thread-safe (requires PS 7+)
 class FakeDirectoryEntry {
@@ -730,42 +731,38 @@ function Add-SidInfo {
     }
 }
 function ConvertFrom-DirectoryEntry {
+
     <#
     .SYNOPSIS
     Convert a DirectoryEntry to a PSCustomObject
     .DESCRIPTION
     Recursively convert every property into a string, or a PSCustomObject (whose properties are all strings, or more PSCustomObjects)
     This obfuscates the troublesome PropertyCollection and PropertyValueCollection and Hashtable aspects of working with ADSI
-    .NOTES
-    # TODO: There is a faster way than Select-Object, just need to dig into the default formatting of DirectoryEntry to see how to get those properties
     #>
 
     param (
+
         [Parameter(
             Position = 0
         )]
         [System.DirectoryServices.DirectoryEntry[]]$DirectoryEntry
-    )
-    ForEach ($ThisDirectoryEntry in $DirectoryEntry) {
-        #$ObjectWithProperties = $ThisDirectoryEntry |
-        #Select-Object -Property *
 
-        #$ObjectNoteProperties = $ObjectWithProperties |
-        #Get-Member -MemberType Property, CodeProperty, ScriptProperty, NoteProperty
-        #
-        #$ThisObject = @{}
-        #ForEach ($ThisObjProperty in $ObjectNoteProperties) {
-        #    $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
-        #}
-        #
-        #[PSCustomObject]$ThisObject
+    )
+
+    ForEach ($ThisDirectoryEntry in $DirectoryEntry) {
 
         $OutputObject = @{}
+
         ForEach ($Prop in ($ThisDirectoryEntry | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+
             $null = ConvertTo-SimpleProperty -InputObject $ThisDirectoryEntry -Property $Prop -PropertyDictionary $OutputObject
+
         }
+
         [PSCustomObject]$OutputObject
+
     }
+
 }
 function ConvertFrom-IdentityReferenceResolved {
     <#
@@ -8698,7 +8695,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.235' is below
+# Definition of Module 'Permission' Version '0.0.240' is below
 
 function Add-CacheItem {
 
@@ -8764,208 +8761,62 @@ function ConvertTo-ItemBlock {
     }
 
 }
-function Expand-AcctPermission {
+function Expand-AccountPermissionReference {
 
     param (
 
-        # Permission objects from Get-FolderAccessList whose IdentityReference to resolve
-        [Parameter(ValueFromPipeline)]
-        [object[]]$SecurityPrincipal,
-
-        # Output stream to send the log messages to
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug',
-
-        # Maximum number of concurrent threads to allow
-        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
-
-        <#
-        Hostname of the computer running this function.
-
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
-        [string]$ThisHostName = (HOSTNAME.EXE),
-
-        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$WhoAmI = (whoami.EXE),
-
-        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages,
-
-        # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
+        $Reference,
+        $PrincipalsByResolvedID,
+        $ACEsByGUID
 
     )
 
-    $Progress = @{
-        Activity = 'Expand-AcctPermission'
-    }
-    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
-        $Progress['ParentId'] = $ProgressParentId
-        $Progress['Id'] = $ProgressParentId + 1
-    } else {
-        $Progress['Id'] = 0
-    }
+    ForEach ($Account in $Reference) {
 
-    $Count = $SecurityPrincipal.Count
-    Write-Progress @Progress -Status "0% (account 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
+        $Access = ForEach ($PermissionRef in $Account.Access) {
 
-    $LogParams = @{
-        LogMsgCache  = $LogMsgCache
-        ThisHostname = $ThisHostname
-        Type         = $DebugOutputStream
-        WhoAmI       = $WhoAmI
-    }
-
-    if ($ThreadCount -eq 1) {
-
-        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
-        $IntervalCounter = 0
-        $i = 0
-
-        ForEach ($ThisPrinc in $SecurityPrincipal) {
-
-            $IntervalCounter++
-
-            if ($IntervalCounter -eq $ProgressInterval) {
-
-                [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete% (account $($i+1) of $Count)" -CurrentOperation "Expand-AccountPermission '$($ThisPrinc.Name)'" -PercentComplete $PercentComplete
-                $IntervalCounter = 0
-
+            [PSCustomObject]@{
+                Path   = $PermissionRef.Path
+                Access = $ACEsByGUID[$PermissionRef.AceGUIDs]
             }
 
-            $i++
-            Write-LogMsg @LogParams -Text "Expand-AccountPermission -AccountPermission $($ThisPrinc.Name)"
-            Expand-AccountPermission -AccountPermission $ThisPrinc
-
         }
 
-    } else {
-
-        $ExpandAccountPermissionParams = @{
-            Command              = 'Expand-AccountPermission'
-            InputObject          = $SecurityPrincipal
-            InputParameter       = 'AccountPermission'
-            TodaysHostname       = $ThisHostname
-            ObjectStringProperty = 'Name'
-            Timeout              = 1200
-            Threads              = $ThreadCount
+        [PSCustomObject]@{
+            Account = $PrincipalsByResolvedID[$Account.Account]
+            Access  = $Access
         }
-
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Expand-AccountPermission' -InputParameter 'AccountPermission' -InputObject `$SecurityPrincipal -ObjectStringProperty 'Name'"
-        Split-Thread @ExpandAccountPermissionParams
 
     }
-
-    Write-Progress @Progress -Completed
 
 }
-function Expand-PermissionPrincipal {
-
-    # Expand ADSI security principals into their group members
+function Expand-ItemPermissionReference {
 
     param (
 
-        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
-        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
-
-        # Output stream to send the log messages to
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug',
-
-        # Maximum number of concurrent threads to allow
-        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
-
-        <#
-        Hostname of the computer running this function.
-
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
-        [string]$ThisHostName = (HOSTNAME.EXE),
-
-        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$WhoAmI = (whoami.EXE),
-
-        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages,
-
-        # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
+        $Reference,
+        $PrincipalsByResolvedID,
+        $ACEsByGUID
 
     )
 
-    $Progress = @{
-        Activity = 'Expand-PermissionPrincipal'
-    }
-    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
-        $Progress['ParentId'] = $ProgressParentId
-        $Progress['Id'] = $ProgressParentId + 1
-    } else {
-        $Progress['Id'] = 0
-    }
+    ForEach ($Item in $Reference) {
 
-    Write-Progress @Progress -Status "0% (principal 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
+        $Access = ForEach ($PermissionRef in $Item.Access) {
 
-    $LogParams = @{
-        LogMsgCache  = $LogMsgCache
-        ThisHostname = $ThisHostname
-        Type         = $DebugOutputStream
-        WhoAmI       = $WhoAmI
-    }
-
-    $ResolvedIDs = $PrincipalsByResolvedID.Keys
-    $Count = $ResolvedIDs.Count
-
-    $FormatSecurityPrincipalParams = @{
-        PrincipalsByResolvedID = $PrincipalsByResolvedID
-    }
-
-    if ($ThreadCount -eq 1) {
-
-        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
-        $IntervalCounter = 0
-        $i = 0
-
-        ForEach ($ThisID in $ResolvedIDs) {
-
-            $IntervalCounter++
-
-            if ($IntervalCounter -eq $ProgressInterval) {
-
-                [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete% (principal $($i + 1) of $Count) Format-SecurityPrincipal" -CurrentOperation $ThisID -PercentComplete $PercentComplete
-                $IntervalCounter = 0
-
+            [PSCustomObject]@{
+                Account = $PrincipalsByResolvedID[$PermissionRef.Account]
+                Access  = $ACEsByGUID[$PermissionRef.AceGUIDs]
             }
 
-            $i++
-            Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -ResolvedID '$ThisID'"
-            Format-SecurityPrincipal -ResolvedID $ThisID @FormatSecurityPrincipalParams
-
         }
 
-    } else {
-
-        $SplitThreadParams = @{
-            Command              = 'Format-SecurityPrincipal'
-            InputObject          = $ResolvedIDs
-            InputParameter       = 'ResolvedID'
-            Timeout              = 1200
-            ObjectStringProperty = 'Name'
-            TodaysHostname       = $ThisHostname
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-            AddParam             = $FormatSecurityPrincipalParams
+        [PSCustomObject]@{
+            Item   = $Item.Item
+            Access = $Access
         }
-
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipal -ObjectStringProperty 'Name'"
-        Split-Thread @SplitThreadParams
 
     }
-
-    Write-Progress @Progress -Completed
 
 }
 function Expand-PermissionTarget {
@@ -9491,6 +9342,32 @@ function Export-ResolvedPermissionCsv {
 
     Write-Progress @Progress -Completed
         Write-Information $LiteralPath
+
+}
+function Find-ResolvedIDsWithAccess {
+
+    param (
+        $ItemPath,
+        $AceGUIDsByPath,
+        $ACEsByGUID,
+        $PrincipalsByResolvedID
+    )
+
+    $IDsWithAccess = @{}
+
+    ForEach ($Guid in $AceGUIDsByPath[$ItemPath]) {
+
+        $Ace = $ACEsByGUID[$Guid]
+        Add-CacheItem -Cache $IDsWithAccess -Key $Ace.IdentityReferenceResolved -Value $Guid -Type ([guid])
+
+        ForEach ($Member in $PrincipalsByResolvedID[$Ace.IdentityReferenceResolved].Members) {
+
+            Add-CacheItem -Cache $IDsWithAccess -Key $Member -Value $Guid -Type ([guid])
+
+        }
+    }
+
+    $IDsWithAccess
 
 }
 function Format-FolderPermission {
@@ -10710,38 +10587,70 @@ function Get-UniqueServerFqdn {
     return $UniqueValues.Keys
 
 }
-function Group-Permission {
+function Group-AccountPermissionReference {
 
     param (
-
-        [object[]]$InputObject,
-
-        [string]$Property
-
+        $PrincipalsByResolvedID,
+        $AceGUIDsByResolvedID,
+        $ACEsByGUID
     )
 
-    $Cache = @{}
+    ForEach ($ID in $PrincipalsByResolvedID.Keys) {
 
-    ForEach ($Permission in $InputObject) {
+        $ACEGuidsForThisID = $AceGUIDsByResolvedID[$ID]
+        $ItemPaths = @{}
 
-        $Key = $Permission.$Property
-        $CacheResult = $Cache[$Key]
-        if (-not $CacheResult) {
-            $CacheResult = [System.Collections.Generic.List[object]]::new()
+        ForEach ($Guid in $ACEGuidsForThisID) {
+
+            $Ace = $ACEsByGUID[$Guid]
+            Add-CacheItem -Cache $ItemPaths -Key $Ace.Path -Value $Guid -Type ([guid])
+
         }
-        $CacheResult.Add($Permission)
-        $Cache[$Key] = $CacheResult
+
+        $ItemPermissionsForThisAccount = ForEach ($Item in $ItemPaths.Keys) {
+
+            [PSCustomObject]@{
+                Path     = $Item
+                AceGUIDs = $ItemPaths[$Item]
+            }
+
+        }
+
+        [PSCustomObject]@{
+            Account = $ID
+            Access  = $ItemPermissionsForThisAccount
+        }
 
     }
 
-    ForEach ($Key in $Cache.Keys) {
+}
+function Group-ItemPermissionReference {
 
-        $CacheResult = $Cache[$Key]
-        [pscustomobject]@{
-            PSTypeName = "Permission.$Property`Permission"
-            Group      = $CacheResult
-            Name       = $Key
-            Count      = $CacheResult.Count
+    param (
+        $SortedPath,
+        $AceGUIDsByPath,
+        $ACEsByGUID,
+        $ACLsByPath,
+        $PrincipalsByResolvedID
+    )
+
+    ForEach ($ItemPath in $SortedPath) {
+
+        $Acl = $ACLsByPath[$ItemPath]
+        $IDsWithAccess = Find-ResolvedIDsWithAccess -ItemPath $ItemPath -AceGUIDsByPath $AceGUIDsByPath -ACEsByGUID $ACEsByGUID -PrincipalsByResolvedID $PrincipalsByResolvedID
+
+        $AccountPermissionsForThisItem = ForEach ($ID in ($IDsWithAccess.Keys | Sort-Object)) {
+
+            [PSCustomObject]@{
+                Account  = $ID
+                AceGUIDs = $IDsWithAccess[$ID]
+            }
+
+        }
+
+        [PSCustomObject]@{
+            Item   = $Acl
+            Access = $AccountPermissionsForThisItem
         }
 
     }
@@ -11814,7 +11723,7 @@ function Select-FolderPermissionTableProperty {
 
         [pscustomobject]@{
             'Account'              = $Object.Account.ResolvedAccountName
-            'Access'               = ($Object.Access.FileSystemRights | Sort-Object -Unique) -join ' ; '
+            'Access'               = ($Object.Access.Access | Sort-Object -Unique) -join ' ; '
             'Due to Membership In' = $GroupString
             'Source of Access'     = ($Object.Access.SourceOfAccess | Sort-Object -Unique) -join ' ; '
             'Name'                 = $Object.Account.Name
@@ -12072,23 +11981,11 @@ end {
     Write-LogMsg @LogParams -Text "Get-PermissionPrincipal -ACEsByResolvedID `$ACEsByResolvedID -PrincipalsByResolvedID `$PrincipalsByResolvedID -NoGroupMembers:`$$NoMembers"
     Get-PermissionPrincipal -ACEsByResolvedID $AceGUIDsByResolvedID -PrincipalsByResolvedID $PrincipalsByResolvedID -NoGroupMembers:$NoMembers -CurrentDomain $CurrentDomain -CimCache $CimCache @LoggingParams @CacheParams @ProgressParent
 
-    ###Write-Progress -Status '55% (step 12 of 20) Format-PermissionAccount' -CurrentOperation 'Expand the ADSI security principals into their group members' -PercentComplete 55 @Progress
-    ###Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Expand-PermissionPrincipal -SecurityPrincipal `$SecurityPrincipals @Threads"
-    ###$FormattedSecurityPrincipals = Expand-PermissionPrincipal -PrincipalsByResolvedID $PrincipalsByResolvedID @Threads @LoggingParams @ProgressParent
-
-    ###Write-Progress -Status '60% (step 13 of 20) Expand-AcctPermission' -CurrentOperation 'Expand the security principals back into their permissions (one per ACE per principal)' -PercentComplete 60 @Progress
-    ###Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals @Threads"
-    ###$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals @Threads @LoggingParams @ProgressParent
-
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
     #Write-Progress -Status '65% (step 14 of 20) Export-Csv' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
     #Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
     #$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
     #Write-Information $CsvFilePath3
-
-    ###Write-Progress -Status '70% (step 15 of 20) Group-Object' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
-    ###Write-LogMsg @LogParams -Text "`$Accounts = `$ExpandedAccountPermissions | Group-Object -Property User"
-    ###$Accounts = $ExpandedAccountPermissions | Group-Object -Property user
 
     ####Write-Progress -Status '75% (step 16 of 20) Select-UniqueAccountPermission' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
     ####Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
@@ -12106,136 +12003,40 @@ end {
         }
     }
 
+    $SortedPaths = $AceGUIDsByPath.Keys | Sort-Object
+    $ShortestPath = $SortedPaths[0]
+
     ForEach ($Split in $HowToSplit) {
+
         switch ($Split) {
+
             'account' {
                 # Group reference GUIDs by the name of their associated account.
-                $AccountPermissionReferences = ForEach ($ID in $PrincipalsByResolvedID.Keys) {
-                    #Format-SecurityPrincipal -ResolvedID $ID -PrincipalsByResolvedID $PrincipalsByResolvedID -AceGUIDsByResolvedID $AceGUIDsByResolvedID -ACEsByGUID $ACEsByGUID
-                    $ACEGuidsForThisID = $AceGUIDsByResolvedID[$ID]
-
-                    $ItemPaths = @{}
-                    ForEach ($Guid in $ACEGuidsForThisID) {
-
-                        $Ace = $ACEsByGUID[$Guid]
-
-                        $CacheResult = $ItemPaths[$Ace.Path]
-                        if (-not $CacheResult) {
-                            $CacheResult = [System.Collections.Generic.List[guid]]::new()
-                        }
-                        $null = $CacheResult.Add($Guid)
-                        $ItemPaths[$Ace.Path] = $CacheResult
-
-                    }
-
-                    $ItemPermissionsForThisAccount = ForEach ($Item in $ItemPaths.Keys) {
-
-                        [PSCustomObject]@{
-                            Path     = $Item
-                            AceGUIDs = $ItemPaths[$Item]
-                        }
-
-                    }
-
-                    [PSCustomObject]@{
-                        Account = $ID
-                        Access  = $ItemPermissionsForThisAccount
-                    }
-
-                }
+                $AccountPermissionReferences = Group-AccountPermissionReference -PrincipalsByResolvedID $PrincipalsByResolvedID -ACEsByGUID $ACEsByGUID -AceGUIDsByResolvedID $AceGUIDsByResolvedID
 
                 # Expand reference GUIDs into their associated Access Control Entries and Security Principals.
-                $AccountPermissions = ForEach ($Acct in $AccountPermissionReferences) {
-                    $Access = ForEach ($PermissionRef in $Acct.Access) {
-                        [PSCustomObject]@{
-                            Path   = $PermissionRef.Path
-                            Access = $ACEsByGUID[$PermissionRef.AceGUIDs]
-                        }
-                    }
-                    [PSCustomObject]@{
-                        Account = $PrincipalsByResolvedID[$Acct.Account]
-                        Access  = $Access
-                    }
-                }
+                $AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences -PrincipalsByResolvedID $PrincipalsByResolvedID -ACEsByGUID $ACEsByGUID
+
             }
+
             'item' {
 
-                [string[]]$SortedPaths = $AceGUIDsByPath.Keys | Sort-Object
-                $ShortestPath = $SortedPaths[0]
-
                 # Group reference GUIDs by the path to their associated item.
-                $ItemPermissionReferences = ForEach ($ItemPath in $SortedPaths) {
-
-                    $ACEGuidsForThisItem = $AceGUIDsByPath[$ItemPath]
-                    $Acl = $ACLsByPath[$ItemPath]
-
-                    # Find-ResolvedIDsWithItemAccess
-                    $IDsWithAccess = @{}
-                    ForEach ($Guid in $ACEGuidsForThisItem) {
-
-                        $Ace = $ACEsByGUID[$Guid]
-
-                        $CacheResult = $IDsWithAccess[$Ace.IdentityReferenceResolved]
-                        if (-not $CacheResult) {
-                            $CacheResult = [System.Collections.Generic.List[guid]]::new()
-                        }
-                        $null = $CacheResult.Add($Guid)
-                        $IDsWithAccess[$Ace.IdentityReferenceResolved] = $CacheResult
-
-                        ForEach ($Member in $PrincipalsByResolvedID[$Ace.IdentityReferenceResolved].Members) {
-
-                            $CacheResult = $IDsWithAccess[$Member]
-                            if (-not $CacheResult) {
-                                $CacheResult = [System.Collections.Generic.List[guid]]::new()
-                            }
-                            $null = $CacheResult.Add($Guid)
-                            $IDsWithAccess[$Member] = $CacheResult
-
-                        }
-                    }
-
-                    $AccountPermissionsForThisItem = ForEach ($ID in ($IDsWithAccess.Keys | Sort-Object)) {
-
-                        [PSCustomObject]@{
-                            Account  = $ID
-                            AceGUIDs = $IDsWithAccess[$ID]
-                        }
-
-                    }
-
-                    [PSCustomObject]@{
-                        Item   = $Acl
-                        Access = $AccountPermissionsForThisItem
-                    }
-
-                }
+                $ItemPermissionReferences = Group-ItemPermissionReference -SortedPath $SortedPaths -AceGUIDsByPath $AceGUIDsByPath -ACEsByGUID $ACEsByGUID -ACLsByPath $ACLsByPath -PrincipalsByResolvedID $PrincipalsByResolvedID
 
                 # Expand reference GUIDs into their associated Access Control Entries.
-                $ItemPermissions = ForEach ($Item in $ItemPermissionReferences) {
-
-                    $Access = ForEach ($PermissionRef in $Item.Access) {
-
-                        [PSCustomObject]@{
-                            Account = $PrincipalsByResolvedID[$PermissionRef.Account]
-                            Access  = $ACEsByGUID[$PermissionRef.AceGUIDs]
-                        }
-
-                    }
-
-                    [PSCustomObject]@{
-                        Item   = $Item.Item
-                        Access = $Access
-                    }
-
-                }
+                $ItemPermissions = Expand-ItemPermissionReference -Reference $ItemPermissionReferences -PrincipalsByResolvedID $PrincipalsByResolvedID -ACEsByGUID $ACEsByGUID
 
             }
+
             default {
 
                 $ACEsByGUID.Values # 'none'
 
             }
+
         }
+
     }
 
     ##Write-Progress -Status '80% (step 17 of 20) Format-FolderPermission' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
@@ -12353,8 +12154,8 @@ end {
             }
             Update-TypeData -DefaultDisplayPropertySet ('Account', 'Access') -TypeName 'Permission.AccountPermission' -ErrorAction SilentlyContinue
 
-            Group-Permission -InputObject $FolderPermissions -Property Account |
-            Sort-Object -Property Name
+            #Group-Permission -InputObject $FolderPermissions -Property Account |
+            #Sort-Object -Property Name
             return
         }
         Default { return }
