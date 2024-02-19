@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.236
+.VERSION 0.0.237
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-its alive
+bugfix fake directory entry noteproperties getting dropped with get-member
 
 .PRIVATEDATA
 
@@ -39,8 +39,6 @@ its alive
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
 
 
 <#
@@ -424,26 +422,16 @@ begin {
     $ReportFile = "$OutputDir\PermissionsReport.htm"
     $LogFile = "$OutputDir\Export-Permission.log"
     $DirectoryEntryCache = [hashtable]::Synchronized(@{})
-    $Win32AccountsBySID = [hashtable]::Synchronized(@{})
-    $Win32AccountsByCaption = [hashtable]::Synchronized(@{})
     $DomainsBySID = [hashtable]::Synchronized(@{})
     $DomainsByNetbios = [hashtable]::Synchronized(@{})
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
     $LogCache = [hashtable]::Synchronized(@{})
     $CimCache = [hashtable]::Synchronized(@{})
     $ACLsByPath = [hashtable]::Synchronized(@{})
-
-    # Cache of access control entries keyed by GUID generated in Resolve-ACE
-    $ACEsByGUID = [hashtable]::Synchronized(@{})
-
-    # Cache of access control entry GUIDs keyed by their resolved identities
-    $AceGUIDsByResolvedID = [hashtable]::Synchronized(@{})
-
-    # Cache of access control entry GUIDs keyed by their paths
-    $AceGUIDsByPath = [hashtable]::Synchronized(@{})
-
-
-    $PrincipalsByResolvedID = [hashtable]::Synchronized(@{})
+    $ACEsByGUID = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entries keyed by GUID generated in Resolve-ACE
+    $AceGUIDsByResolvedID = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entry GUIDs keyed by their resolved identities
+    $AceGUIDsByPath = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entry GUIDs keyed by their paths
+    $PrincipalsByResolvedID = [hashtable]::Synchronized(@{}) # Initialize a cache of ADSI security principals keyed by their resolved NTAccount caption
     $UniquePrincipals = [hashtable]::Synchronized(@{})
     $UniquePrincipalsByResolvedID = [hashtable]::Synchronized(@{})
 
@@ -489,14 +477,12 @@ begin {
 
     # Create a splat of caching-related parameters to pass to various functions for script readability
     $CacheParams = @{
-        Win32AccountsBySID     = $Win32AccountsBySID
-        Win32AccountsByCaption = $Win32AccountsByCaption
-        DirectoryEntryCache    = $DirectoryEntryCache
-        DomainsByFqdn          = $DomainsByFqdn
-        DomainsByNetbios       = $DomainsByNetbios
-        DomainsBySid           = $DomainsBySid
-        ThisFqdn               = $ThisFqdn
-        ThreadCount            = $ThreadCount
+        DirectoryEntryCache = $DirectoryEntryCache
+        DomainsByFqdn       = $DomainsByFqdn
+        DomainsByNetbios    = $DomainsByNetbios
+        DomainsBySid        = $DomainsBySid
+        ThisFqdn            = $ThisFqdn
+        ThreadCount         = $ThreadCount
     }
 
     Write-LogMsg @LogParams -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
