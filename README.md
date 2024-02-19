@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.233
+help version: 0.0.234
 locale: en-US
 script name: Export-Permission.ps1
 online version:
@@ -16,11 +16,13 @@ Create CSV, HTML, and XML reports of permissions
 ## SYNTAX
 
 ```
-Export-Permission.ps1 [-TargetPath] <DirectoryInfo[]> [[-ExcludeAccount] <String[]>]
+Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
  [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoMembers]
  [[-RecurseDepth] <Int32>] [[-Title] <String>] [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>]
  [-Interactive] [-NoJavaScript] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
- [[-PrtgToken] <String>] [[-OutputMode] <String>] [<CommonParameters>]
+ [[-PrtgToken] <String>] [[-OutputMode] <String>] [[-SplitBy] <String[]>] [[-GroupBy] <String>]
+ [[-Format] <String[]>] [[-DetailLevel] <Int32>] [[-InheritanceFlagResolved] <String[]>]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -272,6 +274,23 @@ Add a warning that they are permissions from the DFS namespace server and could 
 
 ## PARAMETERS
 
+### -DetailLevel
+0 is all, -1 is highest, otherwise 1,2,3,etc.
+for each available level. 
+Temporarily 0 during dev.,
+
+```yaml
+Type: System.Int32
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 18
+Default value: 0
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -ExcludeAccount
 Regular expressions matching names of security principals to exclude from the HTML report
 
@@ -303,6 +322,37 @@ Aliases:
 Required: False
 Position: 3
 Default value: @('group', 'computer')
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Format
+{{ Fill Format Description }}
+
+```yaml
+Type: System.String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 17
+Default value: All
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -GroupBy
+optionally split files by...
+temporarily all during dev, later change to none
+
+```yaml
+Type: System.String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 16
+Default value: Item
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -350,6 +400,23 @@ Aliases:
 Required: False
 Position: 4
 Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -InheritanceFlagResolved
+String translations indexed by value in the \[System.Security.AccessControl.InheritanceFlags\] enum
+Parameter default value is on a single line as a workaround to a PlatyPS bug
+TODO: Move to i18n
+
+```yaml
+Type: System.String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 19
+Default value: @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -520,6 +587,24 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -SplitBy
+none will generate a single file. 
+item will generate a file per item. 
+account will generate a file per account. 
+all will generate 1 file per item and 1 file per account.
+
+```yaml
+Type: System.String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 15
+Default value: Item
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -TargetPath
 Path to the NTFS folder whose permissions to export
 
@@ -528,7 +613,7 @@ Type: System.IO.DirectoryInfo[]
 Parameter Sets: (All)
 Aliases:
 
-Required: True
+Required: False
 Position: 1
 Default value: None
 Accept pipeline input: True (ByValue)

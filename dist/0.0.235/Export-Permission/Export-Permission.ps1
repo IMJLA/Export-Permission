@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.234
+.VERSION 0.0.235
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-added output formatting
+its alive
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ added output formatting
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 <#
@@ -246,10 +247,11 @@ added output formatting
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 #>
+
 param (
 
     # Path to the NTFS folder whose permissions to export
-    [Parameter(Mandatory, ValueFromPipeline)]
+    [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
 
@@ -357,7 +359,24 @@ param (
     Type of output returned to the output stream
     #>
     [ValidateSet('PassThru', 'GroupByAccount', 'GroupByFolder', 'PrtgXml', 'Silent')]
-    [string]$OutputMode = 'PassThru'
+    [string]$OutputMode = 'PassThru',
+
+    [ValidateSet('none', 'all', 'item', 'account')] # none will generate a single file.  item will generate a file per item.  account will generate a file per account.  all will generate 1 file per item and 1 file per account.
+    [string[]]$SplitBy = 'item', # optionally split files by... temporarily all during dev, later change to none
+
+    [ValidateSet('none', 'item', 'account')]
+    [string]$GroupBy = 'item',
+
+    [ValidateSet('none', 'all', 'csv', 'xml', 'json', 'html', 'prtgxml')]
+    [string[]]$Format = 'all', # temporarily all  during dev, later change to html
+
+    # 0 is all, -1 is highest, otherwise 1,2,3,etc. for each available level.  Temporarily 0 during dev.,
+    [int]$DetailLevel = 0,
+
+    # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
+    # Parameter default value is on a single line as a workaround to a PlatyPS bug
+    # TODO: Move to i18n
+    [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
 
 )
 
@@ -411,7 +430,21 @@ begin {
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
     $LogCache = [hashtable]::Synchronized(@{})
     $CimCache = [hashtable]::Synchronized(@{})
-    $UNCPaths = [System.Collections.Generic.List[String]]::new()
+    $ACLsByPath = [hashtable]::Synchronized(@{})
+
+    # Cache of access control entries keyed by GUID generated in Resolve-ACE
+    $ACEsByGUID = [hashtable]::Synchronized(@{})
+
+    # Cache of access control entry GUIDs keyed by their resolved identities
+    $AceGUIDsByResolvedID = [hashtable]::Synchronized(@{})
+
+    # Cache of access control entry GUIDs keyed by their paths
+    $AceGUIDsByPath = [hashtable]::Synchronized(@{})
+
+
+    $PrincipalsByResolvedID = [hashtable]::Synchronized(@{})
+    $UniquePrincipals = [hashtable]::Synchronized(@{})
+    $UniquePrincipalsByResolvedID = [hashtable]::Synchronized(@{})
 
     # Get the hostname of the computer running the script
     $ThisHostname = HOSTNAME.EXE
@@ -445,6 +478,7 @@ begin {
     }
 
     # These events already happened but we will log them now that we have the correct capitalization of the user
+    Write-LogMsg @LogParams -Text '$ACLsByPath = [hashtable]::Synchronized(@{})'
     Write-LogMsg @LogParams -Text 'HOSTNAME.EXE # This command was already run but is now being logged'
     Write-LogMsg @LogParams -Text 'Get-CurrentWhoAmI # This command was already run but is now being logged'
 
@@ -452,7 +486,7 @@ begin {
     Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn -ComputerName '$ThisHostName'"
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
 
-    # Create a map of parameters to enable caching functionality in supported functions
+    # Create a splat of caching-related parameters to pass to various functions for script readability
     $CacheParams = @{
         Win32AccountsBySID     = $Win32AccountsBySID
         Win32AccountsByCaption = $Win32AccountsByCaption
@@ -479,98 +513,239 @@ process {
 
     #----------------[ Main Execution ]---------------
 
-    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
-    Write-LogMsg @LogParams -Text "Resolve-PermissionTarget -TargetPath @('$($TargetPath -join "',")')))"
-    [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath -CimCache $CimCache @LoggingParams
-    $UNCPaths.AddRange($ResolvedFolderTargets)
+    Write-Progress -Status '5% (step 2 of 20) Resolve-PermissionTarget' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
+    Write-LogMsg @LogParams -Text "Resolve-PermissionTarget -TargetPath @('$($TargetPath -join "',")') -ACLsByPath `$ACLsByPath"
+    Resolve-PermissionTarget -TargetPath $TargetPath -ACLsByPath $ACLsByPath -CimCache $CimCache @LoggingParams
 
 }
 
 end {
 
-    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
-    Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($UNCPaths -join "',")') -RecurseDepth $RecurseDepth"
-    $Subfolders = Expand-Folder -Folder $UNCPaths -RecurseDepth $RecurseDepth @Threads @ProgressParent @LoggingParams
+    Write-Progress -Status '10% (step 3 of 20) Expand-PermissionTarget' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
+    Write-LogMsg @LogParams -Text "Expand-PermissionTarget -ACLsByPath `$ACLsByPath -RecurseDepth $RecurseDepth"
+    $Children = Expand-PermissionTarget -ACLsByPath $ACLsByPath -RecurseDepth $RecurseDepth @Threads @ProgressParent @LoggingParams
 
-    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get raw permissions on the expanded paths' -PercentComplete 15 @Progress
-    Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -Folder @('$($UNCPaths -join "','")') -Subfolder @('$($Subfolders -join "','")')"
-    $Permissions = Get-FolderAccessList -Folder $UNCPaths -Subfolder $Subfolders @Threads @ProgressParent @LoggingParams
+    Write-Progress -Status '15% (step 4 of 20) Get-FolderAccessList' -CurrentOperation 'Get the ACL of each path' -PercentComplete 15 @Progress
+    # Convert ACLsByPath.Keys to a new array of strings so that when it is modified by adding subfolder ACLs it doesn't cause an error while Get-FolderAccessList is still enumerating it
+    # TODO: Implement ConcurrentDictionary which should implement auto-locking and make enumeration thread-safe
+    $Parents = [string[]]$ACLsByPath.Keys
+    Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAcl -Folder @('$($Parents -join "','")') -Subfolder @('$($Children -join "','")') -ACLsByPath `$ACLsByPath @Threads @ProgressParent @LoggingParams"
+    Get-FolderAcl -Folder $Parents -Subfolder $Children -ACLsByPath $ACLsByPath @Threads @ProgressParent @LoggingParams
 
-    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
-    Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
-    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @ProgressParent @LoggingParams
+    #Write-Progress -Status '20% (step 5 of 20) Export-RawPermissionCsv' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
+    #Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
+    #Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @ProgressParent @LoggingParams
 
-    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Get FQDNs of the current computer, trusted domains, and the servers in the UNC paths' -PercentComplete 25 @Progress
+    Write-Progress -Status '25% (step 6 of 20) Get-UniqueServerFqdn' -CurrentOperation 'Get the FQDN of the current computer, each trusted domain, and each server in the paths' -PercentComplete 25 @Progress
     $FqdnParams = @{
         Known    = $TrustedDomains.DomainFqdn
-        FilePath = $UNCPaths
+        FilePath = $Parents
         ThisFqdn = $ThisFqdn
     }
-    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$($FqdnParams['Known'] -join "',")') -FilePath @('$($FqdnParams['FilePath'] -join "',")') -ThisFqdn '$ThisFqdn'"
+    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$($FqdnParams['Known'] -join "',")') -FilePath @('$($Parents -join "',")') -ThisFqdn '$ThisFqdn'"
     $ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams @ProgressParent
 
-    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
+    Write-Progress -Status '30% (step 7 of 20) Initialize-Cache' -CurrentOperation 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
     Initialize-Cache -Fqdn $ServerFqdns -CimCache $CimCache @ProgressParent @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
-    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
-    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -CimCache $CimCache @LoggingParams @CacheParams -Permission $Permissions @ProgressParent
+    Write-Progress -Status '35% (step 8 of 20) Resolve-AccessControlList' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
+    Write-LogMsg @LogParams -Text 'Resolve-AccessControlList -Permission $Permissions -ACEsByResolvedID $ACEsByResolvedID -ACLsByPath $ACLsByPath -ACEsByGUID $ACEsByGUID -AceGUIDsByPath $AceGUIDsByPath -AceGUIDsByResolvedID $AceGUIDsByResolvedID -CimCache $CimCache -InheritanceFlagResolved $InheritanceFlagResolved @LoggingParams @CacheParams @ProgressParent'
+    Resolve-AccessControlList -ACLsByPath $ACLsByPath -ACEsByGUID $ACEsByGUID -AceGUIDsByPath $AceGUIDsByPath -AceGUIDsByResolvedID $AceGUIDsByResolvedID -CimCache $CimCache -InheritanceFlagResolved $InheritanceFlagResolved @LoggingParams @CacheParams @ProgressParent
 
-    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
-    Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
-    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 @ProgressParent
+    #Write-Progress -Status '40% (step 9 of 20) Export-ResolvedPermissionCsv' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
+    #Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
+    #Export-ResolvedPermissionCsv @LoggingParams -Permission $PermissionsWithResolvedIdentities -LiteralPath $CsvFilePath2 @ProgressParent
 
-    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group permissions by their resolved identity references' -PercentComplete 45 @Progress
-    Write-LogMsg @LogParams -Text "`$Identities = `$PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved"
-    $Identities = $PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved
+    Write-Progress -Status '45% (step 10 of 20) Get-CurrentDomain' -CurrentOperation 'Get the current domain' -PercentComplete 45 @Progress
+    Write-LogMsg @LogParams -Text "Get-CurrentDomain"
+    $CurrentDomain = Get-CurrentDomain
 
-    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
-    Write-LogMsg @LogParams -Text "`$SecurityPrincipals = Get-PermissionPrincipal -Identity `$Identities -NoGroupMembers:`$$NoMembers"
-    $SecurityPrincipals = Get-PermissionPrincipal -Identity $Identities -NoGroupMembers:$NoMembers -CimCache $CimCache @LoggingParams @CacheParams @ProgressParent
+    Write-Progress -Status '50% (step 11 of 20) Get-PermissionPrincipal' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
+    Write-LogMsg @LogParams -Text "Get-PermissionPrincipal -ACEsByResolvedID `$ACEsByResolvedID -PrincipalsByResolvedID `$PrincipalsByResolvedID -NoGroupMembers:`$$NoMembers"
+    Get-PermissionPrincipal -ACEsByResolvedID $AceGUIDsByResolvedID -PrincipalsByResolvedID $PrincipalsByResolvedID -NoGroupMembers:$NoMembers -CurrentDomain $CurrentDomain -CimCache $CimCache @LoggingParams @CacheParams @ProgressParent
 
-    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the ADSI security principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
-    Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals @Threads"
-    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals @Threads @LoggingParams @ProgressParent
+    ###Write-Progress -Status '55% (step 12 of 20) Format-PermissionAccount' -CurrentOperation 'Expand the ADSI security principals into their group members' -PercentComplete 55 @Progress
+    ###Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Expand-PermissionPrincipal -SecurityPrincipal `$SecurityPrincipals @Threads"
+    ###$FormattedSecurityPrincipals = Expand-PermissionPrincipal -PrincipalsByResolvedID $PrincipalsByResolvedID @Threads @LoggingParams @ProgressParent
 
-    Write-Progress -Status '60% (step 13 of 20)' -CurrentOperation 'Expand the security principals back into their permissions (one per ACE per principal)' -PercentComplete 60 @Progress
-    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals @Threads"
-    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals @Threads @LoggingParams @ProgressParent
+    ###Write-Progress -Status '60% (step 13 of 20) Expand-AcctPermission' -CurrentOperation 'Expand the security principals back into their permissions (one per ACE per principal)' -PercentComplete 60 @Progress
+    ###Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals @Threads"
+    ###$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals @Threads @LoggingParams @ProgressParent
 
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-    Write-Progress -Status '65% (step 14 of 20)' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
-    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
-    $ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
-    Write-Information $CsvFilePath3
+    #Write-Progress -Status '65% (step 14 of 20) Export-Csv' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
+    #Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
+    #$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
+    #Write-Information $CsvFilePath3
 
-    Write-Progress -Status '70% (step 15 of 20)' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
-    Write-LogMsg @LogParams -Text "`$Accounts = `$ExpandedAccountPermissions | Group-Object -Property User"
-    $Accounts = $ExpandedAccountPermissions | Group-Object -Property user
+    ###Write-Progress -Status '70% (step 15 of 20) Group-Object' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
+    ###Write-LogMsg @LogParams -Text "`$Accounts = `$ExpandedAccountPermissions | Group-Object -Property User"
+    ###$Accounts = $ExpandedAccountPermissions | Group-Object -Property user
 
-    Write-Progress -Status '75% (step 16 of 20)' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
-    $IgnoreDomainString = "@('$($IgnoreDomain -join "',")')"
-    Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain $IgnoreDomainString"
-    $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
+    ####Write-Progress -Status '75% (step 16 of 20) Select-UniqueAccountPermission' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
+    ####Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
+    ####Select-UniquePrincipal -IgnoreDomain $IgnoreDomain -ExcludeAccount $ExcludeAccount -PrincipalsByResolvedID $PrincipalsByResolvedID -UniquePrincipal $UniquePrincipals -UniquePrincipalsByResolvedID $UniquePrincipalsByResolvedID
 
-    Write-Progress -Status '80% (step 17 of 20)' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
-    Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
+    $HowToSplit = foreach ($Split in $SplitBy) {
+        if ($Split -eq 'none') {
+            $Split
+            break
+        } elseif ($Split -eq 'all') {
+            @('item', 'account')
+            break
+        } else {
+            $Split
+        }
+    }
 
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams
-    #$GroupedPermissions = $FolderPermissions |
-    #Group-Object -Property Folder |
-    #Sort-Object -Property Name
-    $GroupedPermissions = Group-Permission -InputObject $FolderPermissions -Property Folder |
-    Sort-Object -Property Name
+    ForEach ($Split in $HowToSplit) {
+        switch ($Split) {
+            'account' {
+                # Group reference GUIDs by the name of their associated account.
+                $AccountPermissionReferences = ForEach ($ID in $PrincipalsByResolvedID.Keys) {
+                    #Format-SecurityPrincipal -ResolvedID $ID -PrincipalsByResolvedID $PrincipalsByResolvedID -AceGUIDsByResolvedID $AceGUIDsByResolvedID -ACEsByGUID $ACEsByGUID
+                    $ACEGuidsForThisID = $AceGUIDsByResolvedID[$ID]
+
+                    $ItemPaths = @{}
+                    ForEach ($Guid in $ACEGuidsForThisID) {
+
+                        $Ace = $ACEsByGUID[$Guid]
+
+                        $CacheResult = $ItemPaths[$Ace.Path]
+                        if (-not $CacheResult) {
+                            $CacheResult = [System.Collections.Generic.List[guid]]::new()
+                        }
+                        $null = $CacheResult.Add($Guid)
+                        $ItemPaths[$Ace.Path] = $CacheResult
+
+                    }
+
+                    $ItemPermissionsForThisAccount = ForEach ($Item in $ItemPaths.Keys) {
+
+                        [PSCustomObject]@{
+                            Path     = $Item
+                            AceGUIDs = $ItemPaths[$Item]
+                        }
+
+                    }
+
+                    [PSCustomObject]@{
+                        Account = $ID
+                        Access  = $ItemPermissionsForThisAccount
+                    }
+
+                }
+
+                # Expand reference GUIDs into their associated Access Control Entries and Security Principals.
+                $AccountPermissions = ForEach ($Acct in $AccountPermissionReferences) {
+                    $Access = ForEach ($PermissionRef in $Acct.Access) {
+                        [PSCustomObject]@{
+                            Path   = $PermissionRef.Path
+                            Access = $ACEsByGUID[$PermissionRef.AceGUIDs]
+                        }
+                    }
+                    [PSCustomObject]@{
+                        Account = $PrincipalsByResolvedID[$Acct.Account]
+                        Access  = $Access
+                    }
+                }
+            }
+            'item' {
+
+                [string[]]$SortedPaths = $AceGUIDsByPath.Keys | Sort-Object
+                $ShortestPath = $SortedPaths[0]
+
+                # Group reference GUIDs by the path to their associated item.
+                $ItemPermissionReferences = ForEach ($ItemPath in $SortedPaths) {
+
+                    $ACEGuidsForThisItem = $AceGUIDsByPath[$ItemPath]
+                    $Acl = $ACLsByPath[$ItemPath]
+
+                    # Find-ResolvedIDsWithItemAccess
+                    $IDsWithAccess = @{}
+                    ForEach ($Guid in $ACEGuidsForThisItem) {
+
+                        $Ace = $ACEsByGUID[$Guid]
+
+                        $CacheResult = $IDsWithAccess[$Ace.IdentityReferenceResolved]
+                        if (-not $CacheResult) {
+                            $CacheResult = [System.Collections.Generic.List[guid]]::new()
+                        }
+                        $null = $CacheResult.Add($Guid)
+                        $IDsWithAccess[$Ace.IdentityReferenceResolved] = $CacheResult
+
+                        ForEach ($Member in $PrincipalsByResolvedID[$Ace.IdentityReferenceResolved].Members) {
+
+                            $CacheResult = $IDsWithAccess[$Member]
+                            if (-not $CacheResult) {
+                                $CacheResult = [System.Collections.Generic.List[guid]]::new()
+                            }
+                            $null = $CacheResult.Add($Guid)
+                            $IDsWithAccess[$Member] = $CacheResult
+
+                        }
+                    }
+
+                    $AccountPermissionsForThisItem = ForEach ($ID in ($IDsWithAccess.Keys | Sort-Object)) {
+
+                        [PSCustomObject]@{
+                            Account  = $ID
+                            AceGUIDs = $IDsWithAccess[$ID]
+                        }
+
+                    }
+
+                    [PSCustomObject]@{
+                        Item   = $Acl
+                        Access = $AccountPermissionsForThisItem
+                    }
+
+                }
+
+                # Expand reference GUIDs into their associated Access Control Entries.
+                $ItemPermissions = ForEach ($Item in $ItemPermissionReferences) {
+
+                    $Access = ForEach ($PermissionRef in $Item.Access) {
+
+                        [PSCustomObject]@{
+                            Account = $PrincipalsByResolvedID[$PermissionRef.Account]
+                            Access  = $ACEsByGUID[$PermissionRef.AceGUIDs]
+                        }
+
+                    }
+
+                    [PSCustomObject]@{
+                        Item   = $Item.Item
+                        Access = $Access
+                    }
+
+                }
+
+            }
+            default {
+
+                $ACEsByGUID.Values # 'none'
+
+            }
+        }
+    }
+
+    ##Write-Progress -Status '80% (step 17 of 20) Format-FolderPermission' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
+    ##Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
+    ##$FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams
+    ##$GroupedPermissions = Group-Permission -InputObject $FolderPermissions -Property Folder |
+    ##Sort-Object -Property Name
 
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
-    Write-Progress -Status '85% (step 18 of 20)' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
-    $ExportFolderPermissionHtml = @{ FolderPermissions = $GroupedPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; IgnoreDomain = $IgnoreDomain ;
+    Write-Progress -Status '85% (step 18 of 20) Export-FolderPermissionHtml' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
+    $ExportFolderPermissionHtml = @{ ItemPermissions = $ItemPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; IgnoreDomain = $IgnoreDomain ;
         TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoMembers ;
-        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; $ExpandedAccountPermissions = $ExpandedAccountPermissions;
-        LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ; StopWatch = $StopWatch ;
-        Subfolders = $Subfolders ; ResolvedFolderTargets = $UNCPaths ; Title = $Title; NoJavaScript = $NoJavaScript; $FormattedSecurityPrincipals = $FormattedSecurityPrincipals
+        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ;
+        ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ; StopWatch = $StopWatch ;
+        Subfolders = $Children ; ResolvedFolderTargets = $ACLsByPath.Keys ; Title = $Title; NoJavaScript = $NoJavaScript; PrincipalsByResolvedID = $PrincipalsByResolvedID; ShortestPath = $ShortestPath
     }
     Write-LogMsg @LogParams -Text 'Export-FolderPermissionHtml @ExportFolderPermissionHtml'
     Export-FolderPermissionHtml @ExportFolderPermissionHtml
@@ -584,11 +759,11 @@ end {
         WhoAmI            = $WhoAmI
         LogMsgCache       = $LogCache
     }
-    Write-Progress -Status '90% (step 19 of 20)' -CurrentOperation 'Identify common issues with permissions' -PercentComplete 90 @Progress
+    Write-Progress -Status '90% (step 19 of 20) New-NtfsAclIssueReport' -CurrentOperation 'Identify common issues with permissions' -PercentComplete 90 @Progress
     Write-LogMsg @LogParams -Text 'New-NtfsAclIssueReport @NtfsIssueParams'
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
-    Write-Progress -Status '95% (step 20 of 20)' -CurrentOperation 'Output results' -PercentComplete 95 @Progress
+    Write-Progress -Status '95% (step 20 of 20) Output results' -CurrentOperation 'Output results' -PercentComplete 95 @Progress
 
     # Format the issues as a custom XML sensor for Paessler PRTG Network Monitor
     Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
@@ -642,7 +817,7 @@ end {
         'GroupByFolder' {
             Update-TypeData -MemberName Folder -Value { $This.Name } -TypeName 'Permission.FolderPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue
             Update-TypeData -MemberName Access -TypeName 'Permission.FolderPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue -Value {
-                $Access = ForEach ($Permission in $This.Group) {
+                $Access = ForEach ($Permission in $This.Access) {
                     [pscustomobject]@{
                         Account = $Permission.Account
                         Access  = $Permission.Access
@@ -650,7 +825,7 @@ end {
                 }
                 $Access
             }
-            Update-TypeData -DefaultDisplayPropertySet ('Folder', 'Access') -TypeName 'Permission.FolderPermission' -ErrorAction SilentlyContinue
+            Update-TypeData -DefaultDisplayPropertySet ('Path', 'Access') -TypeName 'Permission.FolderPermission' -ErrorAction SilentlyContinue
             return $GroupedPermissions
         }
         'PrtgXml' {

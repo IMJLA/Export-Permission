@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.234
+.VERSION 0.0.235
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,11 +25,12 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-added output formatting
+its alive
 
 .PRIVATEDATA
 
 #> 
+
 
 
 
@@ -251,10 +252,11 @@ added output formatting
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 #>
+
 param (
 
     # Path to the NTFS folder whose permissions to export
-    [Parameter(Mandatory, ValueFromPipeline)]
+    [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
 
@@ -362,7 +364,24 @@ param (
     Type of output returned to the output stream
     #>
     [ValidateSet('PassThru', 'GroupByAccount', 'GroupByFolder', 'PrtgXml', 'Silent')]
-    [string]$OutputMode = 'PassThru'
+    [string]$OutputMode = 'PassThru',
+
+    [ValidateSet('none', 'all', 'item', 'account')] # none will generate a single file.  item will generate a file per item.  account will generate a file per account.  all will generate 1 file per item and 1 file per account.
+    [string[]]$SplitBy = 'item', # optionally split files by... temporarily all during dev, later change to none
+
+    [ValidateSet('none', 'item', 'account')]
+    [string]$GroupBy = 'item',
+
+    [ValidateSet('none', 'all', 'csv', 'xml', 'json', 'html', 'prtgxml')]
+    [string[]]$Format = 'all', # temporarily all  during dev, later change to html
+
+    # 0 is all, -1 is highest, otherwise 1,2,3,etc. for each available level.  Temporarily 0 during dev.,
+    [int]$DetailLevel = 0,
+
+    # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
+    # Parameter default value is on a single line as a workaround to a PlatyPS bug
+    # TODO: Move to i18n
+    [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
 
 )
 
@@ -378,7 +397,7 @@ begin {
 
     #----------------[ Functions ]------------------
 
-# Definition of Module 'Adsi' Version '4.0.38' is below
+# Definition of Module 'Adsi' Version '4.0.84' is below
 
 #[NoRunspaceAffinity()] # Make this class thread-safe (requires PS 7+)
 class FakeDirectoryEntry {
@@ -724,27 +743,29 @@ function ConvertFrom-DirectoryEntry {
 
     param (
         [Parameter(
-            Position = 0,
-            ValueFromPipeline
+            Position = 0
         )]
         [System.DirectoryServices.DirectoryEntry[]]$DirectoryEntry
     )
+    ForEach ($ThisDirectoryEntry in $DirectoryEntry) {
+        #$ObjectWithProperties = $ThisDirectoryEntry |
+        #Select-Object -Property *
 
-    process {
-        ForEach ($ThisDirectoryEntry in $DirectoryEntry) {
-            $ObjectWithProperties = $ThisDirectoryEntry |
-            Select-Object -Property *
+        #$ObjectNoteProperties = $ObjectWithProperties |
+        #Get-Member -MemberType Property, CodeProperty, ScriptProperty, NoteProperty
+        #
+        #$ThisObject = @{}
+        #ForEach ($ThisObjProperty in $ObjectNoteProperties) {
+        #    $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
+        #}
+        #
+        #[PSCustomObject]$ThisObject
 
-            $ObjectNoteProperties = $ObjectWithProperties |
-            Get-Member -MemberType Property, CodeProperty, ScriptProperty, NoteProperty
-
-            $ThisObject = @{}
-            ForEach ($ThisObjProperty in $ObjectNoteProperties) {
-                $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
-            }
-
-            [PSCustomObject]$ThisObject
+        $OutputObject = @{}
+        ForEach ($Prop in ($ThisDirectoryEntry | Get-Member -View All -MemberType Property).Name) {
+            $null = ConvertTo-SimpleProperty -InputObject $ThisDirectoryEntry -Property $Prop -PropertyDictionary $OutputObject
         }
+        [PSCustomObject]$OutputObject
     }
 }
 function ConvertFrom-IdentityReferenceResolved {
@@ -772,19 +793,22 @@ function ConvertFrom-IdentityReferenceResolved {
 
         Incomplete example but it shows the chain of functions to generate the expected input for this
     #>
-    [OutputType([System.Object])]
+    [OutputType([void])]
     param (
 
         # The NTFS AccessControlEntry object(s), grouped by their IdentityReference property
         # TODO: Use System.Security.Principal.NTAccount instead
         [Parameter(ValueFromPipeline)]
-        [System.Object[]]$IdentityReference,
+        [string]$IdentityReference,
 
         # Do not get group members
         [switch]$NoGroupMembers,
 
+        # Cache of access control entries keyed by their resolved identities
+        [hashtable]$ACEsByResolvedID = ([hashtable]::Synchronized(@{})),
+
         # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
-        [hashtable]$IdentityReferenceCache = ([hashtable]::Synchronized(@{})),
+        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
 
         # Output stream to send the log messages to
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
@@ -827,346 +851,345 @@ function ConvertFrom-IdentityReferenceResolved {
         [string]$WhoAmI = (whoami.EXE),
 
         # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # The current domain
+        # Can be passed as a parameter to reduce calls to Get-CurrentDomain
+        [string]$CurrentDomain = (Get-CurrentDomain)
 
     )
 
-    begin {
-
-        $LogParams = @{
-            ThisHostname = $ThisHostname
-            Type         = $DebugOutputStream
-            LogMsgCache  = $LogMsgCache
-            WhoAmI       = $WhoAmI
-        }
-
-        $LoggingParams = @{
-            ThisHostname = $ThisHostname
-            LogMsgCache  = $LogMsgCache
-            WhoAmI       = $WhoAmI
-        }
-
-        # Get the SID of the current domain
-        Write-LogMsg @LogParams -Text '$CurrentDomain = Get-CurrentDomain'
-        $CurrentDomain = Get-CurrentDomain -ComputerName $ThisFqdn -CimCache $CimCache -DebugOutputStream $DebugOutputStream -ThisFqdn $ThisFqdn @LoggingParams
-
-        # Convert the objectSID attribute (byte array) to a security descriptor string formatted according to SDDL syntax (Security Descriptor Definition Language)
-        Write-LogMsg @LogParams -Text '[System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0)'
-        [string]$CurrentDomainSID = & { [System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0) } 2>$null
-
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
     }
 
-    process {
+    $LoggingParams = @{
+        ThisHostname = $ThisHostname
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
 
-        ForEach ($ThisIdentity in $IdentityReference) {
+    $AccessControlEntries = $ACEsByResolvedID[$IdentityReference]
 
-            if (-not $ThisIdentity) {
-                continue
+    if ($null -eq $PrincipalsByResolvedID[$IdentityReference]) {
+
+        Write-LogMsg @LogParams -Text " # ADSI Principal cache miss for '$IdentityReference'"
+
+        $GetDirectoryEntryParams = @{
+            DirectoryEntryCache = $DirectoryEntryCache
+            DomainsByNetbios    = $DomainsByNetbios
+            ThisFqdn            = $ThisFqdn
+            ThisHostname        = $ThisHostname
+            CimCache            = $CimCache
+            LogMsgCache         = $LogMsgCache
+            WhoAmI              = $WhoAmI
+            DebugOutputStream   = $DebugOutputStream
+        }
+
+        $SearchDirectoryParams = @{
+            CimCache            = $CimCache
+            DebugOutputStream   = $DebugOutputStream
+            DirectoryEntryCache = $DirectoryEntryCache
+            DomainsByNetbios    = $DomainsByNetbios
+            LogMsgCache         = $LogMsgCache
+            ThisFqdn            = $ThisFqdn
+            ThisHostname        = $ThisHostname
+            WhoAmI              = $WhoAmI
+        }
+
+        $split = $IdentityReference.Split('\')
+        $DomainNetBIOS = $split[0]
+        $SamaccountnameOrSid = $split[1]
+
+        if (
+            $null -ne $SamaccountnameOrSid -and
+            @($AccessControlEntries.AdsiProvider)[0] -eq 'LDAP'
+        ) {
+            Write-LogMsg @LogParams -Text " # '$IdentityReference' is a domain security principal"
+
+            $DomainNetbiosCacheResult = $DomainsByNetbios[$DomainNetBIOS]
+            if ($DomainNetbiosCacheResult) {
+                Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$DomainNetBIOS' for '$IdentityReference'"
+                $DomainDn = $DomainNetbiosCacheResult.DistinguishedName
+                $SearchDirectoryParams['DirectoryPath'] = "LDAP://$($DomainNetbiosCacheResult.Dns)/$DomainDn"
+            } else {
+                Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$DomainNetBIOS' for '$IdentityReference'"
+                if ( -not [string]::IsNullOrEmpty($DomainNetBIOS) ) {
+                    $DomainDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios @LoggingParams
+                }
+                $SearchDirectoryParams['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$DomainNetBIOS" -ThisFqdn $ThisFqdn -CimCache $CimCache @LogParams
             }
 
-            $ThisIdentityGroup = $ThisIdentity.Group
+            # Search the domain for the principal
+            $SearchDirectoryParams['Filter'] = "(samaccountname=$SamaccountnameOrSid)"
+            $SearchDirectoryParams['PropertiesToLoad'] = @(
+                'objectClass',
+                'objectSid',
+                'samAccountName',
+                'distinguishedName',
+                'name',
+                'grouptype',
+                'description',
+                'managedby',
+                'member',
+                'Department',
+                'Title',
+                'primaryGroupToken'
+            )
+            try {
+                $DirectoryEntry = Search-Directory @SearchDirectoryParams
+            } catch {
+                $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                Write-LogMsg @LogParams -Text " # '$IdentityReference' could not be resolved against its directory: $($_.Exception.Message)"
+                $LogParams['Type'] = $DebugOutputStream
+            }
 
-            if ($null -eq $IdentityReferenceCache[$ThisIdentity.Name]) {
+        } elseif (
+            $IdentityReference.Substring(0, $IdentityReference.LastIndexOf('-') + 1) -eq $CurrentDomain.SIDString
+        ) {
+            Write-LogMsg @LogParams -Text " # '$IdentityReference' is an unresolved SID from the current domain"
 
-                Write-LogMsg @LogParams -Text " # IdentityReferenceCache miss for '$($ThisIdentity.Name)'"
+            # Get the distinguishedName and netBIOSName of the current domain.  This also determines whether the domain is online.
+            $DomainDN = $CurrentDomain.distinguishedName.Value
+            $DomainFQDN = ConvertTo-Fqdn -DistinguishedName $DomainDN -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
 
-                $DomainDN = $null
-                $DirectoryEntry = $null
-                $Members = $null
+            $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/cn=partitions,cn=configuration,$DomainDn"
+            $SearchDirectoryParams['Filter'] = "(&(objectcategory=crossref)(dnsroot=$DomainFQDN)(netbiosname=*))"
+            $SearchDirectoryParams['PropertiesToLoad'] = 'netbiosname'
 
-                $GetDirectoryEntryParams = @{
-                    DirectoryEntryCache = $DirectoryEntryCache
-                    DomainsByNetbios    = $DomainsByNetbios
-                    ThisFqdn            = $ThisFqdn
-                    ThisHostname        = $ThisHostname
-                    CimCache            = $CimCache
-                    LogMsgCache         = $LogMsgCache
-                    WhoAmI              = $WhoAmI
-                    DebugOutputStream   = $DebugOutputStream
-                }
+            $DomainCrossReference = Search-Directory @SearchDirectoryParams
+            if ($DomainCrossReference.Properties ) {
+                Write-LogMsg @LogParams -Text " # The domain '$DomainFQDN' is online for '$IdentityReference'"
+                [string]$DomainNetBIOS = $DomainCrossReference.Properties['netbiosname']
+                # TODO: The domain is online, so let's see if any domain trusts have issues?  Determine if SID is foreign security principal?
+                # TODO: What if the foreign security principal exists but the corresponding domain trust is down?  Don't want to recommend deletion of the ACE in that case.
+            }
+            $SidObject = [System.Security.Principal.SecurityIdentifier]::new($IdentityReference)
+            $SidBytes = [byte[]]::new($SidObject.BinaryLength)
+            $null = $SidObject.GetBinaryForm($SidBytes, 0)
+            $ObjectSid = ConvertTo-HexStringRepresentationForLDAPFilterString -SIDByteArray $SidBytes
+            $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/$DomainDn"
+            $SearchDirectoryParams['Filter'] = "(objectsid=$ObjectSid)"
+            $SearchDirectoryParams['PropertiesToLoad'] = @(
+                'objectClass',
+                'objectSid',
+                'samAccountName',
+                'distinguishedName',
+                'name',
+                'grouptype',
+                'description',
+                'managedby',
+                'member',
+                'Department',
+                'Title',
+                'primaryGroupToken'
+            )
+            try {
+                $DirectoryEntry = Search-Directory @SearchDirectoryParams
+            } catch {
+                $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                Write-LogMsg @LogParams -Text " # '$IdentityReference' could not be resolved against its directory. Error: $($_.Exception.Message.Trim())"
+                $LogParams['Type'] = $DebugOutputStream
+            }
 
-                $SearchDirectoryParams = @{
-                    CimCache            = $CimCache
-                    DebugOutputStream   = $DebugOutputStream
-                    DirectoryEntryCache = $DirectoryEntryCache
-                    DomainsByNetbios    = $DomainsByNetbios
-                    LogMsgCache         = $LogMsgCache
-                    ThisFqdn            = $ThisFqdn
-                    ThisHostname        = $ThisHostname
-                    WhoAmI              = $WhoAmI
-                }
+        } else {
 
-                $StartingIdentityName = $ThisIdentity.Name
-                $split = $StartingIdentityName.Split('\')
-                $DomainNetBIOS = $split[0]
-                $SamaccountnameOrSid = $split[1]
+            Write-LogMsg @LogParams -Text " # '$IdentityReference' is a local security principal or unresolved SID"
 
-                if (
-                    $null -ne $SamaccountnameOrSid -and
-                    @($ThisIdentityGroup.AdsiProvider)[0] -eq 'LDAP'
-                ) {
-                    Write-LogMsg @LogParams -Text " # '$StartingIdentityName' is a domain security principal"
+            if ($null -eq $SamaccountnameOrSid) { $SamaccountnameOrSid = $IdentityReference }
 
-                    $DomainNetbiosCacheResult = $DomainsByNetbios[$DomainNetBIOS]
-                    if ($DomainNetbiosCacheResult) {
-                        Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$DomainNetBIOS' for '$StartingIdentityName'"
-                        $DomainDn = $DomainNetbiosCacheResult.DistinguishedName
-                        $SearchDirectoryParams['DirectoryPath'] = "LDAP://$($DomainNetbiosCacheResult.Dns)/$DomainDn"
-                    } else {
-                        Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$DomainNetBIOS' for '$StartingIdentityName'"
-                        if ( -not [string]::IsNullOrEmpty($DomainNetBIOS) ) {
-                            $DomainDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios @LoggingParams
-                        }
-                        $SearchDirectoryParams['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$DomainNetBIOS" -ThisFqdn $ThisFqdn -CimCache $CimCache @LogParams
-                    }
+            if ($SamaccountnameOrSid -like "S-1-*") {
 
-                    # Search the domain for the principal
-                    $SearchDirectoryParams['Filter'] = "(samaccountname=$SamaccountnameOrSid)"
-                    $SearchDirectoryParams['PropertiesToLoad'] = @(
-                        'objectClass',
-                        'objectSid',
-                        'samAccountName',
-                        'distinguishedName',
-                        'name',
-                        'grouptype',
-                        'description',
-                        'managedby',
-                        'member',
-                        'Department',
-                        'Title',
-                        'primaryGroupToken'
-                    )
-                    try {
-                        $DirectoryEntry = Search-Directory @SearchDirectoryParams
-                    } catch {
-                        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-                        Write-LogMsg @LogParams -Text " # '$StartingIdentityName' could not be resolved against its directory: $($_.Exception.Message)"
-                        $LogParams['Type'] = $DebugOutputStream
-                    }
+                Write-LogMsg @LogParams -Text "$($IdentityReference) is an unresolved SID"
 
-                } elseif (
-                    $StartingIdentityName.Substring(0, $StartingIdentityName.LastIndexOf('-') + 1) -eq $CurrentDomainSID
-                ) {
-                    Write-LogMsg @LogParams -Text " # '$StartingIdentityName' is an unresolved SID from the current domain"
+                # The SID of the domain is the SID of the user minus the last block of numbers
+                $DomainSid = $SamaccountnameOrSid.Substring(0, $SamaccountnameOrSid.LastIndexOf("-"))
 
-                    # Get the distinguishedName and netBIOSName of the current domain.  This also determines whether the domain is online.
-                    $DomainDN = $CurrentDomain.distinguishedName.Value
-                    $DomainFQDN = ConvertTo-Fqdn -DistinguishedName $DomainDN -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
-
-                    $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/cn=partitions,cn=configuration,$DomainDn"
-                    $SearchDirectoryParams['Filter'] = "(&(objectcategory=crossref)(dnsroot=$DomainFQDN)(netbiosname=*))"
-                    $SearchDirectoryParams['PropertiesToLoad'] = 'netbiosname'
-
-                    $DomainCrossReference = Search-Directory @SearchDirectoryParams
-                    if ($DomainCrossReference.Properties ) {
-                        Write-LogMsg @LogParams -Text " # The domain '$DomainFQDN' is online for '$StartingIdentityName'"
-                        [string]$DomainNetBIOS = $DomainCrossReference.Properties['netbiosname']
-                        # TODO: The domain is online, so let's see if any domain trusts have issues?  Determine if SID is foreign security principal?
-                        # TODO: What if the foreign security principal exists but the corresponding domain trust is down?  Don't want to recommend deletion of the ACE in that case.
-                    }
-                    $SidObject = [System.Security.Principal.SecurityIdentifier]::new($StartingIdentityName)
-                    $SidBytes = [byte[]]::new($SidObject.BinaryLength)
-                    $null = $SidObject.GetBinaryForm($SidBytes, 0)
-                    $ObjectSid = ConvertTo-HexStringRepresentationForLDAPFilterString -SIDByteArray $SidBytes
-                    $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/$DomainDn"
-                    $SearchDirectoryParams['Filter'] = "(objectsid=$ObjectSid)"
-                    $SearchDirectoryParams['PropertiesToLoad'] = @(
-                        'objectClass',
-                        'objectSid',
-                        'samAccountName',
-                        'distinguishedName',
-                        'name',
-                        'grouptype',
-                        'description',
-                        'managedby',
-                        'member',
-                        'Department',
-                        'Title',
-                        'primaryGroupToken'
-                    )
-                    try {
-                        $DirectoryEntry = Search-Directory @SearchDirectoryParams
-                    } catch {
-                        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-                        Write-LogMsg @LogParams -Text " # '$StartingIdentityName' could not be resolved against its director. Error: $($_.Exception.Message.Trim())"
-                        $LogParams['Type'] = $DebugOutputStream
-                    }
-
+                # Determine if SID belongs to current domain
+                if ($DomainSid -eq $CurrentDomain.SIDString) {
+                    Write-LogMsg @LogParams -Text "$($IdentityReference) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
                 } else {
-
-                    Write-LogMsg @LogParams -Text " # '$StartingIdentityName' is a local security principal or unresolved SID"
-
-                    if ($null -eq $SamaccountnameOrSid) { $SamaccountnameOrSid = $StartingIdentityName }
-
-                    if ($SamaccountnameOrSid -like "S-1-*") {
-
-                        Write-LogMsg @LogParams -Text "$($StartingIdentityName) is an unresolved SID"
-
-                        # The SID of the domain is the SID of the user minus the last block of numbers
-                        $DomainSid = $SamaccountnameOrSid.Substring(0, $SamaccountnameOrSid.LastIndexOf("-"))
-
-                        # Determine if SID belongs to current domain
-                        if ($DomainSid -eq $CurrentDomainSID) {
-                            Write-LogMsg @LogParams -Text "$($StartingIdentityName) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
-                        } else {
-                            Write-LogMsg @LogParams -Text "$($StartingIdentityName) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
-                        }
-
-                        # Lookup other information about the domain using its SID as the key
-                        $DomainObject = $DomainsBySID[$DomainSid]
-                        if ($DomainObject) {
-                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainObject.Dns)/Users,group"
-                            $DomainNetBIOS = $DomainObject.Netbios
-                        } else {
-                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/Users,group"
-                        }
-
-                        try {
-                            $UsersGroup = Get-DirectoryEntry @GetDirectoryEntryParams
-                        } catch {
-                            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-                            Write-LogMsg @LogParams -Text "Could not get '$($GetDirectoryEntryParams['DirectoryPath'])' using PSRemoting. Error: $_"
-                            $LogParams['Type'] = $DebugOutputStream
-                        }
-                        $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
-
-                        $DirectoryEntry = $MembersOfUsersGroup |
-                        Where-Object -FilterScript { ($SamaccountnameOrSid -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
-
-                        if ($DirectoryEntry.Name) {
-                            $AccountName = $DirectoryEntry.Name
-                        } else {
-                            if ($DirectoryEntry.Properties) {
-                                if ($DirectoryEntry.Properties['name'].Value) {
-                                    $AccountName = $DirectoryEntry.Properties['name'].Value
-                                } else {
-                                    $AccountName = $DirectoryEntry.Properties['name']
-                                }
-                            }
-                        }
-
-                        $ThisIdentity = [pscustomobject]@{
-                            Count = $(($ThisIdentityGroup | Measure-Object).Count)
-                            Name  = "$DomainNetBIOS\" + $AccountName
-                            Group = $ThisIdentityGroup
-                            # Unclear why this was filtered so I have removed it to see what happens
-                            #Group = $ThisIdentityGroup | Where-Object -FilterScript { ($_.SourceAccessList.Path -split '\\')[2] -eq $DomainNetBIOS } # Should be already Resolved to a UNC path so it reflects the server name
-                        }
-
-                    } else {
-                        Write-LogMsg @LogParams -Text " # '$StartingIdentityName' is a local security principal"
-                        $DomainNetbiosCacheResult = $DomainsByNetbios[$DomainNetBIOS]
-                        if ($DomainNetbiosCacheResult) {
-                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainNetbiosCacheResult.Dns)/$SamaccountnameOrSid"
-                        } else {
-                            $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/$SamaccountnameOrSid"
-                        }
-                        $GetDirectoryEntryParams['PropertiesToLoad'] = @(
-                            'members',
-                            'objectClass',
-                            'objectSid',
-                            'samAccountName',
-                            'distinguishedName',
-                            'name',
-                            'grouptype',
-                            'description',
-                            'managedby',
-                            'member',
-                            'Department',
-                            'Title',
-                            'primaryGroupToken'
-                        )
-                        try {
-                            $DirectoryEntry = Get-DirectoryEntry @GetDirectoryEntryParams
-                        } catch {
-                            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-                            Write-LogMsg @LogParams -Text " # '$($GetDirectoryEntryParams['DirectoryPath'])' could not be resolved for '$StartingIdentityName'. Error: $($_.Exception.Message.Trim())"
-                            $LogParams['Type'] = $DebugOutputStream
-                        }
-                    }
+                    Write-LogMsg @LogParams -Text "$($IdentityReference) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
                 }
 
-                $PropertiesToAdd = @{
-                    DomainDn       = $DomainDn
-                    DomainNetbios  = $DomainNetBIOS
-                    DirectoryEntry = $DirectoryEntry
-                }
-                if ($null -ne $DirectoryEntry) {
+                # Lookup other information about the domain using its SID as the key
+                $DomainObject = $DomainsBySID[$DomainSid]
 
-                    # WinNT objects have a SchemaClassName property which is a string
-                    # LDAP objects have an objectClass property which is an ordered list of strings, the last being the class name of the object instance
-                    # ToDo: LDAP objects may have SchemaClassName too.  When/why?  Should I just request it always in the list of properties?
-                    if (-not $DirectoryEntry.SchemaClassName) {
-                        $PropertiesToAdd['SchemaClassName'] = @($DirectoryEntry.Properties['objectClass'])[-1] #untested but should work, last value should be the correct one https://learn.microsoft.com/en-us/windows/win32/ad/retrieving-the-objectclass-property
-                    }
-
-                    if ($NoGroupMembers -eq $false) {
-
-                        if (
-                            # WinNT DirectoryEntries do not contain an objectClass property
-                            # If this property exists it is an LDAP DirectoryEntry rather than WinNT
-                            $PropertiesToAdd['SchemaClassName'] -eq 'group'
-                        ) {
-                            # Retrieve the members of groups from the LDAP provider
-                            Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is an LDAP security principal for '$StartingIdentityName'"
-                            $Members = (Get-AdsiGroupMember -Group $DirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams).FullMembers
-                        } else {
-                            # Retrieve the members of groups from the WinNT provider
-                            Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is a WinNT security principal for '$StartingIdentityName'"
-                            if ( $DirectoryEntry.SchemaClassName -eq 'group') {
-                                Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is a WinNT group for '$StartingIdentityName'"
-                                $Members = Get-WinNTGroupMember -DirectoryEntry $DirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
-                            }
-                        }
-
-                        # (Get-AdsiGroupMember).FullMembers or Get-WinNTGroupMember could return an array with null members so we must verify that is not true
-                        if ($Members) {
-                            $Members |
-                            ForEach-Object {
-
-                                if ($_.Domain) {
-
-                                    Add-Member -InputObject $_ -Force -NotePropertyMembers @{
-                                        Group = $ThisIdentityGroup
-                                    }
-
-                                } else {
-
-                                    Add-Member -InputObject $_ -Force -NotePropertyMembers @{
-                                        Group  = $ThisIdentityGroup
-                                        Domain = [pscustomobject]@{
-                                            Dns     = $DomainNetBIOS
-                                            Netbios = $DomainNetBIOS
-                                            Sid     = ($SamaccountnameOrSid -split '-') | Select-Object -Last 1
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
-
-                        $PropertiesToAdd['Members'] = $Members
-                        Write-LogMsg @LogParams -Text " # $($DirectoryEntry.Path) has $(($Members | Measure-Object).Count) members for '$StartingIdentityName'"
-
-                    }
+                if ($DomainObject) {
+                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainObject.Dns)/Users,group"
+                    $DomainNetBIOS = $DomainObject.Netbios
+                    $DomainDN = $DomainObject.DistinguishedName
                 } else {
+                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/Users,group"
+                    $DomainDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios @LoggingParams
+                }
+
+                try {
+                    $UsersGroup = Get-DirectoryEntry @GetDirectoryEntryParams
+                } catch {
                     $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-                    Write-LogMsg @LogParams -Text " # '$StartingIdentityName' could not be matched to a DirectoryEntry"
+                    Write-LogMsg @LogParams -Text "Could not get '$($GetDirectoryEntryParams['DirectoryPath'])' using PSRemoting. Error: $_"
                     $LogParams['Type'] = $DebugOutputStream
                 }
 
-                Add-Member -InputObject $ThisIdentity -Force -NotePropertyMembers $PropertiesToAdd
-                $IdentityReferenceCache[$StartingIdentityName] = $ThisIdentity
+                $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+
+                $DirectoryEntry = $MembersOfUsersGroup |
+                Where-Object -FilterScript { ($SamaccountnameOrSid -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
 
             } else {
-                Write-LogMsg @LogParams -Text " # IdentityReferenceCache hit for '$($ThisIdentity.Name)'"
-                $null = $IdentityReferenceCache[$ThisIdentity.Name].Group.Add($ThisIdentityGroup)
-                $ThisIdentity = $IdentityReferenceCache[$ThisIdentity.Name]
+
+                Write-LogMsg @LogParams -Text " # '$IdentityReference' is a local security principal"
+                $DomainNetbiosCacheResult = $DomainsByNetbios[$DomainNetBIOS]
+
+                if ($DomainNetbiosCacheResult) {
+                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainNetbiosCacheResult.Dns)/$SamaccountnameOrSid"
+                } else {
+                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/$SamaccountnameOrSid"
+                }
+
+                $GetDirectoryEntryParams['PropertiesToLoad'] = @(
+                    'members',
+                    'objectClass',
+                    'objectSid',
+                    'samAccountName',
+                    'distinguishedName',
+                    'name',
+                    'grouptype',
+                    'description',
+                    'managedby',
+                    'member',
+                    'Department',
+                    'Title',
+                    'primaryGroupToken'
+                )
+
+                try {
+                    $DirectoryEntry = Get-DirectoryEntry @GetDirectoryEntryParams
+                } catch {
+                    $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+                    Write-LogMsg @LogParams -Text " # '$($GetDirectoryEntryParams['DirectoryPath'])' could not be resolved for '$IdentityReference'. Error: $($_.Exception.Message.Trim())"
+                    $LogParams['Type'] = $DebugOutputStream
+                }
+
             }
 
-            $ThisIdentity
+        }
+
+        $PropertiesToAdd = @{
+            DomainDn      = $DomainDn
+            DomainNetbios = $DomainNetBIOS
+        }
+
+        if ($null -ne $DirectoryEntry) {
+
+            ForEach ($Prop in ($DirectoryEntry | Get-Member -View All -MemberType Property).Name) {
+                $null = ConvertTo-SimpleProperty -InputObject $DirectoryEntry -Property $Prop -PropertyDictionary $PropertiesToAdd
+            }
+
+            if ($DirectoryEntry.Name) {
+                $AccountName = $DirectoryEntry.Name
+            } else {
+                if ($DirectoryEntry.Properties) {
+                    if ($DirectoryEntry.Properties['name'].Value) {
+                        $AccountName = $DirectoryEntry.Properties['name'].Value
+                    } else {
+                        $AccountName = $DirectoryEntry.Properties['name']
+                    }
+                }
+            }
+            $PropertiesToAdd['ResolvedAccountName'] = "$DomainNetBIOS\$AccountName"
+
+            # WinNT objects have a SchemaClassName property which is a string
+            # LDAP objects have an objectClass property which is an ordered list of strings, the last being the class name of the object instance
+            # ToDo: LDAP objects may have SchemaClassName too.  When/why?  Should I just request it always in the list of properties?
+            # ToDo: Actually I should create an AdsiObjectType property of my own or something...don't expose the dependency
+            if (-not $DirectoryEntry.SchemaClassName) {
+                $PropertiesToAdd['SchemaClassName'] = @($DirectoryEntry.Properties['objectClass'])[-1] #untested but should work, last value should be the correct one https://learn.microsoft.com/en-us/windows/win32/ad/retrieving-the-objectclass-property
+            }
+
+            if ($NoGroupMembers -eq $false) {
+
+                if (
+                    # WinNT DirectoryEntries do not contain an objectClass property
+                    # If this property exists it is an LDAP DirectoryEntry rather than WinNT
+                    $PropertiesToAdd.ContainsKey('objectClass')
+                ) {
+                    # Retrieve the members of groups from the LDAP provider
+                    Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is an LDAP security principal for '$IdentityReference'"
+                    $Members = (Get-AdsiGroupMember -Group $DirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams).FullMembers
+                } else {
+                    # Retrieve the members of groups from the WinNT provider
+                    Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is a WinNT security principal for '$IdentityReference'"
+                    if ( $DirectoryEntry.SchemaClassName -eq 'group') {
+                        Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is a WinNT group for '$IdentityReference'"
+                        $Members = Get-WinNTGroupMember -DirectoryEntry $DirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+                    }
+                }
+
+                # (Get-AdsiGroupMember).FullMembers or Get-WinNTGroupMember could return an array with null members so we must verify that is not true
+                if ($Members) {
+
+                    $GroupMembers = ForEach ($ThisMember in $Members) {
+
+                        if ($ThisMember.Domain) {
+
+                            # Include specific desired properties
+                            $OutputProperties = @{}
+
+                        } else {
+
+                            # Include specific desired properties
+                            $OutputProperties = @{
+                                Domain = [pscustomobject]@{
+                                    Dns     = $DomainNetBIOS
+                                    Netbios = $DomainNetBIOS
+                                    Sid     = @($SamaccountnameOrSid -split '-')[-1]
+                                }
+                            }
+
+                        }
+
+                        # Get any existing properties for inclusion later
+                        $InputProperties = (Get-Member -InputObject $ThisMember -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+                        # Include any existing properties found earlier
+                        ForEach ($ThisProperty in $InputProperties) {
+                            $OutputProperties[$ThisProperty] = $ThisMember.$ThisProperty
+                        }
+
+                        if ($ThisMember.sAmAccountName) {
+                            $ResolvedAccountName = "$($OutputProperties['Domain'].Netbios)\$($ThisMember.sAmAccountName)"
+                        } else {
+                            $ResolvedAccountName = "$($OutputProperties['Domain'].Netbios)\$($ThisMember.Name)"
+                        }
+
+                        $OutputProperties['ResolvedAccountName'] = $ResolvedAccountName
+                        $PrincipalsByResolvedID[$ResolvedAccountName] = [PSCustomObject]$OutputProperties
+                        $ACEsByResolvedID[$ResolvedAccountName] = $AccessControlEntries
+                        $ResolvedAccountName
+
+                    }
+
+                }
+
+            }
+
+            $PropertiesToAdd['Members'] = $GroupMembers
+            Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' has $(($Members | Measure-Object).Count) members for '$IdentityReference'"
+
+        } else {
+
+            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+            Write-LogMsg @LogParams -Text " # '$IdentityReference' could not be matched to a DirectoryEntry"
+            $LogParams['Type'] = $DebugOutputStream
 
         }
+
+        $PrincipalsByResolvedID[$IdentityReference] = [PSCustomObject]$PropertiesToAdd
 
     }
 
@@ -1248,25 +1271,40 @@ function ConvertFrom-SearchResult {
 
     process {
         ForEach ($ThisSearchResult in $SearchResult) {
-            $ObjectWithProperties = $ThisSearchResult |
-            Select-Object -Property *
+            #$ObjectWithProperties = $ThisSearchResult |
+            #Select-Object -Property *
+            #
+            #$ObjectNoteProperties = $ObjectWithProperties |
+            #Get-Member -MemberType Property, CodeProperty, ScriptProperty, NoteProperty
+            #
+            #$ThisObject = @{}
+            #
+            ## Enumerate the keys of the ResultPropertyCollection
+            #ForEach ($ThisProperty in $ThisSearchResult.Properties.Keys) {
+            #   $ThisObject = ConvertTo-SimpleProperty -InputObject $ThisSearchResult.Properties -Property $ThisProperty -PropertyDictionary $ThisObject
+            #}
+            #
+            ## We will allow any existing properties to override members of the ResultPropertyCollection
+            #ForEach ($ThisObjProperty in $ObjectNoteProperties) {
+            #    $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
+            #}
+            #
+            #[PSCustomObject]$ThisObject
 
-            $ObjectNoteProperties = $ObjectWithProperties |
-            Get-Member -MemberType Property, CodeProperty, ScriptProperty, NoteProperty
-
-            $ThisObject = @{}
+            $OutputObject = @{}
 
             # Enumerate the keys of the ResultPropertyCollection
             ForEach ($ThisProperty in $ThisSearchResult.Properties.Keys) {
-                $ThisObject = ConvertTo-SimpleProperty -InputObject $ThisSearchResult.Properties -Property $ThisProperty -PropertyDictionary $ThisObject
+                $null = ConvertTo-SimpleProperty -InputObject $ThisSearchResult.Properties -Property $ThisProperty -PropertyDictionary $ThisObject
             }
 
             # We will allow any existing properties to override members of the ResultPropertyCollection
-            ForEach ($ThisObjProperty in $ObjectNoteProperties) {
-                $ThisObject = ConvertTo-SimpleProperty -InputObject $ObjectWithProperties -Property $ThisObjProperty.Name -PropertyDictionary $ThisObject
+            ForEach ($ThisProperty in ($ThisSearchResult | Get-Member -View All -MemberType Property).Name) {
+                $null = ConvertTo-SimpleProperty -InputObject $ThisSearchResult -Property $ThisProperty -PropertyDictionary $OutputObject
             }
 
-            [PSCustomObject]$ThisObject
+            [PSCustomObject]$OutputObject
+
         }
     }
 }
@@ -2904,14 +2942,16 @@ function Get-AdsiServer {
         ForEach ($DomainFqdn in $Fqdn) {
 
             $OutputObject = $DomainsByFqdn[$DomainFqdn]
+
             if ($OutputObject) {
+
                 Write-LogMsg @LogParams -Text " # Domain FQDN cache hit for '$DomainFqdn'"
                 $OutputObject
                 continue
-            }
-            Write-LogMsg @LogParams -Text " # Domain FQDN cache miss for '$DomainFqdn'"
 
-            Write-LogMsg @LogParams -Text "Find-AdsiProvider -AdsiServer '$DomainFqdn'"
+            }
+
+            Write-LogMsg @LogParams -Text "Find-AdsiProvider -AdsiServer '$DomainFqdn' # Domain FQDN cache miss for '$DomainFqdn'"
             $AdsiProvider = Find-AdsiProvider -AdsiServer $DomainFqdn @LoggingParams
             $CacheParams['AdsiProvider'] = $AdsiProvider
 
@@ -2954,9 +2994,9 @@ function Get-AdsiServer {
                 BUILTIN                        S-1-5-32
 
 
-             # PS 5.1 returns fewer results than PS 7.4
-                PS C:\Users\Owner> ForEach ($SidType in [System.Security.Principal.WellKnownSidType].GetEnumNames()) {$var = [System.Security.Principal.WellKnownSidType]::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var,$LogonDomainSid) |Add-Member -PassThru -NotePropertyMembers @{'WellKnownSidType' = $SidType}}
+            PS C:\Users\Owner> ForEach ($SidType in [System.Security.Principal.WellKnownSidType].GetEnumNames()) {$var = [System.Security.Principal.WellKnownSidType]::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var,$LogonDomainSid) |Add-Member -PassThru -NotePropertyMembers @{'WellKnownSidType' = $SidType}}
 
+                # PS 5.1 returns fewer results than PS 7.4
                     WellKnownSidType                          BinaryLength AccountDomainSid                          Value
                     ----------------                          ------------ ----------------                          -----
                     NullSid                                             12                                           S-1-0-0
@@ -3029,9 +3069,7 @@ function Get-AdsiServer {
                     WinBuiltinTerminalServerLicenseServersSid           16                                           S-1-5-32-561
                     MaxDefined                                          16                                           S-1-5-32-561
 
-            # PS 7 returns more results
-                PS C:\Users\Owner> ForEach ($SidType in [System.Security.Principal.WellKnownSidType].GetEnumNames()) {$var = [System.Security.Principal.WellKnownSidType]::$SidType; [System.Security.Principal.SecurityIdentifier]::new($var,$LogonDomainSid) |Add-Member -PassThru -NotePropertyMembers @{'WellKnownSidType' = $SidType}}
-
+                # PS 7 returns more results
                     WellKnownSidType                           BinaryLength AccountDomainSid                          Value
                     ----------------                           ------------ ----------------                          -----
                     NullSid                                              12                                           S-1-0-0
@@ -3131,12 +3169,17 @@ function Get-AdsiServer {
                     WinCapabilityEnterpriseAuthenticationSid             16                                           S-1-15-3-8
                     WinCapabilityRemovableStorageSid                     16                                           S-1-15-3-10
             #>
+
             Write-LogMsg @LogParams -Text "Get-CachedCimInstance -ComputerName '$DomainFqdn' -ClassName 'Win32_Account'"
             $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainFqdn -ClassName 'Win32_Account' @CimParams @LoggingParams
 
             ForEach ($Acct in $Win32Accounts) {
+
+                Write-LogMsg @LogParams -Text " # Add '$($Acct.Domain)\$($Acct.SID)' to the Win32_Account SID cache"
                 $Win32AccountsBySID["$($Acct.Domain)\$($Acct.SID)"] = $Acct
+                Write-LogMsg @LogParams -Text " # Add '$($Acct.Caption)' to the Win32_Account caption cache"
                 $Win32AccountsByCaption[$Acct.Caption] = $Acct
+
             }
 
             $OutputObject = [PSCustomObject]@{
@@ -3147,22 +3190,27 @@ function Get-AdsiServer {
                 AdsiProvider      = $AdsiProvider
                 Win32Accounts     = $Win32Accounts
             }
+
             $DomainsBySid[$OutputObject.Sid] = $OutputObject
             $DomainsByNetbios[$OutputObject.Netbios] = $OutputObject
             $DomainsByFqdn[$DomainFqdn] = $OutputObject
             $OutputObject
+
         }
 
         ForEach ($DomainNetbios in $Netbios) {
+
             $OutputObject = $DomainsByNetbios[$DomainNetbios]
+
             if ($OutputObject) {
+
                 Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$DomainNetbios'"
                 $OutputObject
                 continue
-            }
-            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$DomainNetbios'"
 
-            Write-LogMsg @LogParams -Text "Get-CachedCimSession -ComputerName '$DomainNetbios'"
+            }
+
+            Write-LogMsg @LogParams -Text "Get-CachedCimSession -ComputerName '$DomainNetbios' # Domain NetBIOS cache hit for '$DomainNetbios'"
             $CimSession = Get-CachedCimSession -ComputerName $DomainNetbios -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
 
             Write-LogMsg @LogParams -Text "Find-AdsiProvider -AdsiServer '$DomainDnsName' # for '$DomainNetbios'"
@@ -3173,11 +3221,15 @@ function Get-AdsiServer {
             $DomainDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios @LoggingParams
 
             if ($DomainDn) {
+
                 Write-LogMsg @LogParams -Text "ConvertTo-Fqdn -DistinguishedName '$DomainDn' # for '$DomainNetbios'"
                 $DomainDnsName = ConvertTo-Fqdn -DistinguishedName $DomainDn -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
+
             } else {
+
                 $ParentDomainDnsName = Get-ParentDomainDnsName -DomainsByNetbios $DomainNetBIOS -CimSession $CimSession -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
                 $DomainDnsName = "$DomainNetBIOS.$ParentDomainDnsName"
+
             }
 
             Write-LogMsg @LogParams -Text "ConvertTo-DomainSidString -DomainDnsName '$DomainFqdn' -AdsiProvider '$AdsiProvider' -ThisFqdn '$ThisFqdn' # for '$DomainNetbios'"
@@ -3191,8 +3243,12 @@ function Get-AdsiServer {
             }
 
             ForEach ($Acct in $Win32Accounts) {
+
+                Write-LogMsg @LogParams -Text " # Add '$($Acct.Domain)\$($Acct.SID)' to the Win32_Account SID cache"
                 $Win32AccountsBySID["$($Acct.Domain)\$($Acct.SID)"] = $Acct
+                Write-LogMsg @LogParams -Text " # Add '$($Acct.Caption)' to the Win32_Account caption cache"
                 $Win32AccountsByCaption[$Acct.Caption] = $Acct
+
             }
 
             $OutputObject = [PSCustomObject]@{
@@ -3203,12 +3259,16 @@ function Get-AdsiServer {
                 AdsiProvider      = $AdsiProvider
                 Win32Accounts     = $Win32Accounts
             }
+
             $DomainsBySid[$OutputObject.Sid] = $OutputObject
             $DomainsByNetbios[$OutputObject.Netbios] = $OutputObject
             $DomainsByFqdn[$OutputObject.Dns] = $OutputObject
             $OutputObject
+
         }
+
     }
+
 }
 function Get-CurrentDomain {
     <#
@@ -3263,7 +3323,9 @@ function Get-CurrentDomain {
 
     )
     $Obj = [adsi]::new()
-    try { $null = $Obj.RefreshCache('objectSid') } catch {
+    try {
+        $null = $Obj.RefreshCache('objectSid')
+    } catch {
 
         # Assume local computer/workgroup, use CIM rather than ADSI
 
@@ -3273,10 +3335,11 @@ function Get-CurrentDomain {
             WhoAmI       = $WhoAmI
         }
 
-        $SID = Find-LocalAdsiServerSid -ComputerName $ComputerName -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams |
-        ConvertTo-SidByteArray
+        $SIDString = Find-LocalAdsiServerSid -ComputerName $ComputerName -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
+        $SID = $SIDString | ConvertTo-SidByteArray
 
-        $Obj = [PSCustomObject]@{
+        $OutputProperties = @{
+            SIDString         = $SIDString
             ObjectSid         = [PSCustomObject]@{
                 Value = $Sid
             }
@@ -3287,7 +3350,25 @@ function Get-CurrentDomain {
 
     }
 
-    return $Obj
+    # Include specific desired properties
+    if (-not $OutputProperties) {
+        # Convert the objectSID attribute (byte array) to a security descriptor string formatted according to SDDL syntax (Security Descriptor Definition Language)
+        Write-LogMsg @LogParams -Text '[System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0)'
+        $OutputProperties = @{
+            SIDString = & { [System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0) } 2>$null
+        }
+
+        # Get any existing properties for inclusion later
+        $InputProperties = (Get-Member -InputObject $Obj[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+        # Include any existing properties found earlier
+        ForEach ($ThisProperty in $InputProperties) {
+            $OutputProperties[$ThisProperty] = $ThisPrincipal.$ThisProperty
+        }
+    }
+
+    # Output the object
+    [PSCustomObject]$OutputProperties
 
 }
 function Get-DirectoryEntry {
@@ -3908,7 +3989,7 @@ function New-FakeDirectoryEntry {
     Used in place of a DirectoryEntry for certain WinNT security principals that do not have objects in the directory
     The WinNT provider only throws an error if you try to retrieve certain accounts/identities
     #>
-    
+
     param (
         [string]$DirectoryPath
     )
@@ -3990,318 +4071,10 @@ function New-FakeDirectoryEntry {
         SchemaEntry     = $SchemaEntry
         Properties      = $Properties
     }
+
     Add-Member -InputObject $Object -Name RefreshCache -MemberType ScriptMethod -Value {}
     Add-Member -InputObject $Object -Name Invoke -MemberType ScriptMethod -Value {}
     return $Object
-
-}
-function Resolve-Ace {
-    <#
-    .SYNOPSIS
-    Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
-    .DESCRIPTION
-    Based on the IdentityReference proprety of each Access Control Entry:
-    Resolve SID to NT account name and vise-versa
-    Resolve well-known SIDs
-    Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
-    Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
-    .INPUTS
-    [System.Security.AccessControl.AuthorizationRuleCollection]$InputObject
-    .OUTPUTS
-    [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
-    .EXAMPLE
-    Get-Acl |
-    Expand-Acl |
-    Resolve-Ace
-
-    Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
-    This works in either Windows Powershell or in Powershell
-    Get-Acl does not support long paths (>256 characters)
-    That was why I originally used the .Net Framework method
-    .EXAMPLE
-    Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
-    Resolve-Ace
-    .EXAMPLE
-    [System.String]$FolderPath = 'C:\Test'
-    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-    $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
-    $IncludeExplicitRules = $true
-    $IncludeInheritedRules = $true
-    $AccountType = [System.Security.Principal.SecurityIdentifier]
-    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-    Resolve-Ace
-
-    This uses .Net Core as the source of the access list
-    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
-    .EXAMPLE
-    [System.String]$FolderPath = 'C:\Test'
-    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
-    [System.Security.AccessControl.AccessControlSections]::Owner -bor
-    [System.Security.AccessControl.AccessControlSections]::Group
-    $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
-    $IncludeExplicitRules = $true
-    $IncludeInheritedRules = $true
-    $AccountType = [System.Security.Principal.NTAccount]
-    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
-    Resolve-Ace
-
-    This uses .Net Core as the source of the access list
-    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
-    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
-    .EXAMPLE
-    [System.String]$FolderPath = 'C:\Test'
-    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-    [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
-    [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
-    $AuthRules | Resolve-Ace
-
-    Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
-    Only works in Windows PowerShell
-    Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
-    This method is removed in modern versions of .Net Core
-
-    .EXAMPLE
-    [System.String]$FolderPath = 'C:\Test'
-    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
-    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
-    $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
-
-    The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
-    It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
-
-    .NOTES
-    Dependencies:
-        Get-DirectoryEntry
-        Add-SidInfo
-        Get-TrustedDomain
-        Find-AdsiProvider
-
-    if ($FolderPath.Length -gt 255) {
-        $FolderPath = "\\?\$FolderPath"
-    }
-#>
-    [OutputType([PSCustomObject])]
-    param (
-
-        # Authorization Rule Collection of Access Control Entries from Discretionary Access Control Lists
-        [Parameter(
-            ValueFromPipeline
-        )]
-        [PSObject[]]$InputObject,
-
-        <#
-    Dictionary to cache directory entries to avoid redundant lookups
-
-    Defaults to an empty thread-safe hashtable
-    #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
-
-        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
-        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
-        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
-        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
-
-        <#
-    Hostname of the computer running this function.
-
-    Can be provided as a string to avoid calls to HOSTNAME.EXE
-    #>
-        [string]$ThisHostName = (HOSTNAME.EXE),
-
-        <#
-    FQDN of the computer running this function.
-
-    Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
-    #>
-        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
-
-        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$WhoAmI = (whoami.EXE),
-
-        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages,
-
-        # Cache of CIM sessions and instances to reduce connections and queries
-        [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
-
-        # Output stream to send the log messages to
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug'
-
-    )
-    begin {
-
-        $LogParams = @{
-            ThisHostname = $ThisHostname
-            Type         = $DebugOutputStream
-            LogMsgCache  = $LogMsgCache
-            WhoAmI       = $WhoAmI
-        }
-
-        $LoggingParams = @{
-            ThisHostname = $ThisHostname
-            LogMsgCache  = $LogMsgCache
-            WhoAmI       = $WhoAmI
-        }
-
-    }
-
-    process {
-
-        $ACEPropertyNames = (Get-Member -InputObject $InputObject[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
-        ForEach ($ThisACE in $InputObject) {
-
-            $IdentityReference = $ThisACE.IdentityReference.ToString()
-
-            if ([string]::IsNullOrEmpty($IdentityReference)) {
-                continue
-            }
-
-            $ThisServerDns = $null
-            $DomainNetBios = $null
-
-            # Remove the PsProvider prefix from the path string
-            if (-not [string]::IsNullOrEmpty($ThisACE.SourceAccessList.Path)) {
-                $LiteralPath = $ThisACE.SourceAccessList.Path -replace [regex]::escape("$($ThisACE.SourceAccessList.PsProvider)::"), ''
-            } else {
-                $LiteralPath = $LiteralPath -replace [regex]::escape("$($ThisACE.SourceAccessList.PsProvider)::"), ''
-            }
-
-            switch -Wildcard ($IdentityReference) {
-                "S-1-*" {
-                    # IdentityReference is a SID (Revision 1)
-                    Write-LogMsg @LogParams -Text "'$IdentityReference'.LastIndexOf('-')"
-                    $IndexOfLastHyphen = $IdentityReference.LastIndexOf("-")
-                    Write-LogMsg @LogParams -Text "'$IdentityReference'.Substring(0, $IndexOfLastHyphen)"
-                    $DomainSid = $IdentityReference.Substring(0, $IndexOfLastHyphen)
-                    if ($DomainSid) {
-                        $DomainCacheResult = $DomainsBySID[$DomainSid]
-                        if ($DomainCacheResult) {
-                            Write-LogMsg @LogParams -Text " # Domain SID cache hit for '$DomainSid' for '$IdentityReference'"
-                            $ThisServerDns = $DomainCacheResult.Dns
-                            $DomainNetBios = $DomainCacheResult.Netbios
-                        } else {
-                            Write-LogMsg @LogParams -Text " # Domain SID cache miss for '$DomainSid' for '$IdentityReference'"
-                        }
-                    }
-                }
-                "NT SERVICE\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
-                }
-                "BUILTIN\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
-                }
-                "NT AUTHORITY\*" {
-                    $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
-                }
-                default {
-                    $DomainNetBios = ($IdentityReference -split '\\')[0]
-                    if ($DomainNetBios) {
-                        $ThisServerDns = $DomainsByNetbios[$DomainNetBios].Dns #Doesn't work for BUILTIN, etc.
-                    }
-                    if (-not $ThisServerDns) {
-                        $ThisServerDn = ConvertTo-DistinguishedName -Domain $DomainNetBios -DomainsByNetbios $DomainsByNetbios @LoggingParams
-                        $ThisServerDns = ConvertTo-Fqdn -DistinguishedName $ThisServerDn -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
-                    }
-                }
-            }
-
-            if (-not $ThisServerDns) {
-                # Bug: I think this will report incorrectly for a remote domain not in the cache (trust broken or something)
-                $ThisServerDns = Find-ServerNameInPath -LiteralPath $LiteralPath -ThisFqdn $ThisFqdn
-            }
-            Write-LogMsg @LogParams -Text " # Domain FQDN is '$ThisServerDns' for '$IdentityReference'"
-
-            $GetAdsiServerParams = @{
-                Fqdn                   = $ThisServerDns
-                Win32AccountsBySID     = $Win32AccountsBySID
-                Win32AccountsByCaption = $Win32AccountsByCaption
-                DirectoryEntryCache    = $DirectoryEntryCache
-                DomainsByFqdn          = $DomainsByFqdn
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsBySid           = $DomainsBySid
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                LogMsgCache            = $LogMsgCache
-                WhoAmI                 = $WhoAmI
-                CimCache               = $CimCache
-            }
-            $AdsiServer = Get-AdsiServer @GetAdsiServerParams
-            Write-LogMsg @LogParams -Text " # ADSI server is '$($AdsiServer.AdsiProvider)://$($AdsiServer.Dns)' for '$IdentityReference'"
-
-            if ([string]$DomainNetBios -eq '') {
-                $DomainNetBios = $AdsiServer.Netbios
-            }
-
-            Write-LogMsg @LogParams -Text " # Domain NetBIOS is '$DomainNetBios' for '$IdentityReference'"
-
-            <#
-        $AdsiProvider = $null
-        if (-not $DomainNetBios) {
-            $DomainCacheResult = $DomainsByFqdn[$ThisServerDns]
-            if ($DomainCacheResult) {
-                Write-LogMsg @LogParams -Text " # Domain FQDN cache hit for '$ThisServerDns'"
-                $DomainNetBios = $DomainCacheResult.Netbios
-                $AdsiProvider = $DomainCacheResult.AdsiProvider
-            } else {
-                Write-LogMsg @LogParams -Text " # Domain FQDN cache miss for '$ThisServerDns'"
-            }
-        }
-
-        if (-not $DomainNetBios) {
-            if (-not $AdsiProvider) {
-                $AdsiProvider = Find-AdsiProvider -AdsiServer $ThisServerDns
-            }
-            $DomainNetBios = ConvertTo-DomainNetBIOS -DomainFQDN $ThisServerDns -AdsiProvider $AdsiProvider -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid
-        }
-        #>
-
-            $ResolveIdentityReferenceParams = @{
-                IdentityReference      = $IdentityReference
-                AdsiServer             = $AdsiServer
-                Win32AccountsBySID     = $Win32AccountsBySID
-                Win32AccountsByCaption = $Win32AccountsByCaption
-                DirectoryEntryCache    = $DirectoryEntryCache
-                DomainsBySID           = $DomainsBySID
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsByFqdn          = $DomainsByFqdn
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                LogMsgCache            = $LogMsgCache
-                CimCache               = $CimCache
-                WhoAmI                 = $WhoAmI
-            }
-            Write-LogMsg @LogParams -Text "Resolve-IdentityReference -IdentityReference '$IdentityReference'..."
-            $ResolvedIdentityReference = Resolve-IdentityReference @ResolveIdentityReferenceParams
-
-            # not sure if I should add a param to offer DNS instead of NetBIOS
-
-            $ObjectProperties = @{
-                AdsiProvider              = $AdsiServer.AdsiProvider
-                AdsiServer                = $AdsiServer.Dns
-                IdentityReferenceSID      = $ResolvedIdentityReference.SIDString
-                IdentityReferenceName     = $ResolvedIdentityReference.IdentityReferenceUnresolved
-                IdentityReferenceResolved = $ResolvedIdentityReference.IdentityReferenceNetBios
-            }
-            ForEach ($ThisProperty in $ACEPropertyNames) {
-                $ObjectProperties[$ThisProperty] = $ThisACE.$ThisProperty
-            }
-            [PSCustomObject]$ObjectProperties
-
-        }
-
-    }
 
 }
 function Resolve-IdentityReference {
@@ -4400,22 +4173,12 @@ function Resolve-IdentityReference {
         LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
-    
+
     $GetDirectoryEntryParams = @{
         DirectoryEntryCache = $DirectoryEntryCache
         DomainsByNetbios    = $DomainsByNetbios
         DomainsBySid        = $DomainsBySid
     }
-
-    # Populate the caches of known domains if they are currently empty (not sure if this is required so commenting it out for now)
-    #if (($DomainsByFqdn.Keys.Count + $DomainsByNetBios.Keys.Count + $DomainsBySid.Keys.Count) -lt 1) {
-    #    $null = Get-TrustedDomainInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySid -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
-    #}
-
-    # Populate the caches of known domains if they are currently empty (not sure if this is required so commenting it out for now)
-    #if (($DomainsByFqdn.Keys.Count + $DomainsByNetBios.Keys.Count + $DomainsBySid.Keys.Count) -lt 1) {
-    #    $null = Get-TrustedDomainInfo -DirectoryEntryCache $DirectoryEntryCache -DomainsBySID $DomainsBySid -DomainsByNetbios $DomainsByNetbios -DomainsByFqdn $DomainsByFqdn
-    #}
 
     $ServerNetBIOS = $AdsiServer.Netbios
 
@@ -4428,13 +4191,11 @@ function Resolve-IdentityReference {
         #IdentityReference is a SID, and has been cached from this server
         Write-LogMsg @LogParams -Text " # Win32_Account SID cache hit for '$ServerNetBIOS\$IdentityReference'"
         return [PSCustomObject]@{
-            IdentityReferenceOriginal   = $IdentityReference
-            # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
-            IdentityReferenceUnresolved = $null # Could parse SID to get this?
-            SIDString                   = $CacheResult.SID
-            IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+            IdentityReference        = $IdentityReference
+            SIDString                = $CacheResult.SID
+            IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
             # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
-            IdentityReferenceDns        = "$($AdsiServer.Dns)\$($CacheResult.Name)"
+            IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
         Write-LogMsg @LogParams -Text " # Win32_Account SID cache miss for '$ServerNetBIOS\$IdentityReference'"
@@ -4466,13 +4227,11 @@ function Resolve-IdentityReference {
             }
 
             return [PSCustomObject]@{
-                IdentityReferenceOriginal   = $IdentityReference
-                # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
-                IdentityReferenceUnresolved = $IdentityReference
-                SIDString                   = $CacheResult.SID
-                IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+                IdentityReference        = $IdentityReference
+                SIDString                = $CacheResult.SID
+                IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
                 # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
-                IdentityReferenceDns        = "$DomainDns\$($CacheResult.Name)"
+                IdentityReferenceDns     = "$DomainDns\$($CacheResult.Name)"
             }
         } else {
             Write-LogMsg @LogParams -Text " # Win32_Account caption cache miss for '$ServerNetBIOS\$ServerNetBIOS\$Name'"
@@ -4483,13 +4242,11 @@ function Resolve-IdentityReference {
         # IdentityReference is an NT Account Name without a \, and has been cached from this server
         Write-LogMsg @LogParams -Text " # Win32_Account caption cache hit for '$ServerNetBIOS\$IdentityReference'"
         return [PSCustomObject]@{
-            IdentityReferenceOriginal   = $IdentityReference
-            # IdentityReferenceNameUnresolved below is not available, the Win32_Account instances in the cache are already resolved to the NetBios domain names
-            IdentityReferenceUnresolved = $null
-            SIDString                   = $CacheResult.SID
-            IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+            IdentityReference        = $IdentityReference
+            SIDString                = $CacheResult.SID
+            IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
             # PS 7 more efficient IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase)
-            IdentityReferenceDns        = "$($AdsiServer.Dns)\$($CacheResult.Name)"
+            IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
         Write-LogMsg @LogParams -Text " # Win32_Account caption cache miss for '$ServerNetBIOS\$IdentityReference'"
@@ -4534,7 +4291,10 @@ function Resolve-IdentityReference {
                         Domain  = $ServerNetBIOS
                         Name    = $split[1]
                     }
+
+                    Write-LogMsg @LogParams -Text " # Add '$Caption' to the Win32_Account caption cache"
                     $Win32AccountsByCaption[$Caption] = $Win32Acct
+                    Write-LogMsg @LogParams -Text " # Add '$ServerNetBIOS\$IdentityReference' to the Win32_Account SID cache"
                     $Win32AccountsBySID["$ServerNetBIOS\$IdentityReference"] = $Win32Acct
 
                 } else {
@@ -4573,12 +4333,11 @@ function Resolve-IdentityReference {
                 $Resolved = Resolve-IdentityReference @ResolveIdentityReferenceParams
             } else {
                 $Resolved = [PSCustomObject]@{
-                    IdentityReferenceOriginal   = $IdentityReference
-                    IdentityReferenceUnresolved = $IdentityReference
-                    SIDString                   = $IdentityReference
-                    IdentityReferenceNetBios    = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
+                    IdentityReference        = $IdentityReference
+                    SIDString                = $IdentityReference
+                    IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" # required for ps 5.1 support
                     #IdentityReferenceNetBios    = $CacheResult.Caption.Replace("$ThisHostname\","$ThisHostname\",[System.StringComparison]::CurrentCultureIgnoreCase) # PS 7 more efficient
-                    IdentityReferenceDns        = "$DomainDns\$IdentityReference"
+                    IdentityReferenceDns     = "$DomainDns\$IdentityReference"
                 }
             }
 
@@ -4620,15 +4379,17 @@ function Resolve-IdentityReference {
                 Domain  = $ServerNetBIOS
                 Name    = $Name
             }
+
+            Write-LogMsg @LogParams -Text " # Add '$Caption' to the Win32_Account caption cache"
             $Win32AccountsByCaption[$Caption] = $Win32Acct
+            Write-LogMsg @LogParams -Text " # Add '$ServerNetBIOS\$SIDString' to the Win32_Account SID cache"
             $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
 
             return [PSCustomObject]@{
-                IdentityReferenceOriginal   = $IdentityReference
-                IdentityReferenceUnresolved = $IdentityReference
-                SIDString                   = $SIDString
-                IdentityReferenceNetBios    = $Caption
-                IdentityReferenceDns        = "$DomainDns\$Name"
+                IdentityReference        = $IdentityReference
+                SIDString                = $SIDString
+                IdentityReferenceNetBios = $Caption
+                IdentityReferenceDns     = "$DomainDns\$Name"
             }
         }
         "APPLICATION PACKAGE AUTHORITY\*" {
@@ -4683,15 +4444,17 @@ function Resolve-IdentityReference {
                 Domain  = $ServerNetBIOS
                 Name    = $Name
             }
+
+            Write-LogMsg @LogParams -Text " # Add '$Caption' to the Win32_Account caption cache"
             $Win32AccountsByCaption[$Caption] = $Win32Acct
+            Write-LogMsg @LogParams -Text " # Add '$ServerNetBIOS\$SIDString' to the Win32_Account SID cache"
             $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
 
             return [PSCustomObject]@{
-                IdentityReferenceOriginal   = $IdentityReference
-                IdentityReferenceUnresolved = $IdentityReference
-                SIDString                   = $SIDString
-                IdentityReferenceNetBios    = $Caption
-                IdentityReferenceDns        = "$DomainDns\$Name"
+                IdentityReference        = $IdentityReference
+                SIDString                = $SIDString
+                IdentityReferenceNetBios = $Caption
+                IdentityReferenceDns     = "$DomainDns\$Name"
             }
         }
         "BUILTIN\*" {
@@ -4711,15 +4474,17 @@ function Resolve-IdentityReference {
                 Domain  = $ServerNetBIOS
                 Name    = $Name
             }
+
+            Write-LogMsg @LogParams -Text " # Add '$Caption' to the Win32_Account caption cache"
             $Win32AccountsByCaption[$Caption] = $Win32Acct
+            Write-LogMsg @LogParams -Text " # Add '$ServerNetBIOS\$SIDString' to the Win32_Account SID cache"
             $Win32AccountsBySID["$ServerNetBIOS\$SIDString"] = $Win32Acct
 
             return [PSCustomObject]@{
-                IdentityReferenceOriginal   = $IdentityReference
-                IdentityReferenceUnresolved = $IdentityReference
-                SIDString                   = $SIDString
-                IdentityReferenceNetBios    = $Caption
-                IdentityReferenceDns        = "$DomainDns\$Name"
+                IdentityReference        = $IdentityReference
+                SIDString                = $SIDString
+                IdentityReferenceNetBios = $Caption
+                IdentityReferenceDns     = "$DomainDns\$Name"
             }
         }
     }
@@ -4803,11 +4568,10 @@ function Resolve-IdentityReference {
         }
 
         return [PSCustomObject]@{
-            IdentityReferenceOriginal   = $IdentityReference
-            IdentityReferenceUnresolved = $IdentityReference
-            SIDString                   = $SIDString
-            IdentityReferenceNetBios    = "$DomainNetBios\$Name" -replace "^$ThisHostname\\", "$ThisHostname\"
-            IdentityReferenceDns        = "$DomainDns\$Name"
+            IdentityReference        = $IdentityReference
+            SIDString                = $SIDString
+            IdentityReferenceNetBios = "$DomainNetBios\$Name" -replace "^$ThisHostname\\", "$ThisHostname\"
+            IdentityReferenceDns     = "$DomainDns\$Name"
         }
 
     }
@@ -5202,7 +4966,7 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'PsNtfs' Version '2.0.154' is below
+# Definition of Module 'PsNtfs' Version '2.0.182' is below
 
 function GetDirectories {
 
@@ -5225,7 +4989,11 @@ function GetDirectories {
         [string]$WhoAmI = (whoami.EXE),
 
         # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # Hashtable of warning messages to avoid writing duplicate warnings when recurisive calls error while retrying a folder
+        [System.Collections.Specialized.OrderedDictionary]$WarningCache = [ordered]@{}
+
     )
 
     $LogParams = @{
@@ -5237,25 +5005,45 @@ function GetDirectories {
 
     # Try to run the command as instructed
     Write-LogMsg @LogParams -Text "[System.IO.Directory]::GetDirectories('$TargetPath','$SearchPattern',[System.IO.SearchOption]::$SearchOption)"
+
     try {
+
         $result = [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, $SearchOption)
         return $result
+
     }
     catch {
-        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-        Write-LogMsg @LogParams -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
-        $LogParams['Type'] = $DebugOutputStream
+
+        $WarningCache[$_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')] = $null
+
     }
 
     # Sometimes access is denied to a single buried subdirectory, so we will try searching the top directory only and then recursing through results one at a time
     Write-LogMsg @LogParams -Text "[System.IO.Directory]::GetDirectories('$TargetPath','$SearchPattern',[System.IO.SearchOption]::TopDirectoryOnly)"
+
     try {
+
         $result = [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, [System.IO.SearchOption]::TopDirectoryOnly)
+
     }
     catch {
-        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-        Write-LogMsg @LogParams -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+
+        $WarningCache[$_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')] = $null
+
+        # If this was not a recursive call to GetDirectories, write the warnings
+        if (-not $PSBoundParameters.ContainsKey('WarningCache')) {
+
+            $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+
+            ForEach ($Warning in $WarningCache.Keys) {
+
+                Write-LogMsg @LogParams -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+
+            }
+        }
+
         return
+
     }
 
     $GetSubfolderParams = @{
@@ -5265,11 +5053,27 @@ function GetDirectories {
         WhoAmI            = $WhoAmI
         SearchOption      = $SearchOption
         SearchPattern     = $SearchPattern
+        WarningCache      = $WarningCache
     }
 
     ForEach ($Child in $result) {
+
         Write-LogMsg @LogParams -Text "[System.IO.Directory]::GetDirectories('$Child','$SearchPattern',[System.IO.SearchOption]::$SearchOption)"
         GetDirectories -TargetPath $Child @GetSubfolderParams
+
+    }
+
+    # If this was not a recursive call to GetDirectories, write the warnings
+    if (-not $PSBoundParameters.ContainsKey('WarningCache')) {
+
+        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+
+        ForEach ($Warning in $WarningCache.Keys) {
+
+            Write-LogMsg @LogParams -Text $Warning
+
+        }
+
     }
 
 }
@@ -5402,7 +5206,7 @@ function ConvertTo-SimpleProperty {
         }
     }
 
-    return $PropertyDictionary
+    #return $PropertyDictionary
 }
 function Expand-AccountPermission {
     <#
@@ -5572,96 +5376,151 @@ function Format-SecurityPrincipal {
     param (
 
         # Security Principals received from Expand-IdentityReference in the Adsi module
-        $SecurityPrincipal
+        [string]$ResolvedID,
+
+        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
+        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
+        [hashtable]$AceGUIDsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
+        [hashtable]$ACEsByGUID = ([hashtable]::Synchronized(@{}))
 
     )
 
-    ForEach ($ThisPrincipal in $SecurityPrincipal) {
+    # Get the security principal from the cache
+    $ThisPrincipal = $PrincipalsByResolvedID[$ResolvedID]
 
-        # Format and output the security principal
-        $ThisPrincipal |
-        Select-Object -ExcludeProperty Name -Property @{
-            Label      = 'User'
-            Expression = {
-                $ThisPrincipalAccount = $null
-                if ($_.Properties) {
-                    $ThisPrincipalAccount = $_.Properties['sAmAccountName']
-                }
-                if ("$ThisPrincipalAccount" -eq '') {
-                    $_.Name
-                }
-                else {
-                    $ThisPrincipalAccount
-                }
-            }
-        },
-        @{
-            Label      = 'IdentityReference'
-            Expression = { $null }
-        },
-        @{
-            Label      = 'NtfsAccessControlEntries'
-            Expression = { $_.Group }
-        },
-        @{
-            Label      = 'Name'
-            Expression = {
-                $ThisName = $null
-                if ($_.DirectoryEntry.Properties) {
-                    $ThisName = $_.DirectoryEntry.Properties['name']
-                }
-                if ("$ThisName" -eq '') {
-                    $_.Name -replace [regex]::Escape("$($_.DomainNetBios)\"), ''
-                }
-                else {
-                    $ThisName
-                }
-            }
-        },
-        *
+    # Exclude accounts whose classes were specified in the parameters
+    if ($ExcludeClass.Count -gt 0) {
+        if ($ClassExclusions[$ThisPrincipal.DirectoryEntry.SchemaClassName]) {
+            continue
+        }
+    }
 
-        # Format and output its members if it is a group
-        $ThisPrincipal.Members |
-        Select-Object -Property @{
-            Label      = 'User'
-            Expression = {
-                $ThisPrincipalAccount = $null
-                if ($_.Properties) {
-                    $ThisPrincipalAccount = $_.Properties['sAmAccountName']
-                    if ("$ThisPrincipalAccount" -eq '') {
-                        $ThisPrincipalAccount = $_.Properties['Name']
-                    }
-                }
+    $Access = $ACEsByGUID[$AceGUIDsByResolvedID[$ResolvedID]]
 
-                if ("$ThisPrincipalAccount" -eq '') {
-                    # This code should never execute
-                    # but if we are somehow not dealing with a DirectoryEntry,
-                    # it will not have sAmAcountName or Name properties
-                    # However it may have a direct Name attribute on the PSObject itself
-                    # We will attempt that as a last resort in hopes of avoiding a null Account name
-                    $ThisPrincipalAccount = $_.Name
-                }
-                "$($_.Domain.Netbios)\$ThisPrincipalAccount"
-            }
-        },
-        @{
-            Label      = 'IdentityReference'
-            Expression = {
-                @($ThisPrincipal.Group.IdentityReferenceResolved)[0]
-            }
-        },
-        @{
-            Label      = 'NtfsAccessControlEntries'
-            Expression = { $ThisPrincipal.Group }
-        },
-        @{
-            Label      = 'ObjectType'
-            Expression = { $_.SchemaClassName }
-        },
-        *
+    # Format the security principal
+    # Include specific desired properties
+    $OutputProperties = @{
+        Access = $Access
+        #User = Format-SecurityPrincipalUser -InputObject $ThisPrincipal
+        #Name = Format-SecurityPrincipalName -InputObject $ThisPrincipal
+    }
+
+    if ($ThisPrincipal.DirectoryEntry) {
+
+        $InputProperties = (Get-Member -InputObject $ThisPrincipal.DirectoryEntry -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+        ForEach ($ThisProperty in $InputProperties) {
+            $OutputProperties[$ThisProperty] = $ThisPrincipal.DirectoryEntry.$ThisProperty
+        }
 
     }
 
+    # Get any existing properties for inclusion later
+    $InputProperties = (Get-Member -InputObject $ThisPrincipal -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+    # Include any existing properties found earlier
+    ForEach ($ThisProperty in $InputProperties) {
+        $OutputProperties[$ThisProperty] = $ThisPrincipal.$ThisProperty
+    }
+
+    # Output the security principal
+    [PSCustomObject]$OutputProperties
+
+    # Format and output any group members
+    Format-SecurityPrincipalMember -ResolvedID $ThisPrincipal.Members -ParentIdentityReference $ResolvedID -Access $Access -PrincipalsByResolvedID $PrincipalsByResolvedID
+
+}
+function Format-SecurityPrincipalMember {
+
+    param (
+        [object[]]$ResolvedID,
+        [string]$ParentIdentityReference,
+        [object[]]$Access,
+        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{}))
+    )
+
+    ForEach ($ID in $ResolvedID) {
+
+        $Principal = $PrincipalsByResolvedID[$ID]
+
+        # Include specific desired properties
+        $OutputProperties = @{
+            Access                          = $Access
+            ParentIdentityReferenceResolved = $ParentIdentityReference
+        }
+
+        if ($Principal.DirectoryEntry) {
+
+            $InputProperties = (Get-Member -InputObject $Principal.DirectoryEntry -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+            ForEach ($ThisProperty in $InputProperties) {
+                $OutputProperties[$ThisProperty] = $Principal.DirectoryEntry.$ThisProperty
+            }
+
+        }
+
+        # Include any existing properties
+        $InputProperties = (Get-Member -InputObject $Principal -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+        ForEach ($ThisProperty in $InputProperties) {
+            $OutputProperties[$ThisProperty] = $Principal.$ThisProperty
+        }
+
+        [PSCustomObject]$OutputProperties
+
+    }
+
+}
+function Format-SecurityPrincipalMemberUser {
+
+    param ([object]$InputObject)
+
+    if ($InputObject.Properties) {
+        $sAmAccountName = $InputObject.Properties['sAmAccountName']
+        if ("$sAmAccountName" -eq '') {
+            $sAmAccountName = $InputObject.Properties['Name']
+        }
+    }
+
+    if ("$sAmAccountName" -eq '') {
+        # This code should never execute
+        # but if we are somehow not dealing with a DirectoryEntry,
+        # it will not have sAmAcountName or Name properties
+        # However it may have a direct Name attribute on the PSObject itself
+        # We will attempt that as a last resort in hopes of avoiding a null Account name
+        $sAmAccountName = $InputObject.Name
+    }
+    "$($InputObject.Domain.Netbios)\$sAmAccountName"
+
+}
+function Format-SecurityPrincipalName {
+    param ([object]$InputObject)
+    if ($InputObject.DirectoryEntry.Properties) {
+        $ThisName = $InputObject.DirectoryEntry.Properties['name']
+    }
+    if ("$ThisName" -eq '') {
+        $InputObject.Name -replace [regex]::Escape("$($InputObject.DomainNetBios)\"), ''
+    }
+    else {
+        $ThisName
+    }
+}
+function Format-SecurityPrincipalUser {
+    param ([object]$InputObject)
+
+    if ($InputObject.Properties) {
+        $sAmAccountName = $InputObject.Properties['sAmAccountName']
+    }
+    if ("$sAmAccountName" -eq '') {
+        $InputObject.Name
+    }
+    else {
+        $sAmAccountName
+    }
 }
 function Get-DirectorySecurity {
     <#
@@ -5669,7 +5528,6 @@ function Get-DirectorySecurity {
     Alternative to Get-Acl designed to be as lightweight and flexible as possible
         Lightweight: Does not return the Path property like Get-Acl does
         Flexible how?  Was it long paths?  DFS?  Can't remember what didn't work with Get-Acl
-    TEMP NOTE: Get-DirectorySecurity combined with Get-FileSystemAccessRule is basically what Get-FolderACE does
     .DESCRIPTION
     Returns an object for each access control entry instead of a single object for the ACL
     Excludes inherited permissions by default but allows them to be included with the -IncludeInherited switch parameter
@@ -5686,18 +5544,91 @@ function Get-DirectorySecurity {
         # Path to the directory whose permissions to get
         [string]$LiteralPath,
 
+        # Include inherited Access Control Entries in the results
+        [Switch]$IncludeInherited,
+
         # Include all sections except Audit because it requires admin rights if run on the local system and we want to avoid that requirement
         [System.Security.AccessControl.AccessControlSections]$Sections = (
             [System.Security.AccessControl.AccessControlSections]::Access -bor
             [System.Security.AccessControl.AccessControlSections]::Owner -bor
-            [System.Security.AccessControl.AccessControlSections]::Group)
+            [System.Security.AccessControl.AccessControlSections]::Group),
+
+        # Include non-inherited Access Control Entries in the results
+        [bool]$IncludeExplicitRules = $true,
+
+        # Type of IdentityReference to return in each ACE
+        [System.Type]$AccountType = [System.Security.Principal.SecurityIdentifier],
+
+        # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
+        [string]$DebugOutputStream = 'Debug',
+
+        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$ThisHostname = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Thread-safe cache of items and their owners
+        [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
+
+        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{})
 
     )
 
-    [System.Security.AccessControl.DirectorySecurity]::new(
-        $LiteralPath,
-        $Sections
-    )
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
+
+    Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections')"
+    $DirectorySecurity = & { [System.Security.AccessControl.DirectorySecurity]::new(
+            $LiteralPath,
+            $Sections
+        )
+    } 2>$null
+
+    if ($null -eq $DirectorySecurity) {
+        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
+        Write-LogMsg @LogParams -Text "# Found no ACL for '$LiteralPath'"
+        $LogParams['Type'] = $DebugOutputStream
+        return
+    }
+
+    <#
+    Get-Acl would have already populated the Path property on the Access List, but [System.Security.AccessControl.DirectorySecurity] has a null Path property instead
+    Creating new PSCustomObjects with all the original properties then manually setting the Path is faster than using Add-Member
+    #>
+    $AclProperties = @{}
+    $AclPropertyNames = (Get-Member -InputObject $DirectorySecurity -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+    ForEach ($ThisProperty in $AclPropertyNames) {
+        $AclProperties[$ThisProperty] = $DirectorySecurity.$ThisProperty
+    }
+
+    $AclProperties['Path'] = $LiteralPath
+
+    <#
+    The creator of a folder is the Owner
+    Unless S-1-3-4 (Owner Rights) is in the DACL, the Owner is implicitly granted two standard access rights defined in WinNT.h of the Win32 API:
+      READ_CONTROL: The right to read the information in the object's security descriptor, not including the information in the system access control list (SACL).
+      WRITE_DAC: The right to modify the discretionary access control list (DACL) in the object's security descriptor.
+
+    Previously the .Owner property was already populated with the NTAccount name of the Owner,
+    but for some reason this stopped being true and now I have to call the GetOwner method.
+    This at least lets us specify the AccountType to match what is used when calling the GetAccessRules method.
+    #>
+    Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetOwner([$AccountType])"
+    $AclProperties['Owner'] = $DirectorySecurity.GetOwner($AccountType).Value
+
+    Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetAccessRules(`$$IncludeExplicitRules, `$$IncludeInherited, [$AccountType])"
+    $AclProperties['Access'] = $DirectorySecurity.GetAccessRules($IncludeExplicitRules, $IncludeInherited, $AccountType)
+    $ACLsByPath[$LiteralPath] = [PSCustomObject]$AclProperties
 
 }
 function Get-FileSystemAccessRule {
@@ -5781,133 +5712,9 @@ function Get-FileSystemAccessRule {
     }
 
 }
-function Get-FolderAce {
-    <#
-    .SYNOPSIS
-    Alternative to Get-Acl designed to be as lightweight and flexible as possible
-        Lightweight: Does not return the Path property like Get-Acl does
-        Flexible how?  Was it long paths?  DFS?  Can't remember what didn't work with Get-Acl
-    .DESCRIPTION
-    Returns an object for each access control entry instead of a single object for the ACL
-    Excludes inherited permissions by default but allows them to be included with the -IncludeInherited switch parameter
-    .INPUTS
-    None. Pipeline input is not accepted.
-    .OUTPUTS
-    [PSCustomObject]
-    .NOTES
-    Currently only supports Directories but could easily be copied to support files, or Registry or AD providers
-    #>
-
-    param(
-
-        # Path to the directory whose permissions to get
-        [string]$LiteralPath,
-
-        # Include inherited Access Control Entries in the results
-        [Switch]$IncludeInherited,
-
-        # Include all sections except Audit because it requires admin rights if run on the local system and we want to avoid that requirement
-        [System.Security.AccessControl.AccessControlSections]$Sections = (
-            [System.Security.AccessControl.AccessControlSections]::Access -bor
-            [System.Security.AccessControl.AccessControlSections]::Owner -bor
-            [System.Security.AccessControl.AccessControlSections]::Group),
-
-        # Include non-inherited Access Control Entries in the results
-        [bool]$IncludeExplicitRules = $true,
-
-        # Type of IdentityReference to return in each ACE
-        [System.Type]$AccountType = [System.Security.Principal.SecurityIdentifier],
-
-        # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
-        [string]$DebugOutputStream = 'Debug',
-
-        # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$ThisHostname = (HOSTNAME.EXE),
-
-        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$WhoAmI = (whoami.EXE),
-
-        # Thread-safe cache of items and their owners
-        [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
-
-        # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages
-
-    )
-
-    $LogParams = @{
-        ThisHostname = $ThisHostname
-        Type         = $DebugOutputStream
-        LogMsgCache  = $LogMsgCache
-        WhoAmI       = $WhoAmI
-    }
-
-    Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections')"
-    $DirectorySecurity = & { [System.Security.AccessControl.DirectorySecurity]::new(
-            $LiteralPath,
-            $Sections
-        )
-    } 2>$null
-
-    if ($null -eq $DirectorySecurity) {
-        $LogParams['Type'] = 'Warning' # PS 5.1 will not allow you to override the Splat by manually calling the param, so we must update the splat
-        Write-LogMsg @LogParams -Text "# Found no ACL for '$LiteralPath'"
-        $LogParams['Type'] = $DebugOutputStream
-        return
-    }
-
-    <#
-    Get-Acl would have already populated the Path property on the Access List, but [System.Security.AccessControl.DirectorySecurity] has a null Path property instead
-    Creating new PSCustomObjects with all the original properties then manually setting the Path is faster than using Add-Member
-    #>
-    $AclProperties = @{}
-    $AclPropertyNames = (Get-Member -InputObject $DirectorySecurity -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
-    ForEach ($ThisProperty in $AclPropertyNames) {
-        $AclProperties[$ThisProperty] = $DirectorySecurity.$ThisProperty
-    }
-    $AclProperties['Path'] = $LiteralPath
-
-    <#
-    The creator of a folder is the Owner
-    Unless S-1-3-4 (Owner Rights) is in the DACL, the Owner is implicitly granted two standard access rights defined in WinNT.h of the Win32 API:
-      READ_CONTROL: The right to read the information in the object's security descriptor, not including the information in the system access control list (SACL).
-      WRITE_DAC: The right to modify the discretionary access control list (DACL) in the object's security descriptor.
-
-    Previously the .Owner property was already populated with the NTAccount name of the Owner,
-    but for some reason this stopped being true and now I have to call the GetOwner method.
-    This at least lets us specify the AccountType to match what is used when calling the GetAccessRules method.
-    #>
-
-    Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetOwner([$AccountType])"
-    $AclProperties['Owner'] = $DirectorySecurity.GetOwner($AccountType).Value
-
-    $SourceAccessList = [PSCustomObject]$AclProperties
-
-    # Update the OwnerCache with the Source Access List, so that Get-OwnerAce can output an object for the Owner to represent that they have Full Control
-    $OwnerCache[$LiteralPath] = $SourceAccessList
-
-    Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections').GetAccessRules(`$$IncludeExplicitRules, `$$IncludeInherited, [$AccountType])"
-    $AccessRules = $DirectorySecurity.GetAccessRules($IncludeExplicitRules, $IncludeInherited, $AccountType)
-    if ($AccessRules.Count -lt 1) {
-        Write-LogMsg @LogParams -Text "# Found no matching access rules for '$LiteralPath'"
-        return
-    }
-
-    $ACEPropertyNames = (Get-Member -InputObject $AccessRules[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
-
-    ForEach ($ThisAccessRule in $AccessRules) {
-        $ACEProperties = @{
-            SourceAccessList = $SourceAccessList
-            Source           = 'Discretionary Access Control List'
-        }
-        ForEach ($ThisProperty in $ACEPropertyNames) {
-            $ACEProperties[$ThisProperty] = $ThisAccessRule.$ThisProperty
-        }
-        [PSCustomObject]$ACEProperties
-    }
-
-}
 function Get-OwnerAce {
+
+    # Simulate ACEs for item owners who differ from the owner of the item's parent
 
     param (
 
@@ -5915,24 +5722,30 @@ function Get-OwnerAce {
         [string]$Item,
 
         # Thread-safe cache of items and their owners
-        [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new()
+        #[System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{})
     )
 
     # ToDo - Confirm the logic for selecting this to make sure it accurately represents NTFS ownership behavior, then replace this comment with that confirmation and an explanation
     $InheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
 
-    $SourceAccessList = $OwnerCache[$Item]
+    $SourceAccessList = $ACLsByPath[$Item]
     $ThisParent = $Item.Substring(0, [math]::Max($Item.LastIndexOf('\'), 0)) # ToDo - This method of finding the parent path is faster than Split-Path -Parent but it has a dependency on a folder path not containing a trailing \ which is not currently what I am seeing in my simple test but should be supported in the future (possibly default)
-    if ($SourceAccessList.Owner -ne $OwnerCache[$ThisParent].Owner) {
-        [PSCustomObject]@{
-            SourceAccessList  = $SourceAccessList
+    $ParentOwner = $ACLsByPath[$ThisParent].Owner
+    if (
+        $SourceAccessList.Owner -ne $ParentOwner -and
+        $SourceAccessList.Owner -ne $ParentOwner.IdentityReference
+    ) {
+
+        $ACLsByPath[$Item].Owner = [PSCustomObject]@{
             IdentityReference = $SourceAccessList.Owner
             AccessControlType = [System.Security.AccessControl.AccessControlType]::Allow
             FileSystemRights  = [System.Security.AccessControl.FileSystemRights]::FullControl
             InheritanceFlags  = $InheritanceFlags
             IsInherited       = $false
             PropagationFlags  = [System.Security.AccessControl.PropagationFlags]::None
-            Source            = 'Ownership'
         }
 
     }
@@ -8845,8 +8658,72 @@ ForEach ($ThisFile in $CSharpFiles) {
 }
 #>
 
-# Definition of Module 'Permission' Version '0.0.180' is below
+# Definition of Module 'Permission' Version '0.0.223' is below
 
+function Add-CacheItem {
+
+    # Use a key to get a generic list from a hashtable
+    # If it does not exist, create an empty list
+    # Add the new item
+
+    param (
+
+        [hashtable]$Cache,
+
+        $Key,
+
+        $Value,
+
+        [type]$Type
+
+    )
+
+    $CacheResult = $Cache[$Key]
+
+    if (-not $CacheResult) {
+        $Command = "`$CacheResult = [System.Collections.Generic.List[$($Type.ToString())]]::new()"
+        Invoke-Expression $Command
+    }
+
+    $CacheResult.Add($Value)
+    $Cache[$Key] = $CacheResult
+
+}
+function ConvertTo-ItemBlock {
+
+    param (
+
+        $ItemPermissions
+
+    )
+
+    $Culture = Get-Culture
+
+    Write-LogMsg @LogParams -Text "`$ObjectsForTable = Select-ItemTableProperty -InputObject `$ItemPermissions -Culture '$Culture'"
+    $ObjectsForTable = Select-ItemTableProperty -InputObject $ItemPermissions -Culture $Culture
+
+    Write-LogMsg @LogParams -Text "`$ObjectsForTable | ConvertTo-Html -Fragment | New-BootstrapTable"
+    $HtmlTable = $ObjectsForTable |
+    ConvertTo-Html -Fragment |
+    New-BootstrapTable
+
+    $JsonData = $ObjectsForTable |
+    ConvertTo-Json
+
+    Write-LogMsg @LogParams -Text "Get-FolderColumnJson -InputObject `$ObjectsForTable"
+    $JsonColumns = Get-FolderColumnJson -InputObject $ObjectsForTable
+
+    Write-LogMsg @LogParams -Text "ConvertTo-BootstrapJavaScriptTable -Id 'Folders' -InputObject `$ObjectsForTable -DataFilterControl -SearchableColumn 'Folder' -DropdownColumn 'Inheritance'"
+    $JsonTable = ConvertTo-BootstrapJavaScriptTable -Id 'Folders' -InputObject $ObjectsForTable -DataFilterControl -SearchableColumn 'Folder' -DropdownColumn 'Inheritance'
+
+    return [pscustomobject]@{
+        HtmlDiv     = $HtmlTable
+        JsonDiv     = $JsonTable
+        JsonData    = $JsonData
+        JsonColumns = $JsonColumns
+    }
+
+}
 function Expand-AcctPermission {
 
     param (
@@ -8944,14 +8821,118 @@ function Expand-AcctPermission {
     Write-Progress @Progress -Completed
 
 }
-function Expand-Folder {
+function Expand-PermissionPrincipal {
+
+    # Expand ADSI security principals into their group members
+
+    param (
+
+        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
+        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Output stream to send the log messages to
+        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
+        [string]$DebugOutputStream = 'Debug',
+
+        # Maximum number of concurrent threads to allow
+        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # ID of the parent progress bar under which to show progres
+        [int]$ProgressParentId
+
+    )
+
+    $Progress = @{
+        Activity = 'Expand-PermissionPrincipal'
+    }
+    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
+        $Progress['ParentId'] = $ProgressParentId
+        $Progress['Id'] = $ProgressParentId + 1
+    } else {
+        $Progress['Id'] = 0
+    }
+
+    Write-Progress @Progress -Status "0% (principal 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
+
+    $LogParams = @{
+        LogMsgCache  = $LogMsgCache
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        WhoAmI       = $WhoAmI
+    }
+
+    $ResolvedIDs = $PrincipalsByResolvedID.Keys
+    $Count = $ResolvedIDs.Count
+
+    $FormatSecurityPrincipalParams = @{
+        PrincipalsByResolvedID = $PrincipalsByResolvedID
+    }
+
+    if ($ThreadCount -eq 1) {
+
+        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
+        $IntervalCounter = 0
+        $i = 0
+
+        ForEach ($ThisID in $ResolvedIDs) {
+
+            $IntervalCounter++
+
+            if ($IntervalCounter -eq $ProgressInterval) {
+
+                [int]$PercentComplete = $i / $Count * 100
+                Write-Progress @Progress -Status "$PercentComplete% (principal $($i + 1) of $Count) Format-SecurityPrincipal" -CurrentOperation $ThisID -PercentComplete $PercentComplete
+                $IntervalCounter = 0
+
+            }
+
+            $i++
+            Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -ResolvedID '$ThisID'"
+            Format-SecurityPrincipal -ResolvedID $ThisID @FormatSecurityPrincipalParams
+
+        }
+
+    } else {
+
+        $SplitThreadParams = @{
+            Command              = 'Format-SecurityPrincipal'
+            InputObject          = $ResolvedIDs
+            InputParameter       = 'ResolvedID'
+            Timeout              = 1200
+            ObjectStringProperty = 'Name'
+            TodaysHostname       = $ThisHostname
+            WhoAmI               = $WhoAmI
+            LogMsgCache          = $LogMsgCache
+            Threads              = $ThreadCount
+            AddParam             = $FormatSecurityPrincipalParams
+        }
+
+        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipal -ObjectStringProperty 'Name'"
+        Split-Thread @SplitThreadParams
+
+    }
+
+    Write-Progress @Progress -Completed
+
+}
+function Expand-PermissionTarget {
 
     # Expand a folder path into the paths of its subfolders
 
     param (
-
-        # Path to return along, with the paths to its subfolders
-        $Folder,
 
         <#
         How many levels of subfolder to enumerate
@@ -8980,12 +8961,15 @@ function Expand-Folder {
         [hashtable]$LogMsgCache = $Global:LogMessages,
 
         # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
+        [int]$ProgressParentId,
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{})
 
     )
 
     $Progress = @{
-        Activity = 'Expand-Folder'
+        Activity = 'Expand-PermissionTarget'
     }
     if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
         $Progress['ParentId'] = $ProgressParentId
@@ -8994,8 +8978,9 @@ function Expand-Folder {
         $Progress['Id'] = 0
     }
 
-    $FolderCount = @($Folder).Count
-    Write-Progress @Progress -Status "0% (item 0 of $FolderCount)" -CurrentOperation "Initializing..." -PercentComplete 0
+    $Targets = $ACLsByPath.Keys
+    $TargetCount = $Targets.Count
+    Write-Progress @Progress -Status "0% (item 0 of $TargetCount)" -CurrentOperation "Initializing..." -PercentComplete 0
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -9011,49 +8996,51 @@ function Expand-Folder {
         WhoAmI            = $WhoAmI
     }
 
-    if ($ThreadCount -eq 1 -or $FolderCount -eq 1) {
+    if ($ThreadCount -eq 1 -or $TargetCount -eq 1) {
 
-        [int]$ProgressInterval = [math]::max(($FolderCount / 100), 1)
+        [int]$ProgressInterval = [math]::max(($TargetCount / 100), 1)
         $IntervalCounter = 0
         $i = 0
-        ForEach ($ThisFolder in $Folder) {
+
+        ForEach ($ThisFolder in $Targets) {
+
             $IntervalCounter++
+
             if ($IntervalCounter -eq $ProgressInterval) {
-                [int]$PercentComplete = $i / $FolderCount * 100
-                Write-Progress @Progress -Status "$PercentComplete% (item $($i + 1) of $FolderCount))" -CurrentOperation "Get-Subfolder '$($ThisFolder)'" -PercentComplete $PercentComplete
+                [int]$PercentComplete = $i / $TargetCount * 100
+                Write-Progress @Progress -Status "$PercentComplete% (item $($i + 1) of $TargetCount))" -CurrentOperation "Get-Subfolder '$($ThisFolder)'" -PercentComplete $PercentComplete
                 $IntervalCounter = 0
             }
-            $i++ # increment $i after the progress to show progress conservatively rather than optimistically
 
+            $i++ # increment $i after the progress to show progress conservatively rather than optimistically
             $Subfolders = $null
             $Subfolders = Get-Subfolder -TargetPath $ThisFolder -FolderRecursionDepth $RecurseDepth -ErrorAction Continue @GetSubfolderParams
             Write-LogMsg @LogParams -Text "# Folders (including parent): $($Subfolders.Count + 1) for '$ThisFolder'"
             $Subfolders
+
         }
 
     } else {
 
-        $GetSubfolder = @{
+        $SplitThreadParams = @{
             Command           = 'Get-Subfolder'
-            InputObject       = $Folder
+            InputObject       = $Targets
             InputParameter    = 'TargetPath'
             DebugOutputStream = $DebugOutputStream
             TodaysHostname    = $ThisHostname
             WhoAmI            = $WhoAmI
             LogMsgCache       = $LogMsgCache
             Threads           = $ThreadCount
-            AddParam          = @{
-                LogMsgCache       = $LogMsgCache
-                ThisHostname      = $ThisHostname
-                DebugOutputStream = $DebugOutputStream
-                WhoAmI            = $WhoAmI
-            }
+            AddParam          = $GetSubfolderParams
         }
-        Split-Thread @GetSubfolder
+
+        $Subfolders = Split-Thread @SplitThreadParams
+        Write-LogMsg @LogParams -Text "# Folders (including parent): $($Subfolders.Count + 1) for all targets"
+        $Subfolders
 
     }
 
-        Write-Progress @Progress -Completed
+    Write-Progress @Progress -Completed
 
 }
 function Export-FolderPermissionHtml {
@@ -9099,7 +9086,7 @@ function Export-FolderPermissionHtml {
         # Generate a report with only HTML and CSS but no JavaScript
         [switch]$NoJavaScript,
 
-        $FolderPermissions,
+        $ItemPermissions,
         $LogParams,
         $ReportDescription,
         $FolderTableHeader,
@@ -9109,8 +9096,8 @@ function Export-FolderPermissionHtml {
         $ReportInstanceId,
         $Subfolders,
         $ResolvedFolderTargets,
-        $ExpandedAccountPermissions,
-        $FormattedSecurityPrincipals
+        $PrincipalsByResolvedID,
+        $ShortestPath
     )
 
     # Convert the target path(s) to a Bootstrap alert
@@ -9119,14 +9106,15 @@ function Export-FolderPermissionHtml {
     $ReportDescription = "$(New-BootstrapAlert -Class Dark -Text $TargetPathString) $ReportDescription"
 
     # Convert the folder list to an HTML table
-    $FormattedFolders = Get-FolderBlock -FolderPermissions $FolderPermissions
+    $FormattedFolders = ConvertTo-ItemBlock -ItemPermissions $ItemPermissions
 
     # Convert the folder permissions to an HTML table
     $GetFolderPermissionsBlock = @{
-        FolderPermissions = $FolderPermissions
+        FolderPermissions = $ItemPermissions
         ExcludeAccount    = $ExcludeAccount
         ExcludeClass      = $ExcludeClass
         IgnoreDomain      = $IgnoreDomain
+        ShortestPath      = $ShortestPath
     }
     Write-LogMsg @LogParams -Text "Get-FolderPermissionsBlock @GetFolderPermissionsBlock"
     $FormattedFolderPermissions = Get-FolderPermissionsBlock @GetFolderPermissionsBlock
@@ -9232,8 +9220,8 @@ function Export-FolderPermissionHtml {
         WhoAmI           = $WhoAmI
         ThisFqdn         = $ThisFqdn
         ItemCount        = ($Subfolders.Count + $ResolvedFolderTargets.Count)
-        PermissionCount  = $ExpandedAccountPermissions.Count
-        PrincipalCount   = $FormattedSecurityPrincipals.Count
+        PermissionCount  = $ItemPermissions.Access.Access.Count
+        PrincipalCount   = $PrincipalsByResolvedID.Keys.Count
     }
     $ReportFooter = Get-HtmlReportFooter @FooterParams
 
@@ -9278,9 +9266,8 @@ function Export-FolderPermissionHtml {
 
     $ScriptHtmlBuilder = [System.Text.StringBuilder]::new()
 
-    $FormattedFolderPermissions |
-    ForEach-Object {
-        $null = $ScriptHtmlBuilder.AppendLine((ConvertTo-BootstrapTableScript -TableId "#Perms_$($_.Path -replace '[^A-Za-z0-9\-_:.]', '-')" -ColumnJson $_.JsonColumns -DataJson $_.JsonData))
+    ForEach ($Folder in $FormattedFolderPermissions) {
+        $null = $ScriptHtmlBuilder.AppendLine((ConvertTo-BootstrapTableScript -TableId "#$($Folder.JsonTable)" -ColumnJson $Folder.JsonColumns -DataJson $Folder.JsonData))
     }
 
     $null = $ScriptHtmlBuilder.AppendLine((ConvertTo-BootstrapTableScript -TableId '#Folders' -ColumnJson $FormattedFolders.JsonColumns -DataJson $FormattedFolders.JsonData))
@@ -9663,106 +9650,6 @@ function Format-FolderPermission {
     Write-Progress @Progress -Completed
 
 }
-function Format-PermissionAccount {
-
-    param (
-
-        # Permission objects from Get-FolderAccessList whose IdentityReference to resolve
-        [Parameter(ValueFromPipeline)]
-        [object[]]$SecurityPrincipal,
-
-        # Output stream to send the log messages to
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug',
-
-        # Maximum number of concurrent threads to allow
-        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
-
-        <#
-        Hostname of the computer running this function.
-
-        Can be provided as a string to avoid calls to HOSTNAME.EXE
-        #>
-        [string]$ThisHostName = (HOSTNAME.EXE),
-
-        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
-        [string]$WhoAmI = (whoami.EXE),
-
-        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages,
-
-        # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
-
-    )
-
-    $Progress = @{
-        Activity = 'Format-PermissionAccount'
-    }
-    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
-        $Progress['ParentId'] = $ProgressParentId
-        $Progress['Id'] = $ProgressParentId + 1
-    } else {
-        $Progress['Id'] = 0
-    }
-
-    Write-Progress @Progress -Status '0% (step 1 of 1)' -CurrentOperation 'Initializing' -PercentComplete 0
-
-    $LogParams = @{
-        LogMsgCache  = $LogMsgCache
-        ThisHostname = $ThisHostname
-        Type         = $DebugOutputStream
-        WhoAmI       = $WhoAmI
-    }
-
-    $Count = $SecurityPrincipal.Count
-
-    if ($ThreadCount -eq 1) {
-
-        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
-        $IntervalCounter = 0
-        $i = 0
-
-        ForEach ($ThisPrinc in $SecurityPrincipal) {
-
-            $IntervalCounter++
-
-            if ($IntervalCounter -eq $ProgressInterval) {
-
-                [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete%" -CurrentOperation $ThisPrinc.Name -PercentComplete $PercentComplete
-                $IntervalCounter = 0
-
-            }
-            $i++
-
-            Write-LogMsg @LogParams -Text "Format-SecurityPrincipal -SecurityPrincipal $($ThisPrinc.Name)"
-            Format-SecurityPrincipal -SecurityPrincipal $ThisPrinc
-
-        }
-
-    } else {
-
-        $FormatSecurityPrincipalParams = @{
-            Command              = 'Format-SecurityPrincipal'
-            InputObject          = $SecurityPrincipal
-            InputParameter       = 'SecurityPrincipal'
-            Timeout              = 1200
-            ObjectStringProperty = 'Name'
-            TodaysHostname       = $ThisHostname
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-        }
-
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Format-SecurityPrincipal' -InputParameter 'SecurityPrincipal' -InputObject `$SecurityPrincipal -ObjectStringProperty 'Name'"
-        Split-Thread @FormatSecurityPrincipalParams
-
-    }
-
-    Write-Progress @Progress -Completed
-
-}
 function Format-TimeSpan {
     param (
         [timespan]$TimeSpan,
@@ -9969,7 +9856,12 @@ function Get-CachedCimSession {
     }
 
 }
-function Get-FolderAccessList {
+function Get-FolderAcl {
+
+    # Get folder access control lists
+    # Returns an object representing each effective permission on a folder
+    # This includes each Access Control Entry in the Discretionary Access List, as well as the folder's Owner
+
     param (
 
         # Path to the item whose permissions to export (inherited ACEs will be included)
@@ -9997,12 +9889,15 @@ function Get-FolderAccessList {
         [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
 
         # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
+        [int]$ProgressParentId,
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{})
 
     )
 
     $Progress = @{
-        Activity = 'Get-FolderAccessList'
+        Activity = 'Get-FolderAcl'
     }
     if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
         $Progress['ParentId'] = $ProgressParentId
@@ -10012,61 +9907,72 @@ function Get-FolderAccessList {
     }
     $Progress['Id'] = $ProgressId
     $ChildProgress = @{
-        Activity = 'Flatten the raw access control entries for CSV export'
+        Activity = 'Get folder access control lists'
         Id       = $ProgressId + 1
         ParentId = $ProgressId
     }
 
-    Write-Progress @Progress -Status '0% (step 1 of 4)' -CurrentOperation 'Get parent access control lists' -PercentComplete 0
+    Write-Progress @Progress -Status '0% (step 1 of 2)' -CurrentOperation 'Get parent folder access control lists' -PercentComplete 0
 
-    $GetFolderAceParams = @{
+    $GetDirectorySecurity = @{
         LogMsgCache       = $LogMsgCache
         ThisHostname      = $TodaysHostname
         DebugOutputStream = $DebugOutputStream
         WhoAmI            = $WhoAmI
+        OwnerCache        = $OwnerCache
+        ACLsByPath        = $ACLsByPath
     }
 
     # We expect a small number of folders and a large number of subfolders
     # We will multithread the subfolders but not the folders
-    # Multithreading overhead actually hurts performance for such a fast operation (Get-FolderAce) on a small number of items
+    # Multithreading overhead actually hurts performance for such a fast operation (Get-FolderAcl) on a small number of items
     $i = 0
     $Count = $Folder.Count
+
     ForEach ($ThisFolder in $Folder) {
+
         [int]$PercentComplete = $i / $Count * 100
-        Write-Progress @ChildProgress -Status "$PercentComplete% (parent $($i + 1) of $Count)" -CurrentOperation "Get-FolderAce -IncludeInherited '$ThisFolder'" -PercentComplete $PercentComplete
+        Write-Progress @ChildProgress -Status "$PercentComplete% (parent $($i + 1) of $Count) Get-DirectorySecurity -IncludeInherited" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
         $i++
-        Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache -IncludeInherited @GetFolderAceParams
+        Get-DirectorySecurity -LiteralPath $ThisFolder -IncludeInherited @GetDirectorySecurity
+
     }
 
     Write-Progress @ChildProgress -Completed
-        $ChildProgress['Activity'] = 'Get-FolderAccessList (child DACLs)'
-    Write-Progress @Progress -Status '25% (step 2 of 4)' -CurrentOperation $ChildProgress['Activity'] -PercentComplete 25
-        $SubfolderCount = $Subfolder.Count
+    $ChildProgress['Activity'] = 'Get-FolderAcl (subfolders)'
+    Write-Progress @Progress -Status '25% (step 2 of 4)' -CurrentOperation 'Get subfolder access control lists' -PercentComplete 25
+    $SubfolderCount = $Subfolder.Count
 
     if ($ThreadCount -eq 1) {
-        Write-Progress @ChildProgress -Status '0%' -CurrentOperation 'Initializing'
+
+        Write-Progress @ChildProgress -Status "0% (subfolder 0 of $SubfolderCount)" -CurrentOperation 'Initializing' -PercentComplete 0
         [int]$ProgressInterval = [math]::max(($SubfolderCount / 100), 1)
         $IntervalCounter = 0
         $i = 0
-        ForEach ($ThisFolder in $Subfolder) {
-            $IntervalCounter++
-            if ($IntervalCounter -eq $ProgressInterval) {
-                [int]$PercentComplete = $i / $SubfolderCount * 100
-                Write-Progress @ChildProgress -Status "$PercentComplete% (child $($i + 1) of $SubfolderCount)" -CurrentOperation "Get-FolderAce '$ThisFolder'" -PercentComplete $PercentComplete
-                $IntervalCounter = 0
-            }
-            $i++ # increment $i after the progress to show progress conservatively rather than optimistically
 
-            Get-FolderAce -LiteralPath $ThisFolder -OwnerCache $OwnerCache @GetFolderAceParams
+        ForEach ($ThisFolder in $Subfolder) {
+
+            $IntervalCounter++
+
+            if ($IntervalCounter -eq $ProgressInterval) {
+
+                [int]$PercentComplete = $i / $SubfolderCount * 100
+                Write-Progress @ChildProgress -Status "$PercentComplete% (subfolder $($i + 1) of $SubfolderCount) Get-DirectorySecurity" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
+                $IntervalCounter = 0
+
+            }
+
+            $i++ # increment $i after the progress to show progress conservatively rather than optimistically
+            Get-DirectorySecurity -LiteralPath $ThisFolder @GetDirectorySecurity
+
         }
 
         Write-Progress @ChildProgress -Completed
-                Write-Progress @Progress -Status '50% (step 3 of 4)' -CurrentOperation 'Parent Owners' -PercentComplete 50
 
     } else {
 
-        $GetFolderAce = @{
-            Command           = 'Get-FolderAce'
+        $SplitThread = @{
+            Command           = 'Get-DirectorySecurity'
             InputObject       = $Subfolder
             InputParameter    = 'LiteralPath'
             DebugOutputStream = $DebugOutputStream
@@ -10074,59 +9980,67 @@ function Get-FolderAccessList {
             WhoAmI            = $WhoAmI
             LogMsgCache       = $LogMsgCache
             Threads           = $ThreadCount
-            AddParam          = @{
-                OwnerCache        = $OwnerCache
-                LogMsgCache       = $LogMsgCache
-                ThisHostname      = $TodaysHostname
-                DebugOutputStream = $DebugOutputStream
-                WhoAmI            = $WhoAmI
-            }
+            AddParam          = $GetDirectorySecurity
 
         }
 
-        Split-Thread @GetFolderAce
+        Split-Thread @SplitThread
 
     }
 
-    # Return ACEs for the item owners (if they do not match the owner of the item's parent folder)
+    # Update the cache with ACEs for the item owners (if they do not match the owner of the item's parent folder)
     # First return the owner of the parent item
-    # We expect a small number of folders and a large number of subfolders
-    # We will multithread the subfolders but not the folders
-    # Multithreading overhead actually hurts performance for such a fast operation (Get-FolderAce) on a small number of items
-    $ChildProgress['Activity'] = 'Get-FolderAccessList (parent owners)'
+    Write-Progress @Progress -Status '50% (step 3 of 4) Get-OwnerAce (parent folders)' -CurrentOperation 'Get parent folder owners' -PercentComplete 50
+    $ChildProgress['Activity'] = 'Get-FolderAcl (parent owners)'
     $i = 0
-    ForEach ($ThisFolder in $Folder) {
-        [int]$PercentComplete = $i / $Count * 100
-        Write-Progress @ChildProgress -Status "$PercentComplete% (parent $($i + 1) of $Count)" -CurrentOperation "Get-OwnerAce '$ThisFolder'" -PercentComplete $PercentComplete
-        $i++
-        Get-OwnerAce -Item $ThisFolder -OwnerCache $OwnerCache
+
+    $GetOwnerAce = @{
+        OwnerCache = $OwnerCache
+        ACLsByPath = $ACLsByPath
     }
+
+    ForEach ($ThisFolder in $Folder) {
+
+        [int]$PercentComplete = $i / $Count * 100
+        $i++
+        Write-Progress @ChildProgress -Status "$PercentComplete% (parent $i of $Count) Get-OwnerAce" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
+        Get-OwnerAce -Item $ThisFolder @GetOwnerAce
+
+    }
+
     Write-Progress @ChildProgress -Completed
-        Write-Progress @Progress -Status '75% (step 4 of 4)' -CurrentOperation 'Child Owners' -PercentComplete 75
-        $ChildProgress['Activity'] = 'Get-FolderAccessList (child owners)'
+    Write-Progress @Progress -Status '75% (step 4 of 4) Get-OwnerAce (subfolders)' -CurrentOperation 'Get subfolder owners' -PercentComplete 75
+    $ChildProgress['Activity'] = 'Get-FolderAcl (subfolder owners)'
 
     # Then return the owners of any items that differ from their parents' owners
     if ($ThreadCount -eq 1) {
 
         $IntervalCounter = 0
         $i = 0
-        ForEach ($Child in $Subfolder) {
+
+        ForEach ($ThisFolder in $Subfolder) {
+
             Write-Progress @ChildProgress -Status '0%' -CurrentOperation 'Initializing'
             $IntervalCounter++
+
             if ($IntervalCounter -eq $ProgressInterval) {
+
                 [int]$PercentComplete = $i / $SubfolderCount * 100
-                Write-Progress @ChildProgress -Status "$PercentComplete% (child $($i + 1) of $SubfolderCount))" -CurrentOperation "Get-FolderAce '$Child'" -PercentComplete $PercentComplete
+                Write-Progress @ChildProgress -Status "$PercentComplete% (subfolder $($i + 1) of $SubfolderCount)) Get-OwnerAce" -CurrentOperation $ThisFolder -PercentComplete $PercentComplete
                 $IntervalCounter = 0
+
             }
+
             $i++
-            Get-OwnerAce -Item $Child -OwnerCache $OwnerCache
+            Get-OwnerAce -Item $ThisFolder @GetOwnerAce
 
         }
+
         Write-Progress @ChildProgress -Completed
 
     } else {
 
-        $GetOwnerAce = @{
+        $SplitThread = @{
             Command           = 'Get-OwnerAce'
             InputObject       = $Subfolder
             InputParameter    = 'Item'
@@ -10135,45 +10049,14 @@ function Get-FolderAccessList {
             WhoAmI            = $WhoAmI
             LogMsgCache       = $LogMsgCache
             Threads           = $ThreadCount
-            AddParam          = @{
-                OwnerCache = $OwnerCache
-            }
+            AddParam          = $GetOwnerAce
         }
 
-        Split-Thread @GetOwnerAce
+        Split-Thread @SplitThread
 
     }
 
     Write-Progress @Progress -Completed
-
-}
-function Get-FolderBlock {
-    param (
-
-        $FolderPermissions
-
-    )
-
-    Write-LogMsg @LogParams -Text "Select-FolderTableProperty -InputObject `$FolderPermissions | ConvertTo-Html -Fragment | New-BootstrapTable"
-    $FolderObjectsForTable = Select-FolderTableProperty -InputObject $FolderPermissions |
-    Sort-Object -Property Folder
-
-    $HtmlTable = $FolderObjectsForTable |
-    ConvertTo-Html -Fragment |
-    New-BootstrapTable
-
-    $JsonData = $FolderObjectsForTable |
-    ConvertTo-Json
-
-    $JsonColumns = Get-FolderColumnJson -InputObject $FolderObjectsForTable
-    $JsonTable = ConvertTo-BootstrapJavaScriptTable -Id 'Folders' -InputObject $FolderObjectsForTable -DataFilterControl -SearchableColumn 'Folder' -DropdownColumn 'Inheritance'
-
-    return [pscustomobject]@{
-        HtmlDiv     = $HtmlTable
-        JsonDiv     = $JsonTable
-        JsonData    = $JsonData
-        JsonColumns = $JsonColumns
-    }
 
 }
 function Get-FolderColumnJson {
@@ -10220,7 +10103,9 @@ function Get-FolderPermissionsBlock {
 
         Can also be used to remove all domains simply for brevity in the report.
         #>
-        [string[]]$IgnoreDomain
+        [string[]]$IgnoreDomain,
+
+        $ShortestPath
 
     )
 
@@ -10230,19 +10115,15 @@ function Get-FolderPermissionsBlock {
         $ClassExclusions[$ThisClass] = $true
     }
 
-    $ShortestFolderPath = @($FolderPermissions.Name |
-        Sort-Object)[0]
-
     ForEach ($ThisFolder in $FolderPermissions) {
 
-        $ThisHeading = New-HtmlHeading "Accounts with access to $($ThisFolder.Name)" -Level 5
+        $ThisHeading = New-HtmlHeading "Accounts with access to $($ThisFolder.Item.Path)" -Level 5
 
-        $ThisSubHeading = Get-FolderPermissionTableHeader -ThisFolder $ThisFolder -ShortestFolderPath $ShortestFolderPath
+        $ThisSubHeading = Get-FolderPermissionTableHeader -ThisFolder $ThisFolder -ShortestFolderPath $ShortestPath
 
-        $FilterContents = @{}
+        #$FilterContents = @{}
 
-        $FilteredAccounts = $ThisFolder.Group |
-        Group-Object -Property Account |
+        $FilteredPermissions = $ThisFolder.Access |
         Where-Object -FilterScript {
 
             # On built-in groups like 'Authenticated Users' or 'Administrators' the SchemaClassName is null but we have an ObjectType instead.
@@ -10250,25 +10131,25 @@ function Get-FolderPermissionsBlock {
             # A user who was found by being a member of a local group not have an ObjectType (because they are not directly part of the AccessControlEntry)
             # They should have their parent group's AccessControlEntry there...do they?  Doesn't it have a Group ObjectType there?
 
-            if ($_.Group.AccessControlEntry.ObjectType) {
-                $Schema = @($_.Group.AccessControlEntry.ObjectType)[0]
-            } else {
-                $Schema = @($_.Group.SchemaClassName)[0]
-                # ToDo: SchemaClassName is a real property but may not exist on all objects.  ObjectType is my own property.  Need to verify+test all usage of both for accuracy.
-                # ToDo: Why is $_.Group.SchemaClassName 'user' for the local Administrators group and Authenticated Users group, and it is 'Group' for the TestPC\Owner user?
-            }
+            ###if ($_.Group.AccessControlEntry.ObjectType) {
+            ###    $Schema = @($_.Group.AccessControlEntry.ObjectType)[0]
+            ###    $Schema = @($_.Group.SchemaClassName)[0]
+            # ToDo: SchemaClassName is a real property but may not exist on all objects.  ObjectType is my own property.  Need to verify+test all usage of both for accuracy.
+            # ToDo: Why is $_.Group.SchemaClassName 'user' for the local Administrators group and Authenticated Users group, and it is 'Group' for the TestPC\Owner user?
+            ###}
 
             # Exclude the object whose classes were specified in the parameters
             $SchemaExclusionResult = if ($ExcludeClass.Count -gt 0) {
-                $ClassExclusions[$Schema]
+                ###$ClassExclusions[$Schema]
+                $ClassExclusions[$_.Account.SchemaClassName]
             }
             -not $SchemaExclusionResult -and
 
             # Exclude the objects whose names match the regular expressions specified in the parameters
             ![bool]$(
                 ForEach ($RegEx in $ExcludeAccount) {
-                    if ($_.Name -match $RegEx) {
-                        $FilterContents[$_.Name] = $_
+                    if ($_.Account.ResolvedAccountName -match $RegEx) {
+                        #$FilterContents[$_.Account.ResolvedAccountName] += $_ #TODO: IMPLEMENT IN FUTURE WITH HASHTABLE, NOT += which is demonstrative only for now
                         $true
                     }
                 }
@@ -10280,55 +10161,53 @@ function Get-FolderPermissionsBlock {
         # Sending a dummy object down the line to avoid errors
         # TODO: More elegant solution needed. Downstream code should be able to handle null input.
         # TODO: Why does this suppress errors, but the object never appears in the tables? NOTE: Suspect this is now resolved by using -AsArray on ConvertTo-Json (lack of this was causing single objects to not be an array therefore not be displayed)
-        if ($null -eq $FilteredAccounts) {
-            $FilteredAccounts = [pscustomobject]@{
-                'Name'  = 'NoAccountsMatchingCriteria'
-                'Group' = [pscustomobject]@{
-                    'IdentityReference' = '.'
-                    'Access'            = '.'
-
-                    'Name'              = '.'
-                    'Department'        = '.'
-                    'Title'             = '.'
+        if ($null -eq $FilteredPermissions) {
+            $FilteredPermissions = [pscustomobject]@{
+                'Account' = 'NoAccountsMatchingCriteria'
+                'Access'  = [pscustomobject]@{
+                    'IdentityReferenceResolved' = '.'
+                    'FileSystemRights'          = '.'
+                    'SourceOfAccess'            = '.'
+                    'Name'                      = '.'
+                    'Department'                = '.'
+                    'Title'                     = '.'
                 }
             }
         }
 
-        $ObjectsForFolderPermissionTable = Select-FolderPermissionTableProperty -InputObject $FilteredAccounts -IgnoreDomain $IgnoreDomain |
-        Sort-Object -Property Name
+        $ObjectsForFolderPermissionTable = Select-FolderPermissionTableProperty -InputObject $FilteredPermissions -IgnoreDomain $IgnoreDomain |
+        Sort-Object -Property Account
 
         $ThisTable = $ObjectsForFolderPermissionTable |
         ConvertTo-Html -Fragment |
         New-BootstrapTable
 
-        $TableId = $ThisFolder.Name -replace '[^A-Za-z0-9\-_:.]', '-'
+        $TableId = "Perms_$($ThisFolder.Item.Path -replace '[^A-Za-z0-9\-_]', '-')"
 
-        $ThisJsonTable = ConvertTo-BootstrapJavaScriptTable -Id "Perms_$TableId" -InputObject $ObjectsForFolderPermissionTable -DataFilterControl -AllColumnsSearchable
+        $ThisJsonTable = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $ObjectsForFolderPermissionTable -DataFilterControl -AllColumnsSearchable
 
         # Remove spaces from property titles
-        $ObjectsForJsonData = $ObjectsForFolderPermissionTable |
-        Select-Object -Property Account,
-        Access,
-        @{
-            Label      = 'DuetoMembershipIn'
-            Expression = { $_.'Due to Membership In' }
-        },
-        @{
-            Label      = 'SourceofAccess'
-            Expression = { $_.'Source of Access' }
-        },
-        Name,
-        Department,
-        Title
+        $ObjectsForJsonData = ForEach ($Obj in $ObjectsForFolderPermissionTable) {
+            [PSCustomObject]@{
+                Account           = $Obj.Account
+                Access            = $Obj.Access
+                DuetoMembershipIn = $Obj.'Due to Membership In'
+                SourceofAccess    = $Obj.'Source of Access'
+                Name              = $Obj.Name
+                Department        = $Obj.Department
+                Title             = $Obj.Title
+            }
+        }
 
         [pscustomobject]@{
             HtmlDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisTable)
             JsonDiv     = New-BootstrapDiv -Text ($ThisHeading + $ThisSubHeading + $ThisJsonTable)
-            #JsonData    = $ObjectsForJsonData | ConvertTo-Json -AsArray # requires PS6+
-            JsonData    = ConvertTo-Json -InputObject @($ObjectsForJsonData)
             JsonColumns = Get-FolderColumnJson -InputObject $ObjectsForFolderPermissionTable -PropNames Account, Access,
             'Due to Membership In', 'Source of Access', Name, Department, Title
-            Path        = $ThisFolder.Name
+            #JsonData    = $ObjectsForJsonData | ConvertTo-Json -AsArray # requires PS6+ , unknown if any performance benefit compared to wrapping in @()
+            JsonData    = ConvertTo-Json -InputObject @($ObjectsForJsonData)
+            JsonTable   = $TableId
+            Path        = $ThisFolder.Item.Path
         }
     }
 }
@@ -10338,21 +10217,21 @@ function Get-FolderPermissionTableHeader {
         $ThisFolder,
         [string]$ShortestFolderPath
     )
-    $Leaf = $ThisFolder.Name | Split-Path -Parent | Split-Path -Leaf -ErrorAction SilentlyContinue
+    $Leaf = $ThisFolder.Item.Path | Split-Path -Parent | Split-Path -Leaf -ErrorAction SilentlyContinue
     if ($Leaf) {
         $ParentLeaf = $Leaf
     } else {
-        $ParentLeaf = $ThisFolder.Name | Split-Path -Parent
+        $ParentLeaf = $ThisFolder.Item.Path | Split-Path -Parent
     }
     if ('' -ne $ParentLeaf) {
-        if (@($ThisFolder.Group.FolderInheritanceEnabled)[0] -eq $true) {
-            if ($ThisFolder.Name -eq $ShortestFolderPath) {
+        if ($InputObject.Item.AreAccessRulesProtected) {
+            return "Inheritance is disabled on this folder. Accounts with access to the parent folder and subfolders ($ParentLeaf) cannot access this folder unless they are listed below:"
+        } else {
+            if ($ThisFolder.Item.Path -eq $ShortestFolderPath) {
                 return "Inherited permissions from the parent folder ($ParentLeaf) are included. This folder can only be accessed by the accounts listed below:"
             } else {
                 return "Inheritance is enabled on this folder. Accounts with access to the parent folder and subfolders ($ParentLeaf) can access this folder. So can any accounts listed below:"
             }
-        } else {
-            return "Inheritance is disabled on this folder. Accounts with access to the parent folder and subfolders ($ParentLeaf) cannot access this folder unless they are listed below:"
         }
     } else {
         return "This is the top-level folder. It can only be accessed by the accounts listed below:"
@@ -10450,13 +10329,157 @@ $FormattedSecurityPrincipals principals represented by those identities
 $UniqueAccountPermissions.Count unique accounts after filtering out any specified domain names
 $ExpandedAccountPermissions.Count effective permissions belonging to those principals and applying to those folders
 #>
+function Get-Permission {
+
+  # Get detailed info about permissions and the accounts with them
+
+  <#
+    Get-FolderAccessList
+      Get-FolderAce
+    Resolve-AccessList (foreach AccessControlEntry)
+      Resolve-PermissionIdentity
+        Resolve-Ace
+          Resolve-IdentityReference
+      Get-PermissionPrincipal
+        ConvertFrom-IdentityReferenceResolved
+      Format-PermissionAccount
+        Format-SecurityPrincipal
+      Select-UniqueAccountPermission
+      Format-FolderPermission
+    #>
+
+  param (
+
+    # Path to the item whose permissions to export (inherited ACEs will be included)
+    $Folder,
+
+    # Path to the subfolders whose permissions to report (inherited ACEs will be skipped)
+    $Subfolder,
+
+    # Number of asynchronous threads to use
+    [uint16]$ThreadCount = ((Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum),
+
+    # Will be sent to the Type parameter of Write-LogMsg in the PsLogMessage module
+    [string]$DebugOutputStream = 'Debug',
+
+    # Hostname to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+    [string]$ThisHostname = (HOSTNAME.EXE),
+
+    <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+    [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+
+    # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+    [string]$WhoAmI = (whoami.EXE),
+
+    # Cache of CIM sessions and instances to reduce connections and queries
+    [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
+
+    # Cache of known Win32_Account instances keyed by domain and SID
+    [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+    # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
+    [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+    <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+    [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+    # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+    [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+    # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+    [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
+
+    # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName,AdsiProvider,Win32Accounts properties as values
+    [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+    # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+    [hashtable]$LogMsgCache = $Global:LogMessages,
+
+    # Thread-safe cache of items and their owners
+    [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
+
+    # ID of the parent progress bar under which to show progres
+    [int]$ProgressParentId,
+
+    [string[]]$KnownFqdn,
+
+    # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
+    # Parameter default value is on a single line as a workaround to a PlatyPS bug
+    [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
+
+  )
+
+  # Create a splat of the progress parameters for code readability
+  $Progress = @{
+    Activity = 'Get-Permission'
+  }
+  if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
+    $Progress['ParentId'] = $ProgressParentId
+    $ProgressId = $ProgressParentId + 1
+  } else {
+    $ProgressId = 0
+  }
+  $Progress['Id'] = $ProgressId
+
+  # Start the progress bar for this function
+  Write-Progress -Status '0% (step 1 of 4)' -CurrentOperation 'Initialize' -PercentComplete 0 @Progress
+
+  # Create a splat of the child progress bar ID to pass to various functions for code readability
+  $ChildProgress = @{
+    ProgressParentId = $ProgressId
+  }
+
+  # Create a splat of the ThreadCount parameter to pass to various functions for code readability
+  $Threads = @{
+    ThreadCount = $ThreadCount
+  }
+
+  # Create a splat of log-related parameters to pass to various functions for code readability
+  $LoggingParams = @{
+    ThisHostname = $ThisHostname
+    LogMsgCache  = $LogCache
+    WhoAmI       = $WhoAmI
+  }
+
+  # Create a splat of caching-related parameters to pass to various functions for code readability
+  $CacheParams = @{
+    Win32AccountsBySID     = $Win32AccountsBySID
+    Win32AccountsByCaption = $Win32AccountsByCaption
+    DirectoryEntryCache    = $DirectoryEntryCache
+    DomainsByFqdn          = $DomainsByFqdn
+    DomainsByNetbios       = $DomainsByNetbios
+    DomainsBySid           = $DomainsBySid
+    ThisFqdn               = $ThisFqdn
+    ThreadCount            = $ThreadCount
+  }
+
+  Write-Progress -Status '25% (step 2 of 4)' -CurrentOperation 'Get folder access control lists' -PercentComplete 15 @Progress
+  Write-LogMsg @LogParams -Text "`$AccessLists = Get-FolderAccessList -Folder @('$($Folder -join "','")') -Subfolder @('$($Subfolder -join "','")')"
+  $AccessLists = Get-FolderAccessList -Folder $Folder -Subfolder $Subfolder @Threads @ChildProgress @LoggingParams
+
+  # Without this step, threads that start simulataneously would all find the cache empty and would all perform queries to populate it
+  Write-Progress -Status '50% (step 3 of 4)' -CurrentOperation 'Pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
+  Write-LogMsg @LogParams -Text "Initialize-Cache -Fqdn @('$($KnownFqdn -join "',")')"
+  Initialize-Cache -Fqdn $KnownFqdn -CimCache $CimCache @ProgressParent @LoggingParams @CacheParams
+
+  Write-Progress -Status '75% (step 4 of 4)' -CurrentOperation 'Resolve and expand the identities in access control lists to the accounts they represent' -PercentComplete 30 @Progress
+  Write-LogMsg @LogParams -Text "Resolve-AccessList -AccessList `$AccessLists"
+  Resolve-AccessList -AccessList $AccessLists -InheritanceFlagResolved $InheritanceFlagResolved @Threads @ChildProgress @LoggingParams
+
+  Write-Progress @Progress -Completed
+
+}
 function Get-PermissionPrincipal {
 
     param (
-
-        # Objects from Resolve-PermissionIdentity whose corresponding ADSI security principals to retrieve
-        [Parameter(ValueFromPipeline)]
-        [object[]]$Identity,
 
         # Output stream to send the log messages to
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
@@ -10465,14 +10488,14 @@ function Get-PermissionPrincipal {
         # Maximum number of concurrent threads to allow
         [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
 
+        # Cache of security principals keyed by resolved identity reference. END STATE
+        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entries keyed by their resolved identities. STARTING STATE
+        [hashtable]$ACEsByResolvedID = ([hashtable]::Synchronized(@{})),
+
         # Cache of CIM sessions and instances to reduce connections and queries
         [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
-
-        # Cache of known Win32_Account instances keyed by domain and SID
-        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
-
-        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
-        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
 
         <#
         Dictionary to cache directory entries to avoid redundant lookups
@@ -10490,8 +10513,11 @@ function Get-PermissionPrincipal {
         # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName,AdsiProvider,Win32Accounts properties as values
         [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
 
-        # Thread-safe hashtable to use for caching directory entries and avoiding duplicate directory queries
-        [hashtable]$IdentityCache = ([hashtable]::Synchronized(@{})),
+        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known Win32_Account instances keyed by domain and SID
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
 
         <#
         Hostname of the computer running this function.
@@ -10523,7 +10549,11 @@ function Get-PermissionPrincipal {
         [switch]$NoGroupMembers,
 
         # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
+        [int]$ProgressParentId,
+
+        # The current domain
+        # Can be passed as a parameter to reduce calls to Get-CurrentDomain
+        [string]$CurrentDomain = (Get-CurrentDomain)
 
     )
 
@@ -10537,7 +10567,9 @@ function Get-PermissionPrincipal {
         $Progress['Id'] = 0
     }
 
-    Write-Progress @Progress -Status '0% (step 1 of 2)' -CurrentOperation 'Flattening the raw access control entries for CSV export' -PercentComplete 0
+    [string[]]$IDs = $ACEsByResolvedID.Keys
+    $Count = $IDs.Count
+    Write-Progress @Progress -Status "0% (identity 0 of $Count)" -CurrentOperation 'Initialize' -PercentComplete 0
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -10548,7 +10580,6 @@ function Get-PermissionPrincipal {
 
     $ADSIConversionParams = @{
         DirectoryEntryCache    = $DirectoryEntryCache
-        IdentityReferenceCache = $IdentityCache
         DomainsBySID           = $DomainsBySID
         DomainsByNetbios       = $DomainsByNetbios
         DomainsByFqdn          = $DomainsByFqdn
@@ -10558,6 +10589,9 @@ function Get-PermissionPrincipal {
         LogMsgCache            = $LogMsgCache
         CimCache               = $CimCache
         DebugOutputStream      = $DebugOutputStream
+        PrincipalsByResolvedID = $PrincipalsByResolvedID # end state
+        ACEsByResolvedID       = $ACEsByResolvedID # start state
+        CurrentDomain          = $CurrentDomain
     }
 
     if ($ThreadCount -eq 1) {
@@ -10566,34 +10600,37 @@ function Get-PermissionPrincipal {
             $ADSIConversionParams['NoGroupMembers'] = $true
         }
 
-        $Count = $Identity.Count
         [int]$ProgressInterval = [math]::max(($Count / 100), 1)
         $IntervalCounter = 0
         $i = 0
 
-        ForEach ($ThisID in $Identity) {
+        ForEach ($ThisID in $IDs) {
 
             $IntervalCounter++
 
             if ($IntervalCounter -eq $ProgressInterval) {
 
                 [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete% (identity $($i + 1) of $Count)" -CurrentOperation "ConvertFrom-IdentityReferenceResolved for '$($ThisID.Name)'" -PercentComplete $PercentComplete
+                Write-Progress @Progress -Status "$PercentComplete% (identity $($i + 1) of $Count) ConvertFrom-IdentityReferenceResolved" -CurrentOperation $ThisID -PercentComplete $PercentComplete
                 $IntervalCounter = 0
 
             }
 
             $i++
-            Write-LogMsg @LogParams -Text "ConvertFrom-IdentityReferenceResolved -IdentityReference $($ThisID.Name)"
+            Write-LogMsg @LogParams -Text "ConvertFrom-IdentityReferenceResolved -IdentityReference '$ThisID'"
             ConvertFrom-IdentityReferenceResolved -IdentityReference $ThisID @ADSIConversionParams
 
         }
 
     } else {
 
+        if ($NoGroupMembers) {
+            $ADSIConversionParams['AddSwitch'] = 'NoGroupMembers'
+        }
+
         $SplitThreadParams = @{
             Command              = 'ConvertFrom-IdentityReferenceResolved'
-            InputObject          = $Identity
+            InputObject          = $IDs
             InputParameter       = 'IdentityReference'
             ObjectStringProperty = 'Name'
             TodaysHostname       = $ThisHostname
@@ -10603,11 +10640,7 @@ function Get-PermissionPrincipal {
             AddParam             = $ADSIConversionParams
         }
 
-        if ($NoGroupMembers) {
-            $ADSIConversionParams['AddSwitch'] = 'NoGroupMembers'
-        }
-
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'ConvertFrom-IdentityReferenceResolved' -InputParameter 'IdentityReference' -InputObject `$Identity"
+        Write-LogMsg @LogParams -Text "Split-Thread -Command 'ConvertFrom-IdentityReferenceResolved' -InputParameter 'IdentityReference' -InputObject `$IDs"
         Split-Thread @SplitThreadParams
 
     }
@@ -10726,7 +10759,7 @@ function Get-UniqueServerFqdn {
     )
 
     $Progress = @{
-        Activity = 'Expand-Folder'
+        Activity = 'Get-UniqueServerFqdn'
     }
     if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
         $Progress['ParentId'] = $ProgressParentId
@@ -10744,11 +10777,6 @@ function Get-UniqueServerFqdn {
     ForEach ($Value in $Known) {
         $UniqueValues[$Value] = $null
     }
-
-    #why would this be needed?  why add the full path?  I am expecting only fqdns as output right?
-    #ForEach ($Value in $FilePath) {
-    #    $UniqueValues[$Value] = $null
-    #}
 
     # Add server names from the ACL paths
     [int]$ProgressInterval = [math]::max(($Count / 100), 1)
@@ -10810,7 +10838,9 @@ function Group-Permission {
 }
 function Initialize-Cache {
 
-    <# Use the list of known ADSI server FQDNs to populate six caches:
+    <#
+    Pre-populate caches in memory to avoid redundant ADSI and CIM queries
+    Use known ADSI and CIM server FQDNs to populate six caches:
        Three caches of known ADSI directory servers
          The first cache is keyed on domain SID (e.g. S-1-5-2)
          The second cache is keyed on domain FQDN (e.g. ad.contoso.com)
@@ -10896,7 +10926,7 @@ function Initialize-Cache {
         $Progress['Id'] = 0
     }
     $Count = $ServerFqdns.Count
-    Write-Progress @Progress -Status "0% (FQDN 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
+    Write-Progress -Status "0% (FQDN 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
 
     $LogParams = @{
         LogMsgCache  = $LogMsgCache
@@ -10931,7 +10961,7 @@ function Initialize-Cache {
 
             if ($IntervalCounter -eq $ProgressInterval) {
                 [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete% (FQDN $($i + 1) of $Count)" -CurrentOperation "Get-AdsiServer '$ThisServerName'" -PercentComplete $PercentComplete
+                Write-Progress @Progress -Status "$PercentComplete% (FQDN $($i + 1) of $Count) Get-AdsiServer" -CurrentOperation "Get-AdsiServer '$ThisServerName'" -PercentComplete $PercentComplete
                 $IntervalCounter = 0
             }
 
@@ -11016,6 +11046,591 @@ function Remove-CachedCimSession {
 
         }
 
+    }
+
+}
+function Resolve-AccessControlList {
+
+    # Resolve identities in access control lists to their SIDs and NTAccount names
+
+    param (
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{}),
+
+        # Output stream to send the log messages to
+        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
+        [string]$DebugOutputStream = 'Debug',
+
+        # Maximum number of concurrent threads to allow
+        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
+
+        # Cache of access control entries keyed by GUID generated in this function
+        [hashtable]$ACEsByGUID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entry GUIDs keyed by their resolved identities
+        [hashtable]$AceGUIDsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entry GUIDs keyed by their paths
+        [hashtable]$AceGUIDsByPath = ([hashtable]::Synchronized(@{})),
+
+        # Cache of CIM sessions and instances to reduce connections and queries
+        [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName,AdsiProvider,Win32Accounts properties as values
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        # Cache of known Win32_Account instances keyed by domain and SID
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # ID of the parent progress bar under which to show progres
+        [int]$ProgressParentId,
+
+        # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
+        # Parameter default value is on a single line as a workaround to a PlatyPS bug
+        [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
+
+    )
+
+    $Progress = @{
+        Activity = 'Resolve-AccessControlList'
+    }
+    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
+        $Progress['ParentId'] = $ProgressParentId
+        $Progress['Id'] = $ProgressParentId + 1
+    } else {
+        $Progress['Id'] = 0
+    }
+
+    $Paths = $ACLsByPath.Keys
+    $Count = $Paths.Count
+    Write-Progress @Progress -Status "0% (ACL 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
+
+    $LogParams = @{
+        LogMsgCache  = $LogMsgCache
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        WhoAmI       = $WhoAmI
+    }
+
+    $ACEPropertyName = (Get-Member -InputObject $ACLsByPath.Values.Access[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+
+    $ResolveAclParams = @{
+        DirectoryEntryCache     = $DirectoryEntryCache
+        Win32AccountsBySID      = $Win32AccountsBySID
+        Win32AccountsByCaption  = $Win32AccountsByCaption
+        DomainsBySID            = $DomainsBySID
+        DomainsByNetbios        = $DomainsByNetbios
+        DomainsByFqdn           = $DomainsByFqdn
+        ThisHostName            = $ThisHostName
+        ThisFqdn                = $ThisFqdn
+        WhoAmI                  = $WhoAmI
+        LogMsgCache             = $LogMsgCache
+        CimCache                = $CimCache
+        ACEsByGuid              = $ACEsByGUID
+        AceGUIDsByPath          = $AceGUIDsByPath
+        AceGUIDsByResolvedID    = $AceGUIDsByResolvedID
+        ACLsByPath              = $ACLsByPath
+        ACEPropertyName         = $ACEPropertyName
+        InheritanceFlagResolved = $InheritanceFlagResolved
+    }
+
+    if ($ThreadCount -eq 1) {
+
+        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
+        $IntervalCounter = 0
+        $i = 0
+
+        ForEach ($ThisPath in $Paths) {
+
+            $IntervalCounter++
+
+            if ($IntervalCounter -eq $ProgressInterval) {
+
+                [int]$PercentComplete = $i / $Count * 100
+                Write-Progress @Progress -Status "$PercentComplete% (ACL $($i + 1) of $Count) Resolve-Acl" -CurrentOperation $ThisPath -PercentComplete $PercentComplete
+                $IntervalCounter = 0
+
+            }
+
+            $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
+            Write-LogMsg @LogParams -Text "Resolve-Acl -InputObject '$ThisPath' -ACLsByPath `$ACLsByPath -ACEsByGUID `$ACEsByGUID"
+            Resolve-Acl -ItemPath $ThisPath @ResolveAclParams
+
+        }
+
+    } else {
+
+        $SplitThreadParams = @{
+            Command        = 'Resolve-Acl'
+            InputObject    = $Paths
+            InputParameter = 'ItemPath'
+            TodaysHostname = $ThisHostname
+            WhoAmI         = $WhoAmI
+            LogMsgCache    = $LogMsgCache
+            Threads        = $ThreadCount
+            AddParam       = $ResolveAclParams
+            #DebugOutputStream    = 'Debug'
+        }
+
+        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Acl' -InputParameter InputObject -InputObject @('$($ACLsByPath.Keys -join "','")') -AddParam @{ACLsByPath=`$ACLsByPath;ACEsByGUID=`$ACEsByGUID}"
+        Split-Thread @SplitThreadParams
+
+    }
+
+    Write-Progress @Progress -Completed
+
+}
+function Resolve-Ace {
+    <#
+    .SYNOPSIS
+    Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
+    .DESCRIPTION
+    Based on the IdentityReference proprety of each Access Control Entry:
+    Resolve SID to NT account name and vise-versa
+    Resolve well-known SIDs
+    Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+    Add these properties (IdentityReferenceSID,IdentityReferenceResolved) to the object and return it
+    .INPUTS
+    [System.Security.AccessControl.AuthorizationRuleCollection]$ACE
+    .OUTPUTS
+    [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceResolved, and AdsiProvider properties
+    .EXAMPLE
+    Get-Acl |
+    Expand-Acl |
+    Resolve-Ace
+
+    Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
+    This works in either Windows Powershell or in Powershell
+    Get-Acl does not support long paths (>256 characters)
+    That was why I originally used the .Net Framework method
+    .EXAMPLE
+    Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
+    Resolve-Ace
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.SecurityIdentifier]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
+
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
+    [System.Security.AccessControl.AccessControlSections]::Owner -bor
+    [System.Security.AccessControl.AccessControlSections]::Group
+    $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.NTAccount]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
+
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
+    [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
+    $AuthRules | Resolve-Ace
+
+    Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
+    Only works in Windows PowerShell
+    Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
+    This method is removed in modern versions of .Net Core
+
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
+
+    The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
+    It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
+
+    .NOTES
+    Dependencies:
+        Get-DirectoryEntry
+        Add-SidInfo
+        Get-TrustedDomain
+        Find-AdsiProvider
+
+    if ($FolderPath.Length -gt 255) {
+        $FolderPath = "\\?\$FolderPath"
+    }
+#>
+    [OutputType([void])]
+    param (
+
+        # Authorization Rule Collection of Access Control Entries from Discretionary Access Control Lists
+        [Parameter(
+            ValueFromPipeline
+        )]
+        [object]$ACE,
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{}),
+
+        [Parameter(
+            ValueFromPipeline
+        )]
+        [object]$ItemPath,
+
+        # Cache of access control entries keyed by GUID generated in this function
+        [hashtable]$ACEsByGUID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entry GUIDs keyed by their resolved identities
+        [hashtable]$AceGUIDsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entry GUIDs keyed by their paths
+        [hashtable]$AceGUIDsByPath = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        <#
+    Hostname of the computer running this function.
+
+    Can be provided as a string to avoid calls to HOSTNAME.EXE
+    #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        <#
+    FQDN of the computer running this function.
+
+    Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+    #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # Cache of CIM sessions and instances to reduce connections and queries
+        [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
+
+        # Output stream to send the log messages to
+        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
+        [string]$DebugOutputStream = 'Debug',
+
+        [string[]]$ACEPropertyName = (Get-Member -InputObject $ACE -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name,
+
+        # Will be set as the Source property of the output object.
+        # Intended to reflect permissions resulting from Ownership rather than Discretionary Access Lists
+        [string]$Source,
+
+        # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
+        # Parameter default value is on a single line as a workaround to a PlatyPS bug
+        [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
+
+    )
+
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
+
+    $Log = @{
+        ThisHostname = $ThisHostname
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
+
+    $Cache1 = @{
+        DirectoryEntryCache    = $DirectoryEntryCache
+        DomainsByFqdn          = $DomainsByFqdn
+        Win32AccountsBySID     = $Win32AccountsBySID
+        Win32AccountsByCaption = $Win32AccountsByCaption
+    }
+
+    $Cache2 = @{
+        DomainsByNetBIOS = $DomainsByNetbios
+        DomainsBySid     = $DomainsBySid
+        CimCache         = $CimCache
+    }
+
+    Write-LogMsg @LogParams -Text "Resolve-IdentityReferenceDomainDNS -IdentityReference '$($ACE.IdentityReference)' -ItemPath '$ItemPath' -ThisFqdn '$ThisFqdn' @Cache2 @Log"
+    $DomainDNS = Resolve-IdentityReferenceDomainDNS -IdentityReference $ACE.IdentityReference -ItemPath $ItemPath -ThisFqdn $ThisFqdn @Cache2 @Log
+
+    Write-LogMsg @LogParams -Text "`$AdsiServer = Get-AdsiServer -Fqdn '$DomainDNS' -ThisFqdn '$ThisFqdn'"
+    $AdsiServer = Get-AdsiServer -Fqdn $DomainDNS -ThisFqdn $ThisFqdn @GetAdsiServerParams @Cache1 @Cache2 @Log
+
+    Write-LogMsg @LogParams -Text "Resolve-IdentityReference -IdentityReference '$($ACE.IdentityReference)' -AdsiServer `$AdsiServer -ThisFqdn '$ThisFqdn' # ADSI server '$($AdsiServer.AdsiProvider)://$($AdsiServer.Dns)'"
+    $ResolvedIdentityReference = Resolve-IdentityReference -IdentityReference $ACE.IdentityReference -AdsiServer $AdsiServer -ThisFqdn $ThisFqdn @Cache1 @Cache2 @Log
+
+    # TODO: add a param to offer DNS instead of or in addition to NetBIOS
+
+    $ObjectProperties = @{
+        Access                    = "$($ACE.AccessControlType) $($ACE.FileSystemRights) $($InheritanceFlagResolved[$ACE.InheritanceFlags])"
+        AdsiProvider              = $AdsiServer.AdsiProvider
+        AdsiServer                = $AdsiServer.Dns
+        IdentityReferenceSID      = $ResolvedIdentityReference.SIDString
+        IdentityReferenceResolved = $ResolvedIdentityReference.IdentityReferenceNetBios
+        Path                      = $ItemPath
+        SourceOfAccess            = $Source
+        PSTypeName                = 'Permission.AccessControlEntry'
+    }
+
+    ForEach ($ThisProperty in $ACEPropertyName) {
+        $ObjectProperties[$ThisProperty] = $ACE.$ThisProperty
+    }
+
+    $OutputObject = [PSCustomObject]$ObjectProperties
+    $Guid = [guid]::NewGuid()
+    Add-CacheItem -Cache $ACEsByGUID -Key $Guid -Value $OutputObject -Type ([object])
+    $Type = [guid]
+    Add-CacheItem -Cache $AceGUIDsByResolvedID -Key $OutputObject.IdentityReferenceResolved -Value $Guid -Type $Type
+    Add-CacheItem -Cache $AceGUIDsByPath -Key $OutputObject.Path -Value $Guid -Type $Type
+
+}
+function Resolve-Acl {
+    <#
+    .SYNOPSIS
+    Use ADSI to lookup info about IdentityReferences from Authorization Rule Collections that came from Discretionary Access Control Lists
+    .DESCRIPTION
+    Based on the IdentityReference proprety of each Access Control Entry:
+    Resolve SID to NT account name and vise-versa
+    Resolve well-known SIDs
+    Resolve generic defaults like 'NT AUTHORITY' and 'BUILTIN' to the applicable computer or domain name
+    Add these properties (IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved) to the object and return it
+    .INPUTS
+    [System.Security.AccessControl.AuthorizationRuleCollection]$ItemPath
+    .OUTPUTS
+    [PSCustomObject] Original object plus IdentityReferenceSID,IdentityReferenceName,IdentityReferenceResolved, and AdsiProvider properties
+    .EXAMPLE
+    Get-Acl |
+    Expand-Acl |
+    Resolve-Ace
+
+    Use Get-Acl from the Microsoft.PowerShell.Security module as the source of the access list
+    This works in either Windows Powershell or in Powershell
+    Get-Acl does not support long paths (>256 characters)
+    That was why I originally used the .Net Framework method
+    .EXAMPLE
+    Get-FolderAce -LiteralPath C:\Test -IncludeInherited |
+    Resolve-Ace
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.Security.AccessControl.FileSecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.SecurityIdentifier]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
+
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as SIDs
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor
+    [System.Security.AccessControl.AccessControlSections]::Owner -bor
+    [System.Security.AccessControl.AccessControlSections]::Group
+    $DirectorySecurity = [System.Security.AccessControl.DirectorySecurity]::new($DirectoryInfo,$Sections)
+    $IncludeExplicitRules = $true
+    $IncludeInheritedRules = $true
+    $AccountType = [System.Security.Principal.NTAccount]
+    $FileSecurity.GetAccessRules($IncludeExplicitRules,$IncludeInheritedRules,$AccountType) |
+    Resolve-Ace
+
+    This uses .Net Core as the source of the access list
+    It uses the GetAccessRules method on the [System.Security.AccessControl.FileSecurity] class
+    The targetType parameter of the method is used to specify that the accounts in the ACL are returned as NT account names (DOMAIN\User)
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    [System.Security.AccessControl.DirectorySecurity]$DirectorySecurity = $DirectoryInfo.GetAccessControl('Access')
+    [System.Security.AccessControl.AuthorizationRuleCollection]$AuthRules = $DirectorySecurity.Access
+    $AuthRules | Resolve-Ace
+
+    Use the .Net Framework (or legacy .Net Core up to 2.2) as the source of the access list
+    Only works in Windows PowerShell
+    Those versions of .Net had a GetAccessControl method on the [System.IO.DirectoryInfo] class
+    This method is removed in modern versions of .Net Core
+
+    .EXAMPLE
+    [System.String]$FolderPath = 'C:\Test'
+    [System.IO.DirectoryInfo]$DirectoryInfo = Get-Item -LiteralPath $FolderPath
+    $Sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+    $FileSecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($DirectoryInfo,$Sections)
+
+    The [System.IO.FileSystemAclExtensions] class is a Windows-specific implementation
+    It provides no known benefit over the cross-platform equivalent [System.Security.AccessControl.FileSecurity]
+
+    .NOTES
+    Dependencies:
+        Get-DirectoryEntry
+        Add-SidInfo
+        Get-TrustedDomain
+        Find-AdsiProvider
+
+    if ($FolderPath.Length -gt 255) {
+        $FolderPath = "\\?\$FolderPath"
+    }
+#>
+    [OutputType([PSCustomObject])]
+    param (
+
+        # Authorization Rule Collection of Access Control Entries from Discretionary Access Control Lists
+        [Parameter(
+            ValueFromPipeline
+        )]
+        [object]$ItemPath,
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{}),
+
+        # Cache of access control entries keyed by GUID generated in this function
+        [hashtable]$ACEsByGUID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entry GUIDs keyed by their resolved identities
+        [hashtable]$AceGUIDsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Cache of access control entry GUIDs keyed by their paths
+        [hashtable]$AceGUIDsByPath = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Dictionary to cache directory entries to avoid redundant lookups
+
+        Defaults to an empty thread-safe hashtable
+        #>
+        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
+
+        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
+
+        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+
+        <#
+        Hostname of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE
+        #>
+        [string]$ThisHostName = (HOSTNAME.EXE),
+
+        <#
+        FQDN of the computer running this function.
+
+        Can be provided as a string to avoid calls to HOSTNAME.EXE and [System.Net.Dns]::GetHostByName()
+        #>
+        [string]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+
+        # Username to record in log messages (can be passed to Write-LogMsg as a parameter to avoid calling an external process)
+        [string]$WhoAmI = (whoami.EXE),
+
+        # Dictionary of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # Cache of CIM sessions and instances to reduce connections and queries
+        [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
+
+        # Output stream to send the log messages to
+        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
+        [string]$DebugOutputStream = 'Debug',
+
+        [string[]]$ACEPropertyName = (Get-Member -InputObject $ItemPath -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name,
+
+        # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
+        # Parameter default value is on a single line as a workaround to a PlatyPS bug
+        [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
+
+    )
+
+    $LogParams = @{
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        LogMsgCache  = $LogMsgCache
+        WhoAmI       = $WhoAmI
+    }
+
+    $ACL = $ACLsByPath[$ItemPath]
+
+    if ($ACL.Owner.IdentityReference) {
+        Write-LogMsg -Text "Resolve-Ace -ACE $($ACL.Owner) -ACEPropertyName @('$($ACEPropertyName -join "','")') @PSBoundParameters" @LogParams
+        Resolve-Ace -ACE $ACL.Owner -Source 'Ownership' @PSBoundParameters
+    }
+
+    ForEach ($ACE in $ACL.Access) {
+        Write-LogMsg -Text "Resolve-Ace -ACE $ACE -ACEPropertyName @('$($ACEPropertyName -join "','")') @PSBoundParameters" @LogParams
+        Resolve-Ace -ACE $ACE -Source 'Discretionary ACL' @PSBoundParameters
     }
 
 }
@@ -11139,42 +11754,19 @@ function Resolve-Folder {
     }
 
 }
-function Resolve-PermissionIdentity {
+function Resolve-IdentityReferenceDomainDNS {
 
     param (
 
-        # Permission objects from Get-FolderAccessList whose IdentityReference to resolve
-        [Parameter(ValueFromPipeline)]
-        [object[]]$Permission,
+        [string]$IdentityReference,
 
-        # Output stream to send the log messages to
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug',
-
-        # Maximum number of concurrent threads to allow
-        [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
-
-        # Cache of known Win32_Account instances keyed by domain and SID
-        [hashtable]$Win32AccountsBySID = ([hashtable]::Synchronized(@{})),
-
-        # Cache of known Win32_Account instances keyed by domain (e.g. CONTOSO) and Caption (NTAccount name e.g. CONTOSO\User1)
-        [hashtable]$Win32AccountsByCaption = ([hashtable]::Synchronized(@{})),
-
-        <#
-        Dictionary to cache directory entries to avoid redundant lookups
-
-        Defaults to an empty thread-safe hashtable
-        #>
-        [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+        [object]$ItemPath,
 
         # Hashtable with known domain NetBIOS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
         [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
 
         # Hashtable with known domain SIDs as keys and objects with Dns,NetBIOS,SID,DistinguishedName properties as values
         [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
-
-        # Hashtable with known domain DNS names as keys and objects with Dns,NetBIOS,SID,DistinguishedName,AdsiProvider,Win32Accounts properties as values
-        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
 
         <#
         Hostname of the computer running this function.
@@ -11197,107 +11789,55 @@ function Resolve-PermissionIdentity {
         [hashtable]$LogMsgCache = $Global:LogMessages,
 
         # Cache of CIM sessions and instances to reduce connections and queries
-        [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
-
-        # ID of the parent progress bar under which to show progres
-        [int]$ProgressParentId
+        [hashtable]$CimCache = ([hashtable]::Synchronized(@{}))
 
     )
 
-    $Progress = @{
-        Activity = 'Resolve-PermissionIdentity'
-    }
-    if ($PSBoundParameters.ContainsKey('ProgressParentId')) {
-        $Progress['ParentId'] = $ProgressParentId
-        $Progress['Id'] = $ProgressParentId + 1
-    } else {
-        $Progress['Id'] = 0
-    }
-
-    $Count = $Permission.Count
-    Write-Progress @Progress -Status "0% (permission 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
-
     $LogParams = @{
-        LogMsgCache  = $LogMsgCache
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
+        LogMsgCache  = $LogMsgCache
         WhoAmI       = $WhoAmI
     }
 
-    if ($ThreadCount -eq 1) {
+    switch -Wildcard ($IdentityReference) {
 
-        $ResolveAceParams = @{
-            DirectoryEntryCache    = $DirectoryEntryCache
-            Win32AccountsBySID     = $Win32AccountsBySID
-            Win32AccountsByCaption = $Win32AccountsByCaption
-            DomainsBySID           = $DomainsBySID
-            DomainsByNetbios       = $DomainsByNetbios
-            DomainsByFqdn          = $DomainsByFqdn
-            ThisHostName           = $ThisHostName
-            ThisFqdn               = $ThisFqdn
-            WhoAmI                 = $WhoAmI
-            LogMsgCache            = $LogMsgCache
-            CimCache               = $CimCache
-        }
-
-        [int]$ProgressInterval = [math]::max(($Count / 100), 1)
-        $IntervalCounter = 0
-        $i = 0
-
-        ForEach ($ThisPermission in $Permission) {
-
-            $IntervalCounter++
-
-            if ($IntervalCounter -eq $ProgressInterval) {
-
-                [int]$PercentComplete = $i / $Count * 100
-                Write-Progress @Progress -Status "$PercentComplete% (permission $($i + 1) of $Count)" -CurrentOperation "Resolve-Ace '$($ThisPermission.IdentityReference)'" -PercentComplete $PercentComplete
-                $IntervalCounter = 0
-
+        "S-1-*" {
+            # IdentityReference is a SID (Revision 1)
+            $IndexOfLastHyphen = $IdentityReference.LastIndexOf("-")
+            $DomainSid = $IdentityReference.Substring(0, $IndexOfLastHyphen)
+            if ($DomainSid) {
+                $DomainCacheResult = $DomainsBySID[$DomainSid]
+                if ($DomainCacheResult) {
+                    Write-LogMsg @LogParams -Text " # Domain SID cache hit for '$DomainSid' for '$IdentityReference'"
+                    $DomainDNS = $DomainCacheResult.Dns
+                } else {
+                    Write-LogMsg @LogParams -Text " # Domain SID cache miss for '$DomainSid' for '$IdentityReference'"
+                }
             }
-
-            $i++ # increment $i after Write-Progress to show progress conservatively rather than optimistically
-            Write-LogMsg @LogParams -Text "Resolve-Ace -InputObject $($ThisPermission.IdentityReference)"
-            Resolve-Ace -InputObject $ThisPermission @ResolveAceParams
-
         }
-
-    } else {
-
-        $ResolveAceParams = @{
-
-            Command              = 'Resolve-Ace'
-            InputObject          = $Permission
-            InputParameter       = 'InputObject'
-            ObjectStringProperty = 'IdentityReference'
-            TodaysHostname       = $ThisHostname
-            #DebugOutputStream    = 'Debug'
-            WhoAmI               = $WhoAmI
-            LogMsgCache          = $LogMsgCache
-            Threads              = $ThreadCount
-            AddParam             = @{
-                DirectoryEntryCache    = $DirectoryEntryCache
-                Win32AccountsBySID     = $Win32AccountsBySID
-                Win32AccountsByCaption = $Win32AccountsByCaption
-                DomainsBySID           = $DomainsBySID
-                DomainsByNetbios       = $DomainsByNetbios
-                DomainsByFqdn          = $DomainsByFqdn
-                ThisHostName           = $ThisHostName
-                ThisFqdn               = $ThisFqdn
-                WhoAmI                 = $WhoAmI
-                LogMsgCache            = $LogMsgCache
-                CimCache               = $CimCache
+        "NT SERVICE\*" {}
+        "BUILTIN\*" {}
+        "NT AUTHORITY\*" {}
+        default {
+            $DomainNetBIOS = ($IdentityReference -split '\\')[0]
+            if ($DomainNetBIOS) {
+                $DomainDNS = $DomainsByNetbios[$DomainNetBIOS].Dns #Doesn't work for BUILTIN, etc.
             }
-
+            if (-not $DomainDNS) {
+                $ThisServerDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios @LoggingParams
+                $DomainDNS = ConvertTo-Fqdn -DistinguishedName $ThisServerDn -ThisFqdn $ThisFqdn -CimCache $CimCache @LoggingParams
+            }
         }
-
-        Write-LogMsg @LogParams -Text "Split-Thread -Command 'Resolve-Ace' -InputParameter InputObject -InputObject `$Permission -ObjectStringProperty 'IdentityReference' -DebugOutputStream 'Debug'"
-
-        Split-Thread @ResolveAceParams
-
     }
 
-    Write-Progress @Progress -Completed
+    if (-not $DomainDNS) {
+        # TODO - Bug: I think this will report incorrectly for a remote domain not in the cache (trust broken or something)
+        Write-LogMsg @LogParams -Text "Find-ServerNameInPath -LiteralPath '$ItemPath' -ThisFqdn '$ThisFqdn'"
+        $DomainDNS = Find-ServerNameInPath -LiteralPath $ItemPath -ThisFqdn $ThisFqdn
+    }
+
+    return $DomainDNS
 
 }
 function Resolve-PermissionTarget {
@@ -11332,7 +11872,10 @@ function Resolve-PermissionTarget {
         [string]$WhoAmI = (whoami.EXE),
 
         # Hashtable of log messages for Write-LogMsg (can be thread-safe if a synchronized hashtable is provided)
-        [hashtable]$LogMsgCache = $Global:LogMessages
+        [hashtable]$LogMsgCache = $Global:LogMessages,
+
+        # Cache of access control lists keyed by path
+        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{})
 
     )
 
@@ -11355,63 +11898,78 @@ function Resolve-PermissionTarget {
     ForEach ($ThisTargetPath in $TargetPath) {
 
         Write-LogMsg @LogParams -Text "Resolve-Folder -TargetPath '$ThisTargetPath'"
-        Resolve-Folder -TargetPath $ThisTargetPath @ResolveFolderParams
+        $Resolved = Resolve-Folder -TargetPath $ThisTargetPath @ResolveFolderParams
+
+        ForEach ($ThisOne in $Resolved) {
+            $ACLsByPath[$ThisOne] = $null
+        }
 
     }
 
 }
 function Select-FolderPermissionTableProperty {
+
     # For the HTML table
     param (
         $InputObject,
         $IgnoreDomain
     )
+
     ForEach ($Object in $InputObject) {
-        $GroupString = ($Object.Group.IdentityReference | Sort-Object -Unique) -join ' ; '
+
+        # Each ACE contains the original IdentityReference representing the group the Object is a member of
+        $GroupString = ($Object.Access.IdentityReferenceResolved | Sort-Object -Unique) -join ' ; '
+
         # ToDo: param to allow setting [self] instead of the objects own name for this property
-        #if ($GroupString -eq $Object.Name) {
+        #if ($GroupString -eq $Object.Account.ResolvedAccountName) {
         #    $GroupString = '[self]'
         #} else {
         ForEach ($IgnoreThisDomain in $IgnoreDomain) {
             $GroupString = $GroupString -replace "$IgnoreThisDomain\\", ''
         }
         #}
+
         [pscustomobject]@{
-            'Account'              = $Object.Name
-            'Access'               = ($Object.Group | Sort-Object -Property IdentityReference -Unique).Access -join ' ; '
+            'Account'              = $Object.Account.ResolvedAccountName
+            'Access'               = ($Object.Access.FileSystemRights | Sort-Object -Unique) -join ' ; '
             'Due to Membership In' = $GroupString
-            'Source of Access'     = ($Object.Group.AccessControlEntry.ACESource | Sort-Object -Unique) -join ' ; '
-            'Name'                 = @($Object.Group.Name)[0]
-            'Department'           = @($Object.Group.Department)[0]
-            'Title'                = @($Object.Group.Title)[0]
+            'Source of Access'     = ($Object.Access.SourceOfAccess | Sort-Object -Unique) -join ' ; '
+            'Name'                 = $Object.Account.Name
+            'Department'           = $Object.Account.Department
+            'Title'                = $Object.Account.Title
         }
+
     }
 
 }
-function Select-FolderTableProperty {
+function Select-ItemTableProperty {
+
     # For the HTML table
+
     param (
-        $InputObject
+        $InputObject,
+        $Culture = (Get-Culture)
     )
-    $Culture = Get-Culture
-    $InputObject | Select-Object -Property @{
-        Label      = 'Folder'
-        Expression = { $_.Name }
-    },
-    @{
-        Label      = 'Inheritance'
-        Expression = {
-            $Culture.TextInfo.ToTitleCase(@($_.Group.FolderInheritanceEnabled)[0])
+
+    ForEach ($Object in $InputObject) {
+
+        [PSCustomObject]@{
+            Folder      = $Object.Item.Path
+            Inheritance = $Culture.TextInfo.ToTitleCase(-not $Object.Item.AreAccessRulesProtected)
         }
+
     }
+
 }
-function Select-UniqueAccountPermission {
+function Select-UniquePrincipal {
 
     param (
 
-        # Objects output from Format-SecurityPrincipal ... | Group-Object -Property User
-        [Parameter(ValueFromPipeline)]
-        $AccountPermission,
+        # Cache of security principals keyed by resolved identity reference
+        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
+
+        # Regular expressions matching names of Users or Groups to exclude from the Html report
+        [string[]]$ExcludeAccount,
 
         <#
         Domain(s) to ignore (they will be removed from the username)
@@ -11423,39 +11981,44 @@ function Select-UniqueAccountPermission {
         [string[]]$IgnoreDomain,
 
         # Hashtable will be used to deduplicate
-        $KnownUsers = [hashtable]::Synchronized(@{})
+        $UniquePrincipal = [hashtable]::Synchronized(@{}),
+
+        $UniquePrincipalsByResolvedID = [hashtable]::Synchronized(@{})
 
     )
 
-    process {
+    $FilterContents = @{}
 
-        ForEach ($ThisUser in $AccountPermission) {
+    ForEach ($ThisID in $PrincipalsByResolvedID.Keys) {
 
-            $ShortName = $ThisUser.Name
-            ForEach ($IgnoreThisDomain in $IgnoreDomain) {
-                $ShortName = $ShortName -replace "^$IgnoreThisDomain\\", ''
-            }
-
-            $ThisKnownUser = $null
-            $ThisKnownUser = $KnownUsers[$ShortName]
-            if ($null -eq $ThisKnownUser) {
-                $KnownUsers[$ShortName] = [pscustomobject]@{
-                    'Count' = $ThisUser.Group.Count
-                    'Name'  = $ShortName
-                    'Group' = $ThisUser.Group
+        if (
+            # Exclude the objects whose names match the regular expressions specified in the parameters
+            [bool]$(
+                ForEach ($RegEx in $ExcludeAccount) {
+                    if ($ThisID -match $RegEx) {
+                        $FilterContents[$ThisID] = $ThisID
+                        $true
+                    }
                 }
-            } else {
-                $KnownUsers[$ShortName] = [pscustomobject]@{
-                    'Count' = $ThisKnownUser.Group.Count + $ThisUser.Group.Count
-                    'Name'  = $ShortName
-                    'Group' = $ThisKnownUser.Group + $ThisUser.Group
-                }
-            }
+            )
+        ) { continue }
+
+        $ShortName = $ThisID
+
+        ForEach ($IgnoreThisDomain in $IgnoreDomain) {
+            $ShortName = $ShortName -replace "^$IgnoreThisDomain\\", ''
         }
 
-    }
-    end {
-        $KnownUsers.Values
+        $ThisKnownUser = $null
+        $ThisKnownUser = $UniquePrincipal[$ShortName]
+        if ($null -eq $ThisKnownUser) {
+            $UniquePrincipal[$ShortName] = [System.Collections.Generic.List[string]]::new()
+
+        }
+
+        $null = $UniquePrincipal[$ShortName].Add($ThisID)
+        $UniquePrincipalsByResolvedID[$ThisID] = $ShortName
+
     }
 
 }
@@ -11518,7 +12081,21 @@ ForEach ($ThisFile in $CSharpFiles) {
     $DomainsByFqdn = [hashtable]::Synchronized(@{})
     $LogCache = [hashtable]::Synchronized(@{})
     $CimCache = [hashtable]::Synchronized(@{})
-    $UNCPaths = [System.Collections.Generic.List[String]]::new()
+    $ACLsByPath = [hashtable]::Synchronized(@{})
+
+    # Cache of access control entries keyed by GUID generated in Resolve-ACE
+    $ACEsByGUID = [hashtable]::Synchronized(@{})
+
+    # Cache of access control entry GUIDs keyed by their resolved identities
+    $AceGUIDsByResolvedID = [hashtable]::Synchronized(@{})
+
+    # Cache of access control entry GUIDs keyed by their paths
+    $AceGUIDsByPath = [hashtable]::Synchronized(@{})
+
+
+    $PrincipalsByResolvedID = [hashtable]::Synchronized(@{})
+    $UniquePrincipals = [hashtable]::Synchronized(@{})
+    $UniquePrincipalsByResolvedID = [hashtable]::Synchronized(@{})
 
     # Get the hostname of the computer running the script
     $ThisHostname = HOSTNAME.EXE
@@ -11552,6 +12129,7 @@ ForEach ($ThisFile in $CSharpFiles) {
     }
 
     # These events already happened but we will log them now that we have the correct capitalization of the user
+    Write-LogMsg @LogParams -Text '$ACLsByPath = [hashtable]::Synchronized(@{})'
     Write-LogMsg @LogParams -Text 'HOSTNAME.EXE # This command was already run but is now being logged'
     Write-LogMsg @LogParams -Text 'Get-CurrentWhoAmI # This command was already run but is now being logged'
 
@@ -11559,7 +12137,7 @@ ForEach ($ThisFile in $CSharpFiles) {
     Write-LogMsg @LogParams -Text "ConvertTo-DnsFqdn -ComputerName '$ThisHostName'"
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LoggingParams
 
-    # Create a map of parameters to enable caching functionality in supported functions
+    # Create a splat of caching-related parameters to pass to various functions for script readability
     $CacheParams = @{
         Win32AccountsBySID     = $Win32AccountsBySID
         Win32AccountsByCaption = $Win32AccountsByCaption
@@ -11586,98 +12164,239 @@ process {
 
     #----------------[ Main Execution ]---------------
 
-    Write-Progress -Status '5% (step 2 of 20)' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
-    Write-LogMsg @LogParams -Text "Resolve-PermissionTarget -TargetPath @('$($TargetPath -join "',")')))"
-    [string[]]$ResolvedFolderTargets = Resolve-PermissionTarget -TargetPath $TargetPath -CimCache $CimCache @LoggingParams
-    $UNCPaths.AddRange($ResolvedFolderTargets)
+    Write-Progress -Status '5% (step 2 of 20) Resolve-PermissionTarget' -CurrentOperation 'Resolve target paths to UNC paths (including all DFS folder targets)' -PercentComplete 5 @Progress
+    Write-LogMsg @LogParams -Text "Resolve-PermissionTarget -TargetPath @('$($TargetPath -join "',")') -ACLsByPath `$ACLsByPath"
+    Resolve-PermissionTarget -TargetPath $TargetPath -ACLsByPath $ACLsByPath -CimCache $CimCache @LoggingParams
 
 }
 
 end {
 
-    Write-Progress -Status '10% (step 3 of 20)' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
-    Write-LogMsg @LogParams -Text "Expand-Folder -Folder @('$($UNCPaths -join "',")') -RecurseDepth $RecurseDepth"
-    $Subfolders = Expand-Folder -Folder $UNCPaths -RecurseDepth $RecurseDepth @Threads @ProgressParent @LoggingParams
+    Write-Progress -Status '10% (step 3 of 20) Expand-PermissionTarget' -CurrentOperation 'Expand UNC paths into the paths of their subfolders' -PercentComplete 10 @Progress
+    Write-LogMsg @LogParams -Text "Expand-PermissionTarget -ACLsByPath `$ACLsByPath -RecurseDepth $RecurseDepth"
+    $Children = Expand-PermissionTarget -ACLsByPath $ACLsByPath -RecurseDepth $RecurseDepth @Threads @ProgressParent @LoggingParams
 
-    Write-Progress -Status '15% (step 4 of 20)' -CurrentOperation 'Get raw permissions on the expanded paths' -PercentComplete 15 @Progress
-    Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAccessList -Folder @('$($UNCPaths -join "','")') -Subfolder @('$($Subfolders -join "','")')"
-    $Permissions = Get-FolderAccessList -Folder $UNCPaths -Subfolder $Subfolders @Threads @ProgressParent @LoggingParams
+    Write-Progress -Status '15% (step 4 of 20) Get-FolderAccessList' -CurrentOperation 'Get the ACL of each path' -PercentComplete 15 @Progress
+    # Convert ACLsByPath.Keys to a new array of strings so that when it is modified by adding subfolder ACLs it doesn't cause an error while Get-FolderAccessList is still enumerating it
+    # TODO: Implement ConcurrentDictionary which should implement auto-locking and make enumeration thread-safe
+    $Parents = [string[]]$ACLsByPath.Keys
+    Write-LogMsg @LogParams -Text "`$Permissions = Get-FolderAcl -Folder @('$($Parents -join "','")') -Subfolder @('$($Children -join "','")') -ACLsByPath `$ACLsByPath @Threads @ProgressParent @LoggingParams"
+    Get-FolderAcl -Folder $Parents -Subfolder $Children -ACLsByPath $ACLsByPath @Threads @ProgressParent @LoggingParams
 
-    Write-Progress -Status '20% (step 5 of 20)' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
-    Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
-    Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @ProgressParent @LoggingParams
+    #Write-Progress -Status '20% (step 5 of 20) Export-RawPermissionCsv' -CurrentOperation 'Save a CSV report of the raw permissions' -PercentComplete 20 @Progress
+    #Write-LogMsg @LogParams -Text "Export-RawPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath1'"
+    #Export-RawPermissionCsv -Permission $Permissions -LiteralPath $CsvFilePath1 @ProgressParent @LoggingParams
 
-    Write-Progress -Status '25% (step 6 of 20)' -CurrentOperation 'Get FQDNs of the current computer, trusted domains, and the servers in the UNC paths' -PercentComplete 25 @Progress
+    Write-Progress -Status '25% (step 6 of 20) Get-UniqueServerFqdn' -CurrentOperation 'Get the FQDN of the current computer, each trusted domain, and each server in the paths' -PercentComplete 25 @Progress
     $FqdnParams = @{
         Known    = $TrustedDomains.DomainFqdn
-        FilePath = $UNCPaths
+        FilePath = $Parents
         ThisFqdn = $ThisFqdn
     }
-    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$($FqdnParams['Known'] -join "',")') -FilePath @('$($FqdnParams['FilePath'] -join "',")') -ThisFqdn '$ThisFqdn'"
+    Write-LogMsg @LogParams -Text "`$ServerFqdns = Get-UniqueServerFqdn -Known @('$($FqdnParams['Known'] -join "',")') -FilePath @('$($Parents -join "',")') -ThisFqdn '$ThisFqdn'"
     $ServerFqdns = Get-UniqueServerFqdn @FqdnParams @LoggingParams @ProgressParent
 
-    Write-Progress -Status '30% (step 7 of 20)' -CurrentOperation 'Query the FQDNs and pre-populate caches in memory to avoid redundant ADSI and CIM queries' -PercentComplete 30 @Progress
+    Write-Progress -Status '30% (step 7 of 20) Initialize-Cache' -CurrentOperation 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries' -PercentComplete 30 @Progress
     Write-LogMsg @LogParams -Text "Initialize-Cache -ServerFqdns @('$($ServerFqdns -join "',")')"
     Initialize-Cache -Fqdn $ServerFqdns -CimCache $CimCache @ProgressParent @LoggingParams @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
-    Write-Progress -Status '35% (step 8 of 20)' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
-    Write-LogMsg @LogParams -Text '$PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -Permission $Permissions'
-    $PermissionsWithResolvedIdentities = Resolve-PermissionIdentity -CimCache $CimCache @LoggingParams @CacheParams -Permission $Permissions @ProgressParent
+    Write-Progress -Status '35% (step 8 of 20) Resolve-AccessControlList' -CurrentOperation 'Resolve each identity reference to its SID and NTAccount name' -PercentComplete 35 @Progress
+    Write-LogMsg @LogParams -Text 'Resolve-AccessControlList -Permission $Permissions -ACEsByResolvedID $ACEsByResolvedID -ACLsByPath $ACLsByPath -ACEsByGUID $ACEsByGUID -AceGUIDsByPath $AceGUIDsByPath -AceGUIDsByResolvedID $AceGUIDsByResolvedID -CimCache $CimCache -InheritanceFlagResolved $InheritanceFlagResolved @LoggingParams @CacheParams @ProgressParent'
+    Resolve-AccessControlList -ACLsByPath $ACLsByPath -ACEsByGUID $ACEsByGUID -AceGUIDsByPath $AceGUIDsByPath -AceGUIDsByResolvedID $AceGUIDsByResolvedID -CimCache $CimCache -InheritanceFlagResolved $InheritanceFlagResolved @LoggingParams @CacheParams @ProgressParent
 
-    Write-Progress -Status '40% (step 9 of 20)' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
-    Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
-    Export-ResolvedPermissionCsv @LoggingParams -Permission $Permissions -LiteralPath $CsvFilePath2 @ProgressParent
+    #Write-Progress -Status '40% (step 9 of 20) Export-ResolvedPermissionCsv' -CurrentOperation 'Save a CSV report of the resolved identity references' -PercentComplete 40 @Progress
+    #Write-LogMsg @LogParams -Text "Export-ResolvedPermissionCsv -Permission `$Permissions -LiteralPath '$CsvFilePath2'"
+    #Export-ResolvedPermissionCsv @LoggingParams -Permission $PermissionsWithResolvedIdentities -LiteralPath $CsvFilePath2 @ProgressParent
 
-    Write-Progress -Status '45% (step 10 of 20)' -CurrentOperation 'Group permissions by their resolved identity references' -PercentComplete 45 @Progress
-    Write-LogMsg @LogParams -Text "`$Identities = `$PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved"
-    $Identities = $PermissionsWithResolvedIdentities | Group-Object -Property IdentityReferenceResolved
+    Write-Progress -Status '45% (step 10 of 20) Get-CurrentDomain' -CurrentOperation 'Get the current domain' -PercentComplete 45 @Progress
+    Write-LogMsg @LogParams -Text "Get-CurrentDomain"
+    $CurrentDomain = Get-CurrentDomain
 
-    Write-Progress -Status '50% (step 11 of 20)' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
-    Write-LogMsg @LogParams -Text "`$SecurityPrincipals = Get-PermissionPrincipal -Identity `$Identities -NoGroupMembers:`$$NoMembers"
-    $SecurityPrincipals = Get-PermissionPrincipal -Identity $Identities -NoGroupMembers:$NoMembers -CimCache $CimCache @LoggingParams @CacheParams @ProgressParent
+    Write-Progress -Status '50% (step 11 of 20) Get-PermissionPrincipal' -CurrentOperation 'Use ADSI to get details about each resolved identity reference' -PercentComplete 50 @Progress
+    Write-LogMsg @LogParams -Text "Get-PermissionPrincipal -ACEsByResolvedID `$ACEsByResolvedID -PrincipalsByResolvedID `$PrincipalsByResolvedID -NoGroupMembers:`$$NoMembers"
+    Get-PermissionPrincipal -ACEsByResolvedID $AceGUIDsByResolvedID -PrincipalsByResolvedID $PrincipalsByResolvedID -NoGroupMembers:$NoMembers -CurrentDomain $CurrentDomain -CimCache $CimCache @LoggingParams @CacheParams @ProgressParent
 
-    Write-Progress -Status '55% (step 12 of 20)' -CurrentOperation 'Format the ADSI security principals (distinguish group members from accounts directly listed in the ACLs)' -PercentComplete 55 @Progress
-    Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal `$SecurityPrincipals @Threads"
-    $FormattedSecurityPrincipals = Format-PermissionAccount -SecurityPrincipal $SecurityPrincipals @Threads @LoggingParams @ProgressParent
+    ###Write-Progress -Status '55% (step 12 of 20) Format-PermissionAccount' -CurrentOperation 'Expand the ADSI security principals into their group members' -PercentComplete 55 @Progress
+    ###Write-LogMsg @LogParams -Text "`$FormattedSecurityPrincipals = Expand-PermissionPrincipal -SecurityPrincipal `$SecurityPrincipals @Threads"
+    ###$FormattedSecurityPrincipals = Expand-PermissionPrincipal -PrincipalsByResolvedID $PrincipalsByResolvedID @Threads @LoggingParams @ProgressParent
 
-    Write-Progress -Status '60% (step 13 of 20)' -CurrentOperation 'Expand the security principals back into their permissions (one per ACE per principal)' -PercentComplete 60 @Progress
-    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals @Threads"
-    $ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals @Threads @LoggingParams @ProgressParent
+    ###Write-Progress -Status '60% (step 13 of 20) Expand-AcctPermission' -CurrentOperation 'Expand the security principals back into their permissions (one per ACE per principal)' -PercentComplete 60 @Progress
+    ###Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal `$FormattedSecurityPrincipals @Threads"
+    ###$ExpandedAccountPermissions = Expand-AcctPermission -SecurityPrincipal $FormattedSecurityPrincipals @Threads @LoggingParams @ProgressParent
 
     #ToDo: Expand DirectoryEntry objects in the DirectoryEntry and Members properties
-    Write-Progress -Status '65% (step 14 of 20)' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
-    Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
-    $ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
-    Write-Information $CsvFilePath3
+    #Write-Progress -Status '65% (step 14 of 20) Export-Csv' -CurrentOperation 'Save a CSV report of the expanded account permissions' -PercentComplete 65 @Progress
+    #Write-LogMsg @LogParams -Text "`$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath '$CsvFilePath3'"
+    #$ExpandedAccountPermissions | Export-Csv -NoTypeInformation -LiteralPath $CsvFilePath3
+    #Write-Information $CsvFilePath3
 
-    Write-Progress -Status '70% (step 15 of 20)' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
-    Write-LogMsg @LogParams -Text "`$Accounts = `$ExpandedAccountPermissions | Group-Object -Property User"
-    $Accounts = $ExpandedAccountPermissions | Group-Object -Property user
+    ###Write-Progress -Status '70% (step 15 of 20) Group-Object' -CurrentOperation 'Group the permissions by account for domain name hiding' -PercentComplete 70 @Progress
+    ###Write-LogMsg @LogParams -Text "`$Accounts = `$ExpandedAccountPermissions | Group-Object -Property User"
+    ###$Accounts = $ExpandedAccountPermissions | Group-Object -Property user
 
-    Write-Progress -Status '75% (step 16 of 20)' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
-    $IgnoreDomainString = "@('$($IgnoreDomain -join "',")')"
-    Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain $IgnoreDomainString"
-    $UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission $Accounts -IgnoreDomain $IgnoreDomain
+    ####Write-Progress -Status '75% (step 16 of 20) Select-UniqueAccountPermission' -CurrentOperation 'Hide domain names we do not want on the report' -PercentComplete 75 @Progress
+    ####Write-LogMsg @LogParams -Text "`$UniqueAccountPermissions = Select-UniqueAccountPermission -AccountPermission `$Accounts -IgnoreDomain @('$($IgnoreDomain -join "',")')"
+    ####Select-UniquePrincipal -IgnoreDomain $IgnoreDomain -ExcludeAccount $ExcludeAccount -PrincipalsByResolvedID $PrincipalsByResolvedID -UniquePrincipal $UniquePrincipals -UniquePrincipalsByResolvedID $UniquePrincipalsByResolvedID
 
-    Write-Progress -Status '80% (step 17 of 20)' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
-    Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
+    $HowToSplit = foreach ($Split in $SplitBy) {
+        if ($Split -eq 'none') {
+            $Split
+            break
+        } elseif ($Split -eq 'all') {
+            @('item', 'account')
+            break
+        } else {
+            $Split
+        }
+    }
 
-    $FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams
-    #$GroupedPermissions = $FolderPermissions |
-    #Group-Object -Property Folder |
-    #Sort-Object -Property Name
-    $GroupedPermissions = Group-Permission -InputObject $FolderPermissions -Property Folder |
-    Sort-Object -Property Name
+    ForEach ($Split in $HowToSplit) {
+        switch ($Split) {
+            'account' {
+                # Group reference GUIDs by the name of their associated account.
+                $AccountPermissionReferences = ForEach ($ID in $PrincipalsByResolvedID.Keys) {
+                    #Format-SecurityPrincipal -ResolvedID $ID -PrincipalsByResolvedID $PrincipalsByResolvedID -AceGUIDsByResolvedID $AceGUIDsByResolvedID -ACEsByGUID $ACEsByGUID
+                    $ACEGuidsForThisID = $AceGUIDsByResolvedID[$ID]
+
+                    $ItemPaths = @{}
+                    ForEach ($Guid in $ACEGuidsForThisID) {
+
+                        $Ace = $ACEsByGUID[$Guid]
+
+                        $CacheResult = $ItemPaths[$Ace.Path]
+                        if (-not $CacheResult) {
+                            $CacheResult = [System.Collections.Generic.List[guid]]::new()
+                        }
+                        $null = $CacheResult.Add($Guid)
+                        $ItemPaths[$Ace.Path] = $CacheResult
+
+                    }
+
+                    $ItemPermissionsForThisAccount = ForEach ($Item in $ItemPaths.Keys) {
+
+                        [PSCustomObject]@{
+                            Path     = $Item
+                            AceGUIDs = $ItemPaths[$Item]
+                        }
+
+                    }
+
+                    [PSCustomObject]@{
+                        Account = $ID
+                        Access  = $ItemPermissionsForThisAccount
+                    }
+
+                }
+
+                # Expand reference GUIDs into their associated Access Control Entries and Security Principals.
+                $AccountPermissions = ForEach ($Acct in $AccountPermissionReferences) {
+                    $Access = ForEach ($PermissionRef in $Acct.Access) {
+                        [PSCustomObject]@{
+                            Path   = $PermissionRef.Path
+                            Access = $ACEsByGUID[$PermissionRef.AceGUIDs]
+                        }
+                    }
+                    [PSCustomObject]@{
+                        Account = $PrincipalsByResolvedID[$Acct.Account]
+                        Access  = $Access
+                    }
+                }
+            }
+            'item' {
+
+                [string[]]$SortedPaths = $AceGUIDsByPath.Keys | Sort-Object
+                $ShortestPath = $SortedPaths[0]
+
+                # Group reference GUIDs by the path to their associated item.
+                $ItemPermissionReferences = ForEach ($ItemPath in $SortedPaths) {
+
+                    $ACEGuidsForThisItem = $AceGUIDsByPath[$ItemPath]
+                    $Acl = $ACLsByPath[$ItemPath]
+
+                    # Find-ResolvedIDsWithItemAccess
+                    $IDsWithAccess = @{}
+                    ForEach ($Guid in $ACEGuidsForThisItem) {
+
+                        $Ace = $ACEsByGUID[$Guid]
+
+                        $CacheResult = $IDsWithAccess[$Ace.IdentityReferenceResolved]
+                        if (-not $CacheResult) {
+                            $CacheResult = [System.Collections.Generic.List[guid]]::new()
+                        }
+                        $null = $CacheResult.Add($Guid)
+                        $IDsWithAccess[$Ace.IdentityReferenceResolved] = $CacheResult
+
+                        ForEach ($Member in $PrincipalsByResolvedID[$Ace.IdentityReferenceResolved].Members) {
+
+                            $CacheResult = $IDsWithAccess[$Member]
+                            if (-not $CacheResult) {
+                                $CacheResult = [System.Collections.Generic.List[guid]]::new()
+                            }
+                            $null = $CacheResult.Add($Guid)
+                            $IDsWithAccess[$Member] = $CacheResult
+
+                        }
+                    }
+
+                    $AccountPermissionsForThisItem = ForEach ($ID in ($IDsWithAccess.Keys | Sort-Object)) {
+
+                        [PSCustomObject]@{
+                            Account  = $ID
+                            AceGUIDs = $IDsWithAccess[$ID]
+                        }
+
+                    }
+
+                    [PSCustomObject]@{
+                        Item   = $Acl
+                        Access = $AccountPermissionsForThisItem
+                    }
+
+                }
+
+                # Expand reference GUIDs into their associated Access Control Entries.
+                $ItemPermissions = ForEach ($Item in $ItemPermissionReferences) {
+
+                    $Access = ForEach ($PermissionRef in $Item.Access) {
+
+                        [PSCustomObject]@{
+                            Account = $PrincipalsByResolvedID[$PermissionRef.Account]
+                            Access  = $ACEsByGUID[$PermissionRef.AceGUIDs]
+                        }
+
+                    }
+
+                    [PSCustomObject]@{
+                        Item   = $Item.Item
+                        Access = $Access
+                    }
+
+                }
+
+            }
+            default {
+
+                $ACEsByGUID.Values # 'none'
+
+            }
+        }
+    }
+
+    ##Write-Progress -Status '80% (step 17 of 20) Format-FolderPermission' -CurrentOperation 'Format, group, and sort the permissions by folder for the report' -PercentComplete 80 @Progress
+    ##Write-LogMsg @LogParams -Text "Format-FolderPermission -UserPermission `$UniqueAccountPermissions | Group Folder | Sort Name"
+    ##$FolderPermissions = Format-FolderPermission -UserPermission $UniqueAccountPermissions @ProgressParent @LogParams
+    ##$GroupedPermissions = Group-Permission -InputObject $FolderPermissions -Property Folder |
+    ##Sort-Object -Property Name
 
     # The first version uses no JavaScript so it can be rendered by e-mail clients
     # The second version is JavaScript-dependent and will not work in e-mail clients
-    Write-Progress -Status '85% (step 18 of 20)' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
-    $ExportFolderPermissionHtml = @{ FolderPermissions = $GroupedPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; IgnoreDomain = $IgnoreDomain ;
+    Write-Progress -Status '85% (step 18 of 20) Export-FolderPermissionHtml' -CurrentOperation 'Export the HTML report' -PercentComplete 85 @Progress
+    $ExportFolderPermissionHtml = @{ ItemPermissions = $ItemPermissions ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; IgnoreDomain = $IgnoreDomain ;
         TargetPath = $TargetPath ; LogParams = $LogParams ; ReportDescription = $ReportDescription ; FolderTableHeader = $FolderTableHeader ; NoGroupMembers = $NoMembers ;
-        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; $ExpandedAccountPermissions = $ExpandedAccountPermissions;
-        LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ; ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ; StopWatch = $StopWatch ;
-        Subfolders = $Subfolders ; ResolvedFolderTargets = $UNCPaths ; Title = $Title; NoJavaScript = $NoJavaScript; $FormattedSecurityPrincipals = $FormattedSecurityPrincipals
+        ReportFileList = $CsvFilePath1, $CsvFilePath2, $CsvFilePath3, $XmlFile; ReportFile = $ReportFile ; LogFileList = $TranscriptFile, $LogFile ; OutputDir = $OutputDir ;
+        ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn ; StopWatch = $StopWatch ;
+        Subfolders = $Children ; ResolvedFolderTargets = $ACLsByPath.Keys ; Title = $Title; NoJavaScript = $NoJavaScript; PrincipalsByResolvedID = $PrincipalsByResolvedID; ShortestPath = $ShortestPath
     }
     Write-LogMsg @LogParams -Text 'Export-FolderPermissionHtml @ExportFolderPermissionHtml'
     Export-FolderPermissionHtml @ExportFolderPermissionHtml
@@ -11691,11 +12410,11 @@ end {
         WhoAmI            = $WhoAmI
         LogMsgCache       = $LogCache
     }
-    Write-Progress -Status '90% (step 19 of 20)' -CurrentOperation 'Identify common issues with permissions' -PercentComplete 90 @Progress
+    Write-Progress -Status '90% (step 19 of 20) New-NtfsAclIssueReport' -CurrentOperation 'Identify common issues with permissions' -PercentComplete 90 @Progress
     Write-LogMsg @LogParams -Text 'New-NtfsAclIssueReport @NtfsIssueParams'
     $NtfsIssues = New-NtfsAclIssueReport @NtfsIssueParams
 
-    Write-Progress -Status '95% (step 20 of 20)' -CurrentOperation 'Output results' -PercentComplete 95 @Progress
+    Write-Progress -Status '95% (step 20 of 20) Output results' -CurrentOperation 'Output results' -PercentComplete 95 @Progress
 
     # Format the issues as a custom XML sensor for Paessler PRTG Network Monitor
     Write-LogMsg @LogParams -Text "Get-PrtgXmlSensorOutput -NtfsIssues `$NtfsIssues"
@@ -11749,7 +12468,7 @@ end {
         'GroupByFolder' {
             Update-TypeData -MemberName Folder -Value { $This.Name } -TypeName 'Permission.FolderPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue
             Update-TypeData -MemberName Access -TypeName 'Permission.FolderPermission' -MemberType ScriptProperty -ErrorAction SilentlyContinue -Value {
-                $Access = ForEach ($Permission in $This.Group) {
+                $Access = ForEach ($Permission in $This.Access) {
                     [pscustomobject]@{
                         Account = $Permission.Account
                         Access  = $Permission.Access
@@ -11757,7 +12476,7 @@ end {
                 }
                 $Access
             }
-            Update-TypeData -DefaultDisplayPropertySet ('Folder', 'Access') -TypeName 'Permission.FolderPermission' -ErrorAction SilentlyContinue
+            Update-TypeData -DefaultDisplayPropertySet ('Path', 'Access') -TypeName 'Permission.FolderPermission' -ErrorAction SilentlyContinue
             return $GroupedPermissions
         }
         'PrtgXml' {

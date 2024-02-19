@@ -1,18 +1,36 @@
 ````
 Export-Permission
-  Get-Permission (foreach Folder)
-    Get-FolderAccessList
-      Get-FolderAce
-    Resolve-AccessList (foreach AccessControlEntry)
-      Resolve-PermissionIdentity
-        Resolve-Ace
-          Resolve-IdentityReference
-      Get-PermissionPrincipal
-        ConvertFrom-IdentityReferenceResolved
-      Format-PermissionAccount
-        Format-SecurityPrincipal
-      Select-UniqueAccountPermission
-      Format-FolderPermission
+
+
+  Get-Permission
+    (foreach LiteralPath)
+      Resolve-PermissionTarget
+      (foreach ResolvedLiteralPath)
+        Expand-PermissionTarget
+        (foreach ExpandedResolvedLiteralPath)
+          Get-FolderAcl
+            Get-DirectorySecurity
+            Get-OwnerAce
+          Resolve-AccessControlList
+            Resolve-Acl
+              (foreach AccessControlEntry)
+                Resolve-Ace
+                  Resolve-IdentityReferenceDomainDNS
+                  Get-AdsiServer
+                  Resolve-IdentityReference
+                Get-PermissionPrincipal
+                  ConvertFrom-IdentityReferenceResolved
+                    Get-DirectoryEntry -or
+                    Get-WinNTGroupMember -or
+                    Search-Directory
+                    (foreach GroupMember)
+                      Get-AdsiGroupMember -or
+                      Get-WinNTGroupMember
+
+                Format-PermissionAccount
+                  Format-SecurityPrincipal
+                Select-UniqueAccountPermission
+                Format-FolderPermission
 
   Export-PermissionCsv
   Export-PermissionHtml
@@ -33,7 +51,7 @@ subgraph Export-Permission
         ExpandFolder["Expand each UNC path into the paths of its subfolders"]:::description
     end
     subgraph Get-Permission
-        GetPermission["Get detailed info about permissions"]:::description
+        GetPermission["Get detailed info about permissions and the accounts with them"]:::description
         subgraph Get-FolderAccessList
             GetFolderAccessList["Get an object for each effective permission on a folder"]:::description
             subgraph Get-FolderAce
@@ -44,7 +62,7 @@ subgraph Export-Permission
             end
         end
         subgraph Resolve-AccessListIdentity
-            ResolveAccessListIdentity["Resolve the identities in the access lists to the accounts they represent"]:::description
+            ResolveAccessListIdentity["Resolve and expand the identities in the access lists to the accounts they represent"]:::description
             subgraph Resolve-PermissionIdentity
                 subgraph Resolve-Ace
                 end
