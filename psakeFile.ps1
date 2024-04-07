@@ -354,7 +354,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         New-PSScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
 
         # Write the output to file
-        $Result | Out-File -LiteralPath $PortableScriptFilePath -Append
+        #$Result | Out-File -LiteralPath $PortableScriptFilePath -Append
     }
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies'
