@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.255] - 2024-04-07 - fix portable script construction
+
 ## [0.0.254] - 2024-04-07 - fix portable script construction
 
 ## [0.0.253] - 2024-04-07 - test a build failure

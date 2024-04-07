@@ -326,7 +326,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         # Remove the comments
         ForEach ($Comment in $Comments) {
             if ($Comment -eq '#') {
-                $escaped = '^\s*#$' # Need to avoid the Script File Info block <# ... #>
+                $escaped = '^\s*#\s*$' # Need to avoid the Script File Info block <# ... #>
             } else {
                 $escaped = [regex]::Escape($Comment)
             }
