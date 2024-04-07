@@ -4,6 +4,7 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
     "powershell.codeFormatting.preset": "OTBS",
+    "powershell.debugging.createTemporaryIntegratedConsole": true,
     "powershell.scriptAnalysis.settingsPath": "tests\\ScriptAnalyzerSettings.psd1",
     "powershell.scriptAnalysis.enable": true,
     "editor.trimAutoWhitespace": true,

@@ -40,6 +40,7 @@
           <maml:name>TargetPath</maml:name>
           <maml:description>
             <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
+            <maml:para>Currently supports NTFS folders TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
           <dev:type>
@@ -101,7 +102,47 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
-          <maml:name>OutputMode</maml:name>
+          <maml:name>SplitBy</maml:name>
+          <maml:description>
+            <maml:para>How to split up the exported files:     none    generate 1 file with all permissions     target  generate 1 file per target     item    generate 1 file per item     account generate 1 file per account     all     generate 1 file per target and 1 file per item and 1 file per account and 1 file with all permissions.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>Target</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
+          <maml:name>GroupBy</maml:name>
+          <maml:description>
+            <maml:para>How to group the permissions in the output stream and within each exported file</maml:para>
+            <maml:para>    SplitBy	GroupBy     none	none	$FlatPermissions all in 1 file     none	account	$AccountPermissions all in 1 file     none	item	$ItemPermissions all in 1 file</maml:para>
+            <maml:para>    account	none	1 file per item in $AccountPermissions.  In each file, $_.Access | sort path     account	account	(same as -SplitBy account -GroupBy none)     account	item	1 file per item in $AccountPermissions.  In each file, $_.Access | group item | sort name</maml:para>
+            <maml:para>    item	none	1 file per item in $ItemPermissions.  In each file, $_.Access | sort account     item	account	1 file per item in $ItemPermissions.  In each file, $_.Access | group account | sort name     item	item	(same as -SplitBy item -GroupBy none)</maml:para>
+            <maml:para>    target	none	1 file per $TargetPath.  In each file, sort ACEs by item path then account name     target	account	1 file per $TargetPath.  In each file, group ACEs by account and sort by account name     target	item	1 file per $TargetPath.  In each file, group ACEs by item and sort by item path     target  target  (same as -SplitBy target -GroupBy none)</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>Item</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
+          <maml:name>FileFormat</maml:name>
+          <maml:description>
+            <maml:para>File format(s) to export</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>Js</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
+          <maml:name>OutputFormat</maml:name>
           <maml:description>
             <maml:para>Type of output returned to the output stream</maml:para>
           </maml:description>
@@ -110,55 +151,19 @@
             <maml:name>System.String</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>PassThru</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
-          <maml:name>SplitBy</maml:name>
-          <maml:description>
-            <maml:para>none will generate a single file.  item will generate a file per item.  account will generate a file per account.  all will generate 1 file per item and 1 file per account.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>Item</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
-          <maml:name>GroupBy</maml:name>
-          <maml:description>
-            <maml:para>optionally split files by... temporarily all during dev, later change to none</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>Item</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
-          <maml:name>Format</maml:name>
-          <maml:description>
-            <maml:para>{{ Fill Format Description }}</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>All</dev:defaultValue>
+          <dev:defaultValue>Passthru</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="18" aliases="none">
-          <maml:name>DetailLevel</maml:name>
+          <maml:name>Detail</maml:name>
           <maml:description>
-            <maml:para>0 is all, -1 is highest, otherwise 1,2,3,etc. for each available level.  Temporarily 0 during dev.,</maml:para>
+            <maml:para>Level of detail to export to file     0   Item paths     1   Resolved item paths (server names resolved, DFS targets resolved)     2   Expanded resolved item paths (parent paths expanded into children)     3   Access lists     4   Access rules (server names resolved, inheritance flags resolved)     5   Accounts with access     6   Expanded access rules (expanded with account info)     7   Formatted permissions     8   Best Practice issues     9   Custom sensor output for Paessler PRTG Network Monitor     10  Permission Report</maml:para>
           </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+          <command:parameterValue required="true" variableLength="false">System.Int32[]</command:parameterValue>
           <dev:type>
-            <maml:name>System.Int32</maml:name>
+            <maml:name>System.Int32[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>0</dev:defaultValue>
+          <dev:defaultValue>10</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
           <maml:name>InheritanceFlagResolved</maml:name>
@@ -289,17 +294,6 @@
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>NoJavaScript</maml:name>
-          <maml:description>
-            <maml:para>Generate a report with only HTML and CSS but no JavaScript</maml:para>
-          </maml:description>
-          <dev:type>
-            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>NoMembers</maml:name>
           <maml:description>
             <maml:para>Do not get group members (only report the groups themselves)</maml:para>
@@ -311,20 +305,31 @@
           </dev:type>
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoProgress</maml:name>
+          <maml:description>
+            <maml:para>Workaround for https://github.com/PowerShell/PowerShell/issues/20657</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>System.Management.Automation.SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="18" aliases="none">
-        <maml:name>DetailLevel</maml:name>
+        <maml:name>Detail</maml:name>
         <maml:description>
-          <maml:para>0 is all, -1 is highest, otherwise 1,2,3,etc. for each available level.  Temporarily 0 during dev.,</maml:para>
+          <maml:para>Level of detail to export to file     0   Item paths     1   Resolved item paths (server names resolved, DFS targets resolved)     2   Expanded resolved item paths (parent paths expanded into children)     3   Access lists     4   Access rules (server names resolved, inheritance flags resolved)     5   Accounts with access     6   Expanded access rules (expanded with account info)     7   Formatted permissions     8   Best Practice issues     9   Custom sensor output for Paessler PRTG Network Monitor     10  Permission Report</maml:para>
         </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+        <command:parameterValue required="true" variableLength="false">System.Int32[]</command:parameterValue>
         <dev:type>
-          <maml:name>System.Int32</maml:name>
+          <maml:name>System.Int32[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>0</dev:defaultValue>
+        <dev:defaultValue>10</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
         <maml:name>ExcludeAccount</maml:name>
@@ -351,22 +356,26 @@
         </dev:type>
         <dev:defaultValue>@('group', 'computer')</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
-        <maml:name>Format</maml:name>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
+        <maml:name>FileFormat</maml:name>
         <maml:description>
-          <maml:para>{{ Fill Format Description }}</maml:para>
+          <maml:para>File format(s) to export</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
           <maml:name>System.String[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>All</dev:defaultValue>
+        <dev:defaultValue>Js</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
         <maml:name>GroupBy</maml:name>
         <maml:description>
-          <maml:para>optionally split files by... temporarily all during dev, later change to none</maml:para>
+          <maml:para>How to group the permissions in the output stream and within each exported file</maml:para>
+          <maml:para>    SplitBy	GroupBy     none	none	$FlatPermissions all in 1 file     none	account	$AccountPermissions all in 1 file     none	item	$ItemPermissions all in 1 file</maml:para>
+          <maml:para>    account	none	1 file per item in $AccountPermissions.  In each file, $_.Access | sort path     account	account	(same as -SplitBy account -GroupBy none)     account	item	1 file per item in $AccountPermissions.  In each file, $_.Access | group item | sort name</maml:para>
+          <maml:para>    item	none	1 file per item in $ItemPermissions.  In each file, $_.Access | sort account     item	account	1 file per item in $ItemPermissions.  In each file, $_.Access | group account | sort name     item	item	(same as -SplitBy item -GroupBy none)</maml:para>
+          <maml:para>    target	none	1 file per $TargetPath.  In each file, sort ACEs by item path then account name     target	account	1 file per $TargetPath.  In each file, group ACEs by account and sort by account name     target	item	1 file per $TargetPath.  In each file, group ACEs by item and sort by item path     target  target  (same as -SplitBy target -GroupBy none)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -431,9 +440,10 @@
         <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>NoJavaScript</maml:name>
+        <maml:name>NoMembers</maml:name>
         <maml:description>
-          <maml:para>Generate a report with only HTML and CSS but no JavaScript</maml:para>
+          <maml:para>Do not get group members (only report the groups themselves)</maml:para>
+          <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -443,10 +453,9 @@
         <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>NoMembers</maml:name>
+        <maml:name>NoProgress</maml:name>
         <maml:description>
-          <maml:para>Do not get group members (only report the groups themselves)</maml:para>
-          <maml:para>Note: By default, the -ExcludeClass parameter will exclude groups from the report.   If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.   Remove the 'group' class from ExcludeClass in order to see groups on the report.</maml:para>
+          <maml:para>Workaround for https://github.com/PowerShell/PowerShell/issues/20657</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.SwitchParameter</command:parameterValue>
         <dev:type>
@@ -467,8 +476,8 @@
         </dev:type>
         <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
-        <maml:name>OutputMode</maml:name>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
+        <maml:name>OutputFormat</maml:name>
         <maml:description>
           <maml:para>Type of output returned to the output stream</maml:para>
         </maml:description>
@@ -477,7 +486,7 @@
           <maml:name>System.String</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>PassThru</dev:defaultValue>
+        <dev:defaultValue>Passthru</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
         <maml:name>PrtgPort</maml:name>
@@ -544,22 +553,23 @@
         </dev:type>
         <dev:defaultValue>-1</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
         <maml:name>SplitBy</maml:name>
         <maml:description>
-          <maml:para>none will generate a single file.  item will generate a file per item.  account will generate a file per account.  all will generate 1 file per item and 1 file per account.</maml:para>
+          <maml:para>How to split up the exported files:     none    generate 1 file with all permissions     target  generate 1 file per target     item    generate 1 file per item     account generate 1 file per account     all     generate 1 file per target and 1 file per item and 1 file per account and 1 file with all permissions.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
           <maml:name>System.String[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>Item</dev:defaultValue>
+        <dev:defaultValue>Target</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
         <maml:name>TargetPath</maml:name>
         <maml:description>
           <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
+          <maml:para>Currently supports NTFS folders TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
         <dev:type>

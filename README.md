@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.237
+help version: 0.0.238
 locale: en-US
 script name: Export-Permission.ps1
 online version:
@@ -19,9 +19,9 @@ Create CSV, HTML, and XML reports of permissions
 Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
  [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoMembers]
  [[-RecurseDepth] <Int32>] [[-Title] <String>] [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>]
- [-Interactive] [-NoJavaScript] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
- [[-PrtgToken] <String>] [[-OutputMode] <String>] [[-SplitBy] <String[]>] [[-GroupBy] <String>]
- [[-Format] <String[]>] [[-DetailLevel] <Int32>] [[-InheritanceFlagResolved] <String[]>]
+ [-Interactive] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
+ [[-PrtgToken] <String>] [[-SplitBy] <String[]>] [[-GroupBy] <String>] [[-FileFormat] <String[]>]
+ [[-OutputFormat] <String>] [[-Detail] <Int32[]>] [[-InheritanceFlagResolved] <String[]>] [-NoProgress]
  [<CommonParameters>]
 ```
 
@@ -274,19 +274,28 @@ Add a warning that they are permissions from the DFS namespace server and could 
 
 ## PARAMETERS
 
-### -DetailLevel
-0 is all, -1 is highest, otherwise 1,2,3,etc.
-for each available level. 
-Temporarily 0 during dev.,
+### -Detail
+Level of detail to export to file
+    0   Item paths
+    1   Resolved item paths (server names resolved, DFS targets resolved)
+    2   Expanded resolved item paths (parent paths expanded into children)
+    3   Access lists
+    4   Access rules (server names resolved, inheritance flags resolved)
+    5   Accounts with access
+    6   Expanded access rules (expanded with account info)
+    7   Formatted permissions
+    8   Best Practice issues
+    9   Custom sensor output for Paessler PRTG Network Monitor
+    10  Permission Report
 
 ```yaml
-Type: System.Int32
+Type: System.Int32[]
 Parameter Sets: (All)
 Aliases:
 
 Required: False
 Position: 18
-Default value: 0
+Default value: 10
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -326,8 +335,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Format
-{{ Fill Format Description }}
+### -FileFormat
+File format(s) to export
 
 ```yaml
 Type: System.String[]
@@ -335,15 +344,39 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 17
-Default value: All
+Position: 16
+Default value: Js
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -GroupBy
-optionally split files by...
-temporarily all during dev, later change to none
+How to group the permissions in the output stream and within each exported file
+
+    SplitBy	GroupBy
+    none	none	$FlatPermissions all in 1 file
+    none	account	$AccountPermissions all in 1 file
+    none	item	$ItemPermissions all in 1 file
+
+    account	none	1 file per item in $AccountPermissions. 
+In each file, $_.Access | sort path
+    account	account	(same as -SplitBy account -GroupBy none)
+    account	item	1 file per item in $AccountPermissions. 
+In each file, $_.Access | group item | sort name
+
+    item	none	1 file per item in $ItemPermissions. 
+In each file, $_.Access | sort account
+    item	account	1 file per item in $ItemPermissions. 
+In each file, $_.Access | group account | sort name
+    item	item	(same as -SplitBy item -GroupBy none)
+
+    target	none	1 file per $TargetPath. 
+In each file, sort ACEs by item path then account name
+    target	account	1 file per $TargetPath. 
+In each file, group ACEs by account and sort by account name
+    target	item	1 file per $TargetPath. 
+In each file, group ACEs by item and sort by item path
+    target  target  (same as -SplitBy target -GroupBy none)
 
 ```yaml
 Type: System.String
@@ -351,7 +384,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 16
+Position: 15
 Default value: Item
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -436,8 +469,12 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -NoJavaScript
-Generate a report with only HTML and CSS but no JavaScript
+### -NoMembers
+Do not get group members (only report the groups themselves)
+
+Note: By default, the -ExcludeClass parameter will exclude groups from the report.
+  If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
+  Remove the 'group' class from ExcludeClass in order to see groups on the report.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -451,12 +488,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -NoMembers
-Do not get group members (only report the groups themselves)
-
-Note: By default, the -ExcludeClass parameter will exclude groups from the report.
-  If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
-  Remove the 'group' class from ExcludeClass in order to see groups on the report.
+### -NoProgress
+Workaround for https://github.com/PowerShell/PowerShell/issues/20657
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -485,7 +518,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -OutputMode
+### -OutputFormat
 Type of output returned to the output stream
 
 ```yaml
@@ -494,8 +527,8 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 14
-Default value: PassThru
+Position: 17
+Default value: Passthru
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -588,10 +621,12 @@ Accept wildcard characters: False
 ```
 
 ### -SplitBy
-none will generate a single file. 
-item will generate a file per item. 
-account will generate a file per account. 
-all will generate 1 file per item and 1 file per account.
+How to split up the exported files:
+    none    generate 1 file with all permissions
+    target  generate 1 file per target
+    item    generate 1 file per item
+    account generate 1 file per account
+    all     generate 1 file per target and 1 file per item and 1 file per account and 1 file with all permissions.
 
 ```yaml
 Type: System.String[]
@@ -599,14 +634,17 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 15
-Default value: Item
+Position: 14
+Default value: Target
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
 ### -TargetPath
 Path to the NTFS folder whose permissions to export
+
+Currently supports NTFS folders
+TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
 
 ```yaml
 Type: System.IO.DirectoryInfo[]

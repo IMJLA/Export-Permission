@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.239] - 2024-04-07 - implement all groupby options for splitby target
+
 ## [0.0.238] - 2024-02-19 - bugfix access rights and scope in report
 
 ## [0.0.237] - 2024-02-18 - bugfix fake directory entry noteproperties getting dropped with get-member
