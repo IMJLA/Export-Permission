@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.247] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.246] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.245] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.244] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.243] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.242] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.241] - 2024-04-07 - minify export-permissionportable
+
+## [0.0.240] - 2024-04-07 - minify export-permissionportable
+
 ## [0.0.239] - 2024-04-07 - implement all groupby options for splitby target
 
 ## [0.0.238] - 2024-02-19 - bugfix access rights and scope in report

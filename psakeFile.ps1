@@ -255,6 +255,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
 
         # Add the constituent code of each module
         ForEach ($ThisModuleName in $MainScriptFileInfoTest.RequiredModules.Name) {
+
             # Get the latest version of the module
             $ThisModule = Get-Module -Name $ThisModuleName -ListAvailable |
             Sort-Object -Property Version -Descending |
@@ -302,11 +303,57 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         '\.EXTERNALMODULEDEPENDENCIES.*', '.EXTERNALMODULEDEPENDENCIES' -replace
         '\.REQUIREDMODULES.*', '.REQUIREDMODULES'
 
+        # ---BEGIN SECTION TO PARTIALLY MINIFY THE CODE DUE TO PSGALLERY 10k LINE LIMIT---
+        # Parse the PowerShell code
+        $Tokens = $null
+        $null = [System.Management.Automation.Language.Parser]::ParseInput(
+            $Result,
+            [ref]$Tokens,
+            [ref]$null
+        )
+
+        # Find all the comments.
+        # Filter out the Script File Info block which must remain for publishing to PSGallery.
+        # Sort the comments by length in descending order.
+        # This way the shortest comments (which are potentially just a # with nothing else) are removed last.
+        # If '#' were removed first, nothing else would be a comment
+        $Comments = $Tokens.Where({ $_.kind -eq 'comment' }).Text |
+        #Where-Object -FilterScript {
+        #    -not ([regex]::Match($_, '(\.SYNOPSIS)(.*)(\.DESCRIPTION)', $RegExOptions)).Success
+        #} |
+        Sort-Object -Property Length -Descending -Unique
+
+        # Remove the comments
+        ForEach ($Comment in $Comments) {
+            if ($Comment -eq '#') {
+                $escaped = '^\s*#$' # Need to avoid the Script File Info block <# ... #>
+            } else {
+                $escaped = [regex]::Escape($Comment)
+            }
+            $Result = $Result -replace $escaped , ''
+        }
+
+        # Remove blank lines
+        $Result = $Result -replace '\r\n[\s]*\r\n', "`r`n" -replace '\r\n[\s]*\r\n', "`r`n" -replace '\r\n\[\s]*r\n', "`r`n"
+        # ---END SECTION TO PARTIALLY MINIFY THE CODE DUE TO PSGALLERY 10k LINE LIMIT---
+
+        # Write the output to file
         $script:PortableScriptFilePath = "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1"
         $Result | Out-File -LiteralPath $PortableScriptFilePath
 
         # Assign the correct GUID to the portable version of the script (it should be unique, not shared with the other script)
-        Update-ScriptFileInfo -Path "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1" -Guid $PortableVersionGuid
+        $Properties = @{
+            Version      = $MainScriptFileInfoTest.Version
+            Description  = $MainScriptFileInfoTest.Description
+            Author       = $MainScriptFileInfoTest.Author
+            CompanyName  = $MainScriptFileInfoTest.CompanyName
+            Copyright    = $MainScriptFileInfoTest.Copyright
+            Tags         = $MainScriptFileInfoTest.Tags
+            ReleaseNotes = $MainScriptFileInfoTest.ReleaseNotes
+            LicenseUri   = $MainScriptFileInfoTest.LicenseUri
+            ProjectUri   = $MainScriptFileInfoTest.ProjectUri
+        }
+        New-ScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
     }
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies'
