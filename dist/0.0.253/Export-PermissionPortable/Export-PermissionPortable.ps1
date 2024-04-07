@@ -1,7 +1,6 @@
-
 <#PSScriptInfo
 
-.VERSION 0.0.249
+.VERSION 0.0.253
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -17,25 +16,25 @@
 
 .PROJECTURI https://github.com/IMJLA/Export-Permission
 
-.ICONURI
+.ICONURI 
 
 .EXTERNALMODULEDEPENDENCIES 
 
-.REQUIREDSCRIPTS
+.REQUIREDSCRIPTS 
 
-.EXTERNALSCRIPTDEPENDENCIES
+.EXTERNALSCRIPTDEPENDENCIES 
 
 .RELEASENOTES
-learning pester I guess
+test a build failure
 
 .PRIVATEDATA
 
+
 #>
+<#
 
-<# 
-
-.DESCRIPTION 
- Present complex nested permissions and group memberships in a report that is easy to read
+.DESCRIPTION
+Present complex nested permissions and group memberships in a report that is easy to read
 Provide additional information about each account such as Name, Department, Title
 Multithreaded with caching for fast results
 Works as a scheduled task
@@ -71,9 +70,6 @@ Behavior:
       - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
 - Exports information about all accounts with access to a .csv file
 - Exports information about all accounts with access to a report generated as a .html file
-- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor 
+- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
 
-#> 
-Param()
-
-
+#>

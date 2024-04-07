@@ -319,7 +319,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         # If '#' were removed first, nothing else would be a comment
         $Comments = $Tokens.Where({ $_.kind -eq 'comment' }).Text |
         #Where-Object -FilterScript {
-        #    -not ([regex]::Match($_, '(\.SYNOPSIS)(.*)(\.DESCRIPTION)', $RegExOptions)).Success
+        #    -not ([regex]::Match($_, '(\.LICENSEURI)(.*)(\.PROJECTURI)', $RegExOptions)).Success
         #} |
         Sort-Object -Property Length -Descending -Unique
 
@@ -349,11 +349,11 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
             CompanyName  = $MainScriptFileInfoTest.CompanyName
             Copyright    = $MainScriptFileInfoTest.Copyright
             Tags         = $MainScriptFileInfoTest.Tags
-            ReleaseNotes = $MainScriptFileInfoTest.ReleaseNotes
+            ReleaseNotes = [string]$MainScriptFileInfoTest.ReleaseNotes
             LicenseUri   = $MainScriptFileInfoTest.LicenseUri
             ProjectUri   = $MainScriptFileInfoTest.ProjectUri
         }
-        New-ScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
+        New-PSScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
     }
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies'
