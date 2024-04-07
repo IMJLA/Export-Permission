@@ -236,8 +236,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
         # Read in the current contents of the script
-        $MainScriptContent = $MainScript |
-        Get-Content -Raw
+        $MainScriptContent = $MainScript | Get-Content -Raw
 
         # Read the metadata of the script (we will use it to enumerate required modules)
         $MainScriptFileInfoTest = Test-ScriptFileInfo -LiteralPath $MainScript.FullName -ErrorAction Continue
@@ -352,6 +351,11 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
             ProjectUri   = $MainScriptFileInfoTest.ProjectUri
         }
         New-ScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
+
+        # New-PSScriptFileInfo creates a file which is not accepted by Test-ScriptFileInfo (and therefore not accepted by PSGallery)
+        # New-ScriptFileInfo does not have this problem but it generates a param() block which must be erased before we append our own
+        $NewScriptFileContent = Get-Content -LiteralPath $PortableScriptFilePath -Raw
+        $NewScriptFileContent -replace 'Param\(\)', '' | Out-File -LiteralPath $PortableScriptFilePath -Force
 
         # Write the output to file
         $Result | Out-File -LiteralPath $PortableScriptFilePath -Append

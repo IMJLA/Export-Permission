@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.260] - 2024-04-07 - fix portable script version param block
+
+## [0.0.259] - 2024-04-07 - fix portable script version param block
+
 ## [0.0.258] - 2024-04-07 - replace new-psscriptfileinfo with new-scriptfileinfo to troubleshoot build errors
 
 ## [0.0.257] - 2024-04-07 - test new-psscriptfileinfo

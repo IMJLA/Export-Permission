@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.258
+.VERSION 0.0.260
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-replace new-psscriptfileinfo with new-scriptfileinfo to troubleshoot build errors
+fix portable script version param block
 
 .PRIVATEDATA
 
@@ -39,6 +39,8 @@ replace new-psscriptfileinfo with new-scriptfileinfo to troubleshoot build error
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
+
 
 
 
