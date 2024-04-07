@@ -337,9 +337,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         $Result = $Result -replace '\r\n[\s]*\r\n', "`r`n" -replace '\r\n[\s]*\r\n', "`r`n" -replace '\r\n\[\s]*r\n', "`r`n"
         # ---END SECTION TO PARTIALLY MINIFY THE CODE DUE TO PSGALLERY 10k LINE LIMIT---
 
-        # Write the output to file
         $script:PortableScriptFilePath = "$script:BuildOutputFolderForPortableVersion\$FolderName`Portable.ps1"
-        $Result | Out-File -LiteralPath $PortableScriptFilePath
 
         # Assign the correct GUID to the portable version of the script (it should be unique, not shared with the other script)
         $Properties = @{
@@ -354,6 +352,9 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
             ProjectUri   = $MainScriptFileInfoTest.ProjectUri
         }
         New-PSScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
+
+        # Write the output to file
+        $Result | Out-File -LiteralPath $PortableScriptFilePath -Append
     }
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies'

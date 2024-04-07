@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.253
+.VERSION 0.0.254
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test a build failure
+fix portable script construction
 
 .PRIVATEDATA
 
@@ -39,20 +39,6 @@ test a build failure
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <#
