@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.247
+.VERSION 0.0.248
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-minify export-permissionportable
+fix test staging
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ minify export-permissionportable
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

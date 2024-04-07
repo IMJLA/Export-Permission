@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.0.247
+.VERSION 0.0.248
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -26,7 +26,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-minify export-permissionportable
+fix test staging
 
 .PRIVATEDATA
 
