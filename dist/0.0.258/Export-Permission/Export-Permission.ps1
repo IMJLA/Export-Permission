@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.257
+.VERSION 0.0.258
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test new-psscriptfileinfo
+replace new-psscriptfileinfo with new-scriptfileinfo to troubleshoot build errors
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ test new-psscriptfileinfo
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 
