@@ -355,10 +355,10 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         # New-PSScriptFileInfo creates a file which is not accepted by Test-ScriptFileInfo (and therefore not accepted by PSGallery)
         # New-ScriptFileInfo does not have this problem but it generates a param() block which must be erased before we append our own
         $NewScriptFileContent = Get-Content -LiteralPath $PortableScriptFilePath -Raw
-        $NewScriptFileContent -replace 'Param\(\)', '' | Out-File -LiteralPath $PortableScriptFilePath -Force
+        ($NewScriptFileContent -replace 'Param\(\)', '').Trim() | Out-File -LiteralPath $PortableScriptFilePath -Force
 
         # Write the output to file
-        $Result | Out-File -LiteralPath $PortableScriptFilePath -Append
+        $Result.Trim() | Out-File -LiteralPath $PortableScriptFilePath -Append
     }
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies'
