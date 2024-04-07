@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.249] - 2024-04-07 - learning pester I guess
+
 ## [0.0.248] - 2024-04-07 - fix test staging
 
 ## [0.0.247] - 2024-04-07 - minify export-permissionportable
