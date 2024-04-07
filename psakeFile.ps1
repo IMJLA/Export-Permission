@@ -321,7 +321,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         #Where-Object -FilterScript {
         #    -not ([regex]::Match($_, '(\.LICENSEURI)(.*)(\.PROJECTURI)', $RegExOptions)).Success
         #} |
-        Sort-Object -Property Length -Descending -Unique
+        Sort-Object -Property Length -Descending
 
         # Remove the comments
         ForEach ($Comment in $Comments) {
