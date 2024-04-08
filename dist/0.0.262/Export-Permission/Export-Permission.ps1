@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.261
+.VERSION 0.0.262
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove blank lines from portable version
+new psdfs version
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ remove blank lines from portable version
 #Requires -Module PsDfs
 #Requires -Module PsBootstrapCss
 #Requires -Module Permission
+
 
 
 

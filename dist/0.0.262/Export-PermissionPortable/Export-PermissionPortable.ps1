@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.261
+.VERSION 0.0.262
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove blank lines from portable version
+new psdfs version
 
 .PRIVATEDATA
 
@@ -3907,6 +3907,9 @@ Function Get-NetDfsEnum {
         }
     }
 }
+if ([type]'NetApi32Dll') {
+Write-Verbose 'TYPE_ALREADY_EXISTS NetApi32Dll.  It is possible that the most recent version is not loaded.  Restart PowerShell to be certain.'
+} else {
 Add-Type -ErrorAction Stop -TypeDefinition @"
 using System;
 using System.Collections.Generic;
@@ -4177,6 +4180,7 @@ public class NetApi32Dll
     }
 }
 "@
+}
 function ConvertTo-BootstrapJavaScriptTable {
     param (
         [string]$Id,
