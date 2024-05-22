@@ -1,5 +1,5 @@
 $LogPath = 'C:\Users\Owner\AppData\Roaming\Export-Permission\'
-$Year = Get-ChildItem $LogPath -Directory | Sort -Descending | Select -First 1 -ExpandProperty Name
+$Year = Get-ChildItem $LogPath -Directory | Where-Object { $_.Name -match '^\d*$' } | Sort-Object -Descending | Select-Object -First 1 -ExpandProperty Name
 $Month = Get-ChildItem "$LogPath\$Year" -Directory | Sort -Descending | Select -First 1 -ExpandProperty Name
 $Folder = Get-ChildItem "$LogPath\$Year\$Month" -Directory | Sort -Descending | Select -First 1 -ExpandProperty FullName
 $File = "$Folder\Export-Permission.log"

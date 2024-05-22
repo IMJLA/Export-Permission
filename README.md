@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.261
+help version: 0.0.262
 locale: en-US
 script name: Export-Permission.ps1
 online version:
@@ -17,11 +17,12 @@ Create CSV, HTML, and XML reports of permissions
 
 ```
 Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
- [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [-NoMembers]
- [[-RecurseDepth] <Int32>] [[-Title] <String>] [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>]
- [-Interactive] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
- [[-PrtgToken] <String>] [[-SplitBy] <String[]>] [[-GroupBy] <String>] [[-FileFormat] <String[]>]
- [[-OutputFormat] <String>] [[-Detail] <Int32[]>] [[-InheritanceFlagResolved] <String[]>] [-NoProgress]
+ [[-IncludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>]
+ [[-OutputDir] <String>] [-NoMembers] [[-RecurseDepth] <Int32>] [[-Title] <String>]
+ [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
+ [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>] [[-PrtgToken] <String>] [[-SplitBy] <String[]>]
+ [[-GroupBy] <String>] [[-FileFormat] <String[]>] [[-OutputFormat] <String>] [[-Detail] <Int32[]>]
+ [[-InheritanceFlagResolved] <String[]>] [-NoProgress] [-ProgressAction <ActionPreference>]
  [<CommonParameters>]
 ```
 
@@ -294,7 +295,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 18
+Position: 19
 Default value: 10
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -329,7 +330,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 3
+Position: 4
 Default value: @('group', 'computer')
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -344,7 +345,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 16
+Position: 17
 Default value: Js
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -384,7 +385,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 15
+Position: 16
 Default value: Item
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -412,7 +413,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 8
+Position: 9
 Default value: { $true }
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -431,7 +432,24 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 4
+Position: 5
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -IncludeAccount
+Regular expressions matching names of security principals to include in the HTML report
+
+Only security principals with names matching these regular expressions will be returned
+
+```yaml
+Type: System.String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 3
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -448,7 +466,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 19
+Position: 20
 Default value: @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -512,7 +530,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 5
+Position: 6
 Default value: "$env:AppData\Export-Permission"
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -527,7 +545,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 17
+Position: 18
 Default value: Passthru
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -544,7 +562,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 12
+Position: 13
 Default value: 0
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -561,7 +579,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 10
+Position: 11
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -578,7 +596,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 11
+Position: 12
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -595,7 +613,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 13
+Position: 14
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -614,7 +632,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 6
+Position: 7
 Default value: -1
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -622,11 +640,11 @@ Accept wildcard characters: False
 
 ### -SplitBy
 How to split up the exported files:
-    none    generate 1 file with all permissions
-    target  generate 1 file per target
-    item    generate 1 file per item
-    account generate 1 file per account
-    all     generate 1 file per target and 1 file per item and 1 file per account and 1 file with all permissions.
+    none    generate 1 report file with all permissions
+    target  generate 1 report file per target (default)
+    item    generate 1 report file per item
+    account generate 1 report file per account
+    all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
 
 ```yaml
 Type: System.String[]
@@ -634,7 +652,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 14
+Position: 15
 Default value: Target
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -667,7 +685,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 9
+Position: 10
 Default value: (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -682,7 +700,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 7
+Position: 8
 Default value: Permissions Report
 Accept pipeline input: False
 Accept wildcard characters: False

@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.263] - 2024-05-22 - implement out-permission to output objects
+
 ## [0.0.262] - 2024-04-07 - new psdfs version
 
 ## [0.0.261] - 2024-04-07 - remove blank lines from portable version
