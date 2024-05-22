@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.263
+.VERSION 0.0.264
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement out-permission to output objects
+bugfix export-logcsv -progressparentid
 
 .PRIVATEDATA
 
@@ -6416,7 +6416,8 @@ function Export-LogCsv {
         [String]$WhoAmI = (whoami.EXE),
         [Hashtable]$LogBuffer = @{},
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [String]$DebugOutputStream = 'Debug'
+        [String]$DebugOutputStream = 'Debug',
+        [int]$ProgressParentId
     )
     $Log = @{
         Buffer       = $Buffer
