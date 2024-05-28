@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.264
+.VERSION 0.0.265
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix export-logcsv -progressparentid
+restored prtg functionality
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix export-logcsv -progressparentid
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -315,21 +316,25 @@ param (
     [string]$Title = 'Permissions Report',
 
     <#
-    Valid group names that are allowed to appear in ACEs
+    Valid accounts that are allowed to appear in ACEs
 
     Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
 
-    By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance
+    By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance
 
-    In the ScriptBlock, use string comparisons on the Name property
+    In the ScriptBlock, any account properties are available for evaluation:
 
-    e.g. {$_.Name -like 'CONTOSO\Group1*' -or $_.Name -eq 'CONTOSO\Group23'}
+    e.g. {$_.DomainNetbios -eq 'CONTOSO'} # Accounts used in ACEs should be in the CONTOSO domain
+    e.g. {$_.Name -eq 'Group23'} # Accounts used in ACEs should be named Group23
+    e.g. {$_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23'}
 
-    The naming format that will be used for the groups is CONTOSO\Group1
-
-      where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group
+    The format of the ResolvedAccountName property is CONTOSO\Group1
+      where
+        CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
+        and
+        Group1 is the samAccountName of the account
     #>
-    [scriptblock]$GroupNameRule = { $true },
+    [scriptblock]$AccountConvention = { $true },
 
     # Number of asynchronous threads to use
     [uint16]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
@@ -373,7 +378,7 @@ param (
         account generate 1 report file per account
         all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
     #>
-    [ValidateSet('none', 'all', 'target', 'item', 'account')]
+    [ValidateSet('account', 'item', 'none', 'target')]
     [string[]]$SplitBy = 'target',
 
     <#
@@ -436,37 +441,46 @@ param (
 
 begin {
 
+    # Workaround for https://github.com/PowerShell/PowerShell/issues/20657
     if ($NoProgress) {
         $ProgressPreference = 'Ignore'
     }
 
-    # Create a splat of the constant Write-Progress parameters for script readability
+    # Create a splat of the constant Write-Progress parameters for script readability.
     $Progress = @{
         Activity = 'Export-Permission'
         Id       = 0
     }
 
-    Write-Progress -Status '0% (step 1 of 20)' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
+    # Create a splat of the variable Write-Progress parameters for script readability.
+    $ProgressUpdate = @{
+        CurrentOperation = 'Initializing'
+        PercentComplete  = 0
+        Status           = '0% (step 1 of 20)'
+    }
+
+    # Start the progress bar
+    Write-Progress @Progress @ProgressUpdate
 
     #----------------[ Functions ]------------------
 
-    # This is where the function definitions will be inserted in the portable version of this script
+    # This is where the function definitions will be inserted in the portable version of this script.
 
     #----------------[ Logging ]----------------
 
-    # Start a timer to measure progress and performance
+    # Start a timer to measure progress and performance.
     $StopWatch = [System.Diagnostics.Stopwatch]::new()
     $null = $StopWatch.Start()
 
-    # Generate a unique ID for this run of the script
+    # Generate a unique ID for this run of the script.
     $ReportInstanceId = [guid]::NewGuid().ToString()
 
-    # Create a folder to store logs
+    # Create a folder to store logs.
     $OutputDir = New-DatedSubfolder -Root $OutputDir -Suffix "_$ReportInstanceId"
 
-    <# Start the PowerShell transcript
-       PowerShell cannot redirect the Success stream of Start-Transcript to the Information stream
-       But it can redirect it to $null, and then send the Transcript file path to Write-Information
+    <# Start the PowerShell transcript.
+        PowerShell cannot redirect the Success stream of Start-Transcript to the Information stream
+        But it can redirect it to $null, and then send the Transcript file path to Write-Information
     #>
     $TranscriptFile = "$OutputDir\PowerShellTranscript.log"
     Start-Transcript $TranscriptFile *>$null
@@ -475,22 +489,23 @@ begin {
     #----------------[ Declarations ]----------------
 
     $LogFile = "$OutputDir\Export-Permission.log"
-    $DirectoryEntryCache = [hashtable]::Synchronized(@{})
-    $DomainsBySID = [hashtable]::Synchronized(@{})
-    $DomainsByNetbios = [hashtable]::Synchronized(@{})
-    $DomainsByFqdn = [hashtable]::Synchronized(@{})
-    $LogBuffer = [hashtable]::Synchronized(@{}) # Initialize a cache of log messages in memory to minimize random disk access
-    $CimCache = [hashtable]::Synchronized(@{}) # Initialize a cache of CIM sessions, instances, and query results
-    $AclByPath = [hashtable]::Synchronized(@{}) # Initialize a cache of access control lists keyed by their paths
-    $AceByGUID = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entries keyed by GUID generated in Resolve-ACE
-    $AceGuidByID = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entry GUIDs keyed by their resolved identities
-    $AceGuidByPath = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entry GUIDs keyed by their paths
-    $PrincipalByID = [hashtable]::Synchronized(@{}) # Initialize a cache of ADSI security principals keyed by their resolved NTAccount caption
-    $Parents = [hashtable]::Synchronized(@{})
-    $IdByShortName = [hashtable]::Synchronized(@{})
-    $ShortNameByID = [hashtable]::Synchronized(@{})
-    $ExcludeClassFilterContents = [Hashtable]::Synchronized(@{})
-    $IncludeFilterContents = [Hashtable]::Synchronized(@{})
+    $DirectoryEntryCache = [hashtable]::Synchronized(@{}) # Initialize a cache of ADSI directory entry keyed by their Path to minimize ADSI queries.
+    $DomainsBySID = [hashtable]::Synchronized(@{}) # Initialize a cache of directory domains keyed by domain SID to minimize CIM and ADSI queries.
+    $DomainsByNetbios = [hashtable]::Synchronized(@{}) # Initialize a cache of directory domains keyed by domain NetBIOS to minimize CIM and ADSI queries.
+    $DomainsByFqdn = [hashtable]::Synchronized(@{}) # Initialize a cache of directory domains keyed by domain DNS FQDN to minimize CIM and ADSI queries.
+    $LogBuffer = [hashtable]::Synchronized(@{}) # Initialize a cache of log messages in memory to minimize random disk access.
+    $CimCache = [hashtable]::Synchronized(@{}) # Initialize a cache of CIM sessions, instances, and query results.
+    $AclByPath = [hashtable]::Synchronized(@{}) # Initialize a cache of access control lists keyed by their paths.
+    $AceByGUID = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entries keyed by GUID generated in Resolve-ACE.
+    $AceGuidByID = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entry GUIDs keyed by their resolved identities.
+    $AceGuidByPath = [hashtable]::Synchronized(@{}) # Initialize a cache of access control entry GUIDs keyed by their paths.
+    $PrincipalByID = [hashtable]::Synchronized(@{}) # Initialize a cache of ADSI security principals keyed by their resolved NTAccount caption.
+    $Parents = [hashtable]::Synchronized(@{}) # Initialize a cache of resolved parent item paths keyed by their unresolved target paths.
+    $IdByShortName = [hashtable]::Synchronized(@{}) # Initialize a cache of resolved NTAccount captions keyed by their short names (results of the IgnoreDomain parameter).
+    $ShortNameByID = [hashtable]::Synchronized(@{}) # Initialize a cache of short names (results of the IgnoreDomain parameter) keyed by their resolved NTAccount captions.
+    $ExcludeClassFilterContents = [hashtable]::Synchronized(@{}) # Initialize a cache of accounts filtered by the ExcludeClass parameter.
+    $IncludeAccountFilterContents = [hashtable]::Synchronized(@{}) # Initialize a cache of accounts filtered by the IncludeAccount parameter.
+    $ExcludeAccountFilterContents = [hashtable]::Synchronized(@{}) # Initialize a cache of accounts filtered by the ExcludeAccount parameter.
 
     # Get the hostname of the computer running the script
     $ThisHostname = HOSTNAME.EXE
@@ -689,10 +704,11 @@ end {
     $CommandParameters = @{
         ExcludeAccount             = $ExcludeAccount
         ExcludeClassFilterContents = $ExcludeClassFilterContents
+        ExcludeFilterContents      = $ExcludeAccountFilterContents
         IdByShortName              = $IdByShortName
         IgnoreDomain               = $IgnoreDomain
         IncludeAccount             = $IncludeAccount
-        IncludeFilterContents      = $IncludeFilterContents
+        IncludeFilterContents      = $IncludeAccountFilterContents
         PrincipalByID              = $PrincipalByID
         ShortNameByID              = $ShortNameByID
     }
@@ -700,17 +716,32 @@ end {
     Select-PermissionPrincipal @CommandParameters @LogThis
 
     $ProgressUpdate = @{
-        CurrentOperation = 'Format the permissions'
+        CurrentOperation = 'Analyze the permissions against established best practices'
         PercentComplete  = 55
-        Status           = '55% (step 12 of 20) Format-Permission'
+        Status           = '55% (step 12 of 20) Invoke-PermissionAnalyzer'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
+        AclByPath                = $AclByPath
+        AllowDisabledInheritance = $Items
+        AccountConvention        = $AccountConvention
+        PrincipalByID            = $PrincipalByID
+    }
+    $BestPracticeEval = Invoke-PermissionAnalyzer @CommandParameters
+
+    $ProgressUpdate = @{
+        CurrentOperation = 'Format the permissions'
+        PercentComplete  = 60
+        Status           = '60 % (step 13 of 20) Format-Permission'
+    }
+    Write-Progress @Progress @ProgressUpdate
+    $CommandParameters = @{
+        Analysis                   = $BestPracticeEval
         ExcludeClassFilterContents = $ExcludeClassFilterContents
         FileFormat                 = $FileFormat
         GroupBy                    = $GroupBy
         IgnoreDomain               = $IgnoreDomain
-        IncludeFilterContents      = $IncludeFilterContents
+        IncludeFilterContents      = $IncludeAccountFilterContents
         OutputFormat               = $OutputFormat
         Permission                 = $Permissions
         ShortNameByID              = $ShortNameByID
@@ -720,14 +751,14 @@ end {
 
     $ProgressUpdate = @{
         CurrentOperation = 'Export the report files'
-        PercentComplete  = 60
-        Status           = '60 % (step 13 of 20) Out-PermissionReport'
+        PercentComplete  = 65
+        Status           = '65 % (step 14 of 20) Out-PermissionFile'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
 
         # Objects as they progressed through the data pipeline
-        TargetPath = $TargetPath ; Parent = $Parents ; AclByPath = $AclByPath ; AceByGUID = $AceByGUID ; PrincipalByID = $PrincipalByID ;
+        BestPracticeEval = $BestPracticeEval ; TargetPath = $TargetPath ; Parent = $Parents ; AclByPath = $AclByPath ; AceByGUID = $AceByGUID ; PrincipalByID = $PrincipalByID ;
         Permission = $Permissions ; FormattedPermission = $FormattedPermissions ; BestPracticeIssue = $BestPracticeIssues ;
 
         # Parameters
@@ -740,14 +771,24 @@ end {
         ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn
 
     }
-    Write-LogMsg @Log -Text 'Out-PermissionReport' -Expand $CommandParameters
-    $ReportFile = Out-PermissionReport @CommandParameters
+    Write-LogMsg @Log -Text 'Out-PermissionFile' -Expand $CommandParameters
+    $ReportFile = Out-PermissionFile @CommandParameters
 
-    <#
+    $ProgressUpdate = @{
+        CurrentOperation = 'Open the HTML report file (if the -Interactive switch was used)'
+        PercentComplete  = 70
+        Status           = '70 % (step 15 of 20) Invoke-Item'
+    }
+    Write-Progress @Progress @ProgressUpdate
+    if ($Interactive -and $ReportFile) {
+        Write-LogMsg @Log -Text "Invoke-Item -Path '$ReportFile'"
+        Invoke-Item -Path $ReportFile
+    }
+
     $ProgressUpdate = @{
         CurrentOperation = 'Send the results to a PRTG Custom XML Push sensor for tracking'
-        PercentComplete  = 65
-        Status           = '65 % (step 14 of 20) Send-PrtgXmlSensorOutput'
+        PercentComplete  = 75
+        Status           = '75 % (step 16 of 20) Send-PrtgXmlSensorOutput'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
@@ -759,23 +800,11 @@ end {
     }
     Write-LogMsg @Log -Text 'Send-PrtgXmlSensorOutput' -Expand $CommandParameters
     Send-PrtgXmlSensorOutput @CommandParameters
-    #>
-
-    $ProgressUpdate = @{
-        CurrentOperation = 'Open the HTML report file (if the -Interactive switch was used)'
-        PercentComplete  = 70
-        Status           = '70 % (step 15 of 20) Invoke-Item'
-    }
-    Write-Progress @Progress @ProgressUpdate
-    if ($Interactive) {
-        Write-LogMsg @Log -Text "Invoke-Item '$ReportFile'"
-        Invoke-Item $ReportFile
-    }
 
     $ProgressUpdate = @{
         CurrentOperation = 'Output the result to the pipeline'
-        PercentComplete  = 75
-        Status           = '75 % (step 16 of 20) Out-Permission'
+        PercentComplete  = 80
+        Status           = '80 % (step 17 of 20) Out-Permission'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
@@ -788,17 +817,17 @@ end {
 
     $ProgressUpdate = @{
         CurrentOperation = 'Cleanup CIM sessions'
-        PercentComplete  = 80
-        Status           = '80 % (step 17 of 20) Remove-CachedCimSession'
+        PercentComplete  = 85
+        Status           = '85 % (step 18 of 20) Remove-CachedCimSession'
     }
     Write-Progress @Progress @ProgressUpdate
     Write-LogMsg @Log -Text 'Remove-CachedCimSession -CimCache $CimCache'
     Remove-CachedCimSession -CimCache $CimCache
 
     $ProgressUpdate = @{
-        CurrentOperation = 'Write the log buffer to disk'
-        PercentComplete  = 85
-        Status           = '85 % (step 18 of 20) Export-LogCsv'
+        CurrentOperation = 'Export the buffered log messages to a CSV file'
+        PercentComplete  = 90
+        Status           = '95 % (step 19 of 20) Export-LogCsv'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
@@ -809,6 +838,8 @@ end {
     Export-LogCsv @CommandParameters @LogThis
 
     Stop-Transcript  *>$null
+
+    # Complete the progress bar
     Write-Progress @Progress -Completed
 
 }

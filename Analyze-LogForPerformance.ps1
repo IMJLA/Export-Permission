@@ -8,7 +8,7 @@ $ParentCommand = 'Export-Permission.ps1'
 $CommandStartingIndex = 0
 $CommandStart = $LogEntries[0].Timestamp
 
-for ( $i = 0 ; $i -lt $LogEntries.Count ; $i++ ) {
+$Commands = for ( $i = 0 ; $i -lt $LogEntries.Count ; $i++ ) {
 
     $ThisEntry = $LogEntries[$i]
     $j = $i + 1
@@ -23,11 +23,11 @@ for ( $i = 0 ; $i -lt $LogEntries.Count ; $i++ ) {
         $NextEntry.Command -eq $ParentCommand
     ) {
         $Timespan = New-TimeSpan -Start $CommandStart -End $NextEntry.Timestamp
-        $LogEntries[$CommandStartingIndex] | Add-Member -MemberType NoteProperty -Name CommandTook -Value $Timespan -Force
+        $LogEntries[$CommandStartingIndex] | Add-Member -MemberType NoteProperty -Name CommandTook -Value $Timespan -Force -PassThru
         $CommandStartingIndex = $j
         $CommandStart = $NextEntry.Timestamp
     }
 
 }
 
-$LogEntries | Where-Object -FilterScript { $_.CommandTook } | Select-Object CommandTook, Text
+$Commands | Select-Object CommandTook, Text

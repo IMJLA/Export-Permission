@@ -8,7 +8,7 @@
             "name": "GroupBy account",
             "type": "PowerShell",
             "request": "launch",
-            "script": "try { $result = . '${workspaceRoot}/src/Export-Permission.ps1' -TargetPath 'C:\\Windows\\System32' -ExcludeClass 'group' -ExcludeAccount $null -IncludeAccount $null -IgnoreDomain $null -Interactive -GroupBy account -SplitBy target -ThreadCount 1 ; . '${workspaceRoot}/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+            "script": "try { $result = . '${workspaceRoot}/src/Export-Permission.ps1' -TargetPath 'C:\\Windows\\System32' -ExcludeClass 'group' -ExcludeAccount $null -IncludeAccount $null -IgnoreDomain $null -Interactive -GroupBy account -SplitBy target -ThreadCount 1; . '${workspaceRoot}/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
         },
         {
             "name": "GroupBy item",

@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.263
+help version: 0.0.264
 locale: en-US
 script name: Export-Permission.ps1
 online version:
@@ -19,7 +19,7 @@ Create CSV, HTML, and XML reports of permissions
 Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
  [[-IncludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>]
  [[-OutputDir] <String>] [-NoMembers] [[-RecurseDepth] <Int32>] [[-Title] <String>]
- [[-GroupNameRule] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
+ [[-AccountConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
  [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>] [[-PrtgToken] <String>] [[-SplitBy] <String[]>]
  [[-GroupBy] <String>] [[-FileFormat] <String[]>] [[-OutputFormat] <String>] [[-Detail] <Int32[]>]
  [[-InheritanceFlagResolved] <String[]>] [-NoProgress] [-ProgressAction <ActionPreference>]
@@ -275,6 +275,40 @@ Add a warning that they are permissions from the DFS namespace server and could 
 
 ## PARAMETERS
 
+### -AccountConvention
+Valid accounts that are allowed to appear in ACEs
+
+Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
+
+By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance
+
+In the ScriptBlock, any account properties are available for evaluation:
+
+e.g.
+{$_.DomainNetbios -eq 'CONTOSO'} # Accounts used in ACEs should be in the CONTOSO domain
+e.g.
+{$_.Name -eq 'Group23'} # Accounts used in ACEs should be named Group23
+e.g.
+{$_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23'}
+
+The format of the ResolvedAccountName property is CONTOSO\Group1
+  where
+    CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
+    and
+    Group1 is the samAccountName of the account
+
+```yaml
+Type: System.Management.Automation.ScriptBlock
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 9
+Default value: { $true }
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Detail
 Level of detail to export to file
     0   Item paths
@@ -387,34 +421,6 @@ Aliases:
 Required: False
 Position: 16
 Default value: Item
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -GroupNameRule
-Valid group names that are allowed to appear in ACEs
-
-Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
-
-By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance
-
-In the ScriptBlock, use string comparisons on the Name property
-
-e.g.
-{$_.Name -like 'CONTOSO\Group1*' -or $_.Name -eq 'CONTOSO\Group23'}
-
-The naming format that will be used for the groups is CONTOSO\Group1
-
-  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group
-
-```yaml
-Type: System.Management.Automation.ScriptBlock
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: 9
-Default value: { $true }
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

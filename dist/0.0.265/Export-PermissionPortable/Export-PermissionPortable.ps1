@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.264
+.VERSION 0.0.265
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix export-logcsv -progressparentid
+restored prtg functionality
 
 .PRIVATEDATA
 
@@ -86,14 +86,14 @@ param (
     [switch]$NoMembers,
     [int]$RecurseDepth = -1,
     [string]$Title = 'Permissions Report',
-    [scriptblock]$GroupNameRule = { $true },
+    [scriptblock]$AccountConvention = { $true },
     [uint16]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
     [switch]$Interactive,
     [string]$PrtgProbe,
     [string]$PrtgProtocol,
     [uint16]$PrtgPort,
     [string]$PrtgToken,
-    [ValidateSet('none', 'all', 'target', 'item', 'account')]
+    [ValidateSet('account', 'item', 'none', 'target')]
     [string[]]$SplitBy = 'target',
     [ValidateSet('account', 'item', 'none', 'target')]
     [string]$GroupBy = 'item',
@@ -113,7 +113,12 @@ begin {
         Activity = 'Export-Permission'
         Id       = 0
     }
-    Write-Progress -Status '0% (step 1 of 20)' -CurrentOperation 'Initializing' -PercentComplete 0 @Progress
+    $ProgressUpdate = @{
+        CurrentOperation = 'Initializing'
+        PercentComplete  = 0
+        Status           = '0% (step 1 of 20)'
+    }
+    Write-Progress @Progress @ProgressUpdate
 Function Get-DfsNetInfo {
     [CmdletBinding()]
     Param (
@@ -2981,7 +2986,8 @@ function ConvertTo-PermissionList {
         [String]$NetworkPath,
         [ValidateSet('account', 'item', 'none', 'target')]
         [String]$GroupBy = 'item',
-        [Hashtable]$HowToSplit
+        [Hashtable]$HowToSplit,
+        [PSCustomObject]$Analysis
     )
     switch ($Format) {
         'csv' {
@@ -3235,6 +3241,11 @@ function ConvertTo-PermissionList {
             break
         }
         'prtgxml' {
+            [PSCustomObject]@{
+                PSTypeName = 'Permission.BestPracticeAnalysisPrtg'
+                Data       = ConvertTo-PermissionPrtgXml -Analysis $Analysis
+                PassThru   = $Analysis
+            }
             break
         }
         'xml' {
@@ -3287,6 +3298,66 @@ function ConvertTo-PermissionList {
             break
         }
     }
+}
+function ConvertTo-PermissionPrtgXml {
+    param (
+        [PSCustomObject]$Analysis
+    )
+    $IssuesDetected = $false
+    $ItemsWithCreatorOwner = $Analysis.ACEsWithCreatorOwner.Path | Sort-Object -Unique
+    $CountItemsWithBrokenInheritance = $Analysis.ItemsWithBrokenInheritance.Count
+    $CountACEsWithNonCompliantAccounts = $Analysis.ACEsWithNonCompliantAccounts.Count
+    $CountACEsWithUsers = $Analysis.ACEsWithUsers.Count
+    $CountACEsWithUnresolvedSIDs = $Analysis.ACEsWithUnresolvedSIDs.Count
+    $CountItemsWithCreatorOwner = $ItemsWithCreatorOwner.Count
+    if (
+        (
+            $CountItemsWithBrokenInheritance +
+            $CountACEsWithNonCompliantAccounts +
+            $CountACEsWithUsers +
+            $CountACEsWithUnresolvedSIDs +
+            $CountItemsWithCreatorOwner
+        ) -gt 0
+    ) {
+        $IssuesDetected = $true
+    }
+    $Channels = [System.Collections.Generic.List[String]]::new()
+    $ChannelParams = @{
+        MaxError   = 0.5
+        Channel    = 'Folders with inheritance disabled'
+        Value      = $CountItemsWithBrokenInheritance
+        CustomUnit = 'folders'
+    }
+    $null = $Channels.Add((Format-PrtgXmlResult @ChannelParams))
+    $ChannelParams = @{
+        MaxError   = 0.5
+        Channel    = 'ACEs for groups breaking naming convention'
+        Value      = $CountACEsWithNonCompliantAccounts
+        CustomUnit = 'ACEs'
+    }
+    $null = $Channels.Add((Format-PrtgXmlResult @ChannelParams))
+    $ChannelParams = @{
+        MaxError   = 0.5
+        Channel    = 'ACEs for users instead of groups'
+        Value      = $CountACEsWithUsers
+        CustomUnit = 'ACEs'
+    }
+    $null = $Channels.Add((Format-PrtgXmlResult @ChannelParams))
+    $ChannelParams = @{
+        MaxError   = 0.5
+        Channel    = 'ACEs for unresolvable SIDs'
+        Value      = $CountACEsWithUnresolvedSIDs
+        CustomUnit = 'ACEs'
+    }
+    $null = $Channels.Add((Format-PrtgXmlResult @ChannelParams))
+    $ChannelParams = @{
+        MaxError   = 0.5
+        Channel    = "Folders with 'CREATOR OWNER' access"
+        Value      = $CountItemsWithCreatorOwner
+        CustomUnit = 'folders'
+    }
+    $null = $Channels.Add((Format-PrtgXmlResult @ChannelParams))
+    Format-PrtgXmlSensorOutput -PrtgXmlResult $Channels -IssueDetected:$IssuesDetected
 }
 function ConvertTo-ScriptHtml {
     param (
@@ -4709,7 +4780,7 @@ function Format-Permission {
                             $FormatString = 'json'
                         }
                         $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Format $Format -Permission $PermissionGroupingsWithChosenProperties -GroupBy $GroupBy -HowToSplit $Permission.SplitBy
-                        $OutputProperties[$FormatString] = ConvertTo-PermissionList -Format $Format -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath $NetworkPath.Item.Path -GroupBy $GroupBy -HowToSplit $Permission.SplitBy -NetworkPath $NetworkPath.Item.Path
+                        $OutputProperties[$FormatString] = ConvertTo-PermissionList -Format $Format -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath $NetworkPath.Item.Path -GroupBy $GroupBy -HowToSplit $Permission.SplitBy -NetworkPath $NetworkPath.Item.Path -Analysis $Analysis
                     }
                     [PSCustomObject]$OutputProperties
                 }
@@ -5108,53 +5179,6 @@ function Get-PermissionPrincipal {
     }
     Write-Progress @Progress -Completed
 }
-function Get-PrtgXmlSensorOutput {
-    param (
-        $NtfsIssues
-    )
-    $Channels = [System.Collections.Generic.List[String]]::new()
-    $ChannelParams = @{
-        MaxError   = 0.5
-        Channel    = 'Folders with inheritance disabled'
-        Value      = ($NtfsIssues.FoldersWithBrokenInheritance | Measure-Object).Count
-        CustomUnit = 'folders'
-    }
-    Format-PrtgXmlResult @ChannelParams |
-    ForEach-Object { $null = $Channels.Add($_) }
-    $ChannelParams = @{
-        MaxError   = 0.5
-        Channel    = 'ACEs for groups breaking naming convention'
-        Value      = ($NtfsIssues.NonCompliantGroups | Measure-Object).Count
-        CustomUnit = 'ACEs'
-    }
-    Format-PrtgXmlResult @ChannelParams |
-    ForEach-Object { $null = $Channels.Add($_) }
-    $ChannelParams = @{
-        MaxError   = 0.5
-        Channel    = 'ACEs for users instead of groups'
-        Value      = ($NtfsIssues.UserACEs | Measure-Object).Count
-        CustomUnit = 'ACEs'
-    }
-    Format-PrtgXmlResult @ChannelParams |
-    ForEach-Object { $null = $Channels.Add($_) }
-    $ChannelParams = @{
-        MaxError   = 0.5
-        Channel    = 'ACEs for unresolvable SIDs'
-        Value      = ($NtfsIssues.SIDsToCleanup | Measure-Object).Count
-        CustomUnit = 'ACEs'
-    }
-    Format-PrtgXmlResult @ChannelParams |
-    ForEach-Object { $null = $Channels.Add($_) }
-    $ChannelParams = @{
-        MaxError   = 0.5
-        Channel    = "Folders with 'CREATOR OWNER' access"
-        Value      = ($NtfsIssues.FoldersWithCreatorOwner | Measure-Object).Count
-        CustomUnit = 'folders'
-    }
-    Format-PrtgXmlResult @ChannelParams |
-    ForEach-Object { $null = $Channels.Add($_) }
-    Format-PrtgXmlSensorOutput -PrtgXmlResult $Channels -IssueDetected:$($NtfsIssues.IssueDetected)
-}
 function Get-TimeZoneName {
     param (
         [datetime]$Time,
@@ -5238,6 +5262,55 @@ function Initialize-Cache {
     }
     Write-Progress @Progress -Completed
 }
+function Invoke-PermissionAnalyzer {
+    param (
+        [hashtable]$AclByPath,
+        [hashtable]$AllowDisabledInheritance,
+        [hashtable]$PrincipalByID,
+        [scriptblock]$AccountConvention = { $true }
+    )
+    $ItemsWithBrokenInheritance = $AclByPath.Keys |
+    Where-Object -FilterScript {
+        $AclByPath[$_].AreAccessRulesProtected -and
+        -not $AllowDisabledInheritance[$_]
+    }
+    $ViolatesAccountConvention = [scriptblock]::Create("!($AccountConvention)")
+    $NonCompliantAccounts = $PrincipalByID.Values |
+    Where-Object -FilterScript { $_.SchemaClassName -eq 'Group' } |
+    Where-Object -FilterScript $ViolatesAccountConvention
+    if ($NonCompliantAccounts) {
+        $AceGUIDsWithNonCompliantAccounts = $AceGuidByID[$NonCompliantAccounts]
+    }
+    if ($AceGUIDsWithNonCompliantAccounts) {
+        $ACEsWithNonCompliantAccounts = $AceByGUID[$AceGUIDsWithNonCompliantAccounts]
+    }
+    $ACEsWithUsers = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $ACEsWithUnresolvedSIDs = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $ACEsWithCreatorOwner = [System.Collections.Generic.List[PSCustomObject]]::new()
+    ForEach ($ACE in $AceByGUID.Values) {
+        if (
+            $PrincipalByID[$ACE.IdentityReferenceResolved].SchemaClassName -eq 'User' -and
+            $_.IdentityReferenceSID -ne 'S-1-5-18' -and 
+            $_.SourceOfAccess -ne 'Ownership' 
+        ) {
+            $ACEsWithUsers.Add($ACE)
+        }
+        if ( $ACE.IdentityReferenceResolved -like "*$($ACE.IdentityReferenceSID)*" ) {
+            $ACEsWithUnresolvedSIDs.Add($ACE)
+        }
+        if ( $ACE.IdentityReferenceResolved -match 'CREATOR OWNER' ) {
+            $ACEsWithCreatorOwner.Add($ACE)
+        }
+    }
+    return [PSCustomObject]@{
+        ACEsWithCreatorOwner         = $ACEsWithCreatorOwner
+        ACEsWithNonCompliantAccounts = $ACEsWithNonCompliantAccounts
+        ACEsWithUsers                = $ACEsWithUsers
+        ACEsWithUnresolvedSIDs       = $ACEsWithUnresolvedSIDs
+        ItemsWithBrokenInheritance   = $ItemsWithBrokenInheritance
+        NonCompliantAccounts         = $NonCompliantAccounts
+    }
+}
 function Invoke-PermissionCommand {
     param (
         [String]$Command
@@ -5277,7 +5350,7 @@ function Out-Permission {
         }
     }
 }
-function Out-PermissionReport {
+function Out-PermissionFile {
     param (
         [string[]]$ExcludeAccount,
         [string[]]$ExcludeClass = @('group', 'computer'),
@@ -5298,7 +5371,6 @@ function Out-PermissionReport {
         [Hashtable]$AceByGUID,
         [Hashtable]$AclByPath,
         [Hashtable]$PrincipalByID,
-        $BestPracticeIssue,
         [Hashtable]$Parent,
         [int[]]$Detail = @(0..10),
         [cultureinfo]$Culture = (Get-Culture),
@@ -5309,7 +5381,8 @@ function Out-PermissionReport {
         [ValidateSet('account', 'item', 'none', 'target')]
         [String]$GroupBy = 'item',
         [ValidateSet('none', 'all', 'target', 'item', 'account')]
-        [string[]]$SplitBy = 'target'
+        [string[]]$SplitBy = 'target',
+        [PSCustomObject]$BestPracticeEval
     )
     $Formats = Resolve-FormatParameter -FileFormat $FileFormat -OutputFormat $OutputFormat
     $DetailStrings = @(
@@ -5325,8 +5398,8 @@ function Out-PermissionReport {
         'Custom sensor output for Paessler PRTG Network Monitor',
         'Permission report'
     )
-    $UnsplitDetail = $Detail | Where-Object -FilterScript { $_ -le 5 }
-    $SplitDetail = $Detail | Where-Object -FilterScript { $_ -gt 5 }
+    $UnsplitDetail = $Detail | Where-Object -FilterScript { $_ -le 5 -or $_ -in 8, 9 }
+    $SplitDetail = $Detail | Where-Object -FilterScript { $_ -gt 5 -and $_ -notin 8, 9 }
     $DetailScripts = @(
         { $TargetPath },
         { ForEach ($Key in $Parent.Keys) {
@@ -5349,8 +5422,8 @@ function Out-PermissionReport {
             }
         },
         { $Permissions.Data },
-        { $BestPracticeIssues },
-        { $PrtgXml },
+        { $BestPracticeEval },
+        { ConvertTo-PermissionPrtgXml -Analysis $Analysis },
         {}
     )
     ForEach ($Split in $Permission.SplitBy.Keys) {
@@ -5499,8 +5572,7 @@ function Out-PermissionReport {
                     break
                 }
                 'prtgxml' {
-                    $DetailExports = @( { }, { }, { }, { }, { }, { }, { }, { }, { }, { } )
-                    $DetailScripts[10] = { }
+                    $DetailExports = @( { }, { }, { }, { }, { }, { }, { }, { }, { }, { $args[0] | Out-File -LiteralPath $args[1] } )
                     break
                 }
                 'xml' {
@@ -5570,10 +5642,8 @@ function Out-PermissionReport {
                         Out-PermissionDetailReport -Detail $SplitDetail -ReportObject $ReportObjects -DetailExport $DetailExports -Format $Format -OutputDir $FormatDir -FileName $FileName -Culture $Culture -DetailString $DetailStrings
                         break
                     }
-                    'prtgxml' {
-                        break
-                    }
                     'xml' {
+                        Out-PermissionDetailReport -Detail $SplitDetail -ReportObject $ReportObjects -DetailExport $DetailExports -Format $Format -OutputDir $FormatDir -Culture $Culture -DetailString $DetailStrings
                         break
                     }
                 }
@@ -5785,15 +5855,15 @@ function Resolve-PermissionTarget {
 }
 function Select-PermissionPrincipal {
     param (
-        [Hashtable]$PrincipalByID = ([Hashtable]::Synchronized(@{})),
+        [Hashtable]$PrincipalByID = @{},
         [string[]]$ExcludeAccount,
         [string[]]$IncludeAccount,
         [string[]]$IgnoreDomain,
-        [Hashtable]$IdByShortName = [Hashtable]::Synchronized(@{}),
-        [Hashtable]$ShortNameByID = [Hashtable]::Synchronized(@{}),
+        [Hashtable]$IdByShortName = @{},
+        [Hashtable]$ShortNameByID = @{},
         [Hashtable]$ExcludeClassFilterContents = @{},
-        [Hashtable]$ExcludeFilterContents = [Hashtable]::Synchronized(@{}),
-        [Hashtable]$IncludeFilterContents = [Hashtable]::Synchronized(@{}),
+        [Hashtable]$ExcludeFilterContents = @{},
+        [Hashtable]$IncludeFilterContents = @{},
         [int]$ProgressParentId,
         [String]$ThisHostName,
         [String]$WhoAmI,
@@ -5826,6 +5896,7 @@ function Select-PermissionPrincipal {
             [bool]$(
                 ForEach ($RegEx in $ExcludeAccount) {
                     if ($ThisID -match $RegEx) {
+                        $ExcludeFilterContents[$ThisID] = $true
                         $true
                     }
                 }
@@ -7574,12 +7645,8 @@ function Split-Thread {
         $Global:TimedOut = $false
         $AllInputObjects = [System.Collections.Generic.List[psobject]]::new()
     }
-    process {
-        ForEach ($ThisObject in $InputObject) {
-            $null = $AllInputObjects.Add($ThisObject)
-        }
-    }
     end {
+        $AllInputObjects = $input
         Write-LogMsg @LogParams -Text " # Entered end block. Sending $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
         $ThreadParameters = @{
             Command              = $Command
@@ -7866,10 +7933,10 @@ function Send-PrtgXmlSensorOutput {
     Start-Transcript $TranscriptFile *>$null
     Write-Information $TranscriptFile
     $LogFile = "$OutputDir\Export-Permission.log"
-    $DirectoryEntryCache = [hashtable]::Synchronized(@{})
-    $DomainsBySID = [hashtable]::Synchronized(@{})
-    $DomainsByNetbios = [hashtable]::Synchronized(@{})
-    $DomainsByFqdn = [hashtable]::Synchronized(@{})
+    $DirectoryEntryCache = [hashtable]::Synchronized(@{}) 
+    $DomainsBySID = [hashtable]::Synchronized(@{}) 
+    $DomainsByNetbios = [hashtable]::Synchronized(@{}) 
+    $DomainsByFqdn = [hashtable]::Synchronized(@{}) 
     $LogBuffer = [hashtable]::Synchronized(@{}) 
     $CimCache = [hashtable]::Synchronized(@{}) 
     $AclByPath = [hashtable]::Synchronized(@{}) 
@@ -7877,11 +7944,12 @@ function Send-PrtgXmlSensorOutput {
     $AceGuidByID = [hashtable]::Synchronized(@{}) 
     $AceGuidByPath = [hashtable]::Synchronized(@{}) 
     $PrincipalByID = [hashtable]::Synchronized(@{}) 
-    $Parents = [hashtable]::Synchronized(@{})
-    $IdByShortName = [hashtable]::Synchronized(@{})
-    $ShortNameByID = [hashtable]::Synchronized(@{})
-    $ExcludeClassFilterContents = [Hashtable]::Synchronized(@{})
-    $IncludeFilterContents = [Hashtable]::Synchronized(@{})
+    $Parents = [hashtable]::Synchronized(@{}) 
+    $IdByShortName = [hashtable]::Synchronized(@{}) 
+    $ShortNameByID = [hashtable]::Synchronized(@{}) 
+    $ExcludeClassFilterContents = [hashtable]::Synchronized(@{}) 
+    $IncludeAccountFilterContents = [hashtable]::Synchronized(@{}) 
+    $ExcludeAccountFilterContents = [hashtable]::Synchronized(@{}) 
     $ThisHostname = HOSTNAME.EXE
     $WhoAmI = Get-CurrentWhoAmI -Buffer $LogBuffer -ThisHostName $ThisHostname
     $Threads = @{ ThreadCount = $ThreadCount }
@@ -8045,27 +8113,42 @@ end {
     $CommandParameters = @{
         ExcludeAccount             = $ExcludeAccount
         ExcludeClassFilterContents = $ExcludeClassFilterContents
+        ExcludeFilterContents      = $ExcludeAccountFilterContents
         IdByShortName              = $IdByShortName
         IgnoreDomain               = $IgnoreDomain
         IncludeAccount             = $IncludeAccount
-        IncludeFilterContents      = $IncludeFilterContents
+        IncludeFilterContents      = $IncludeAccountFilterContents
         PrincipalByID              = $PrincipalByID
         ShortNameByID              = $ShortNameByID
     }
     Write-LogMsg @Log -Text 'Select-PermissionPrincipal' -Expand $CommandParameters, $LogThis
     Select-PermissionPrincipal @CommandParameters @LogThis
     $ProgressUpdate = @{
-        CurrentOperation = 'Format the permissions'
+        CurrentOperation = 'Analyze the permissions against established best practices'
         PercentComplete  = 55
-        Status           = '55% (step 12 of 20) Format-Permission'
+        Status           = '55% (step 12 of 20) Invoke-PermissionAnalyzer'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
+        AclByPath                = $AclByPath
+        AllowDisabledInheritance = $Items
+        AccountConvention        = $AccountConvention
+        PrincipalByID            = $PrincipalByID
+    }
+    $BestPracticeEval = Invoke-PermissionAnalyzer @CommandParameters
+    $ProgressUpdate = @{
+        CurrentOperation = 'Format the permissions'
+        PercentComplete  = 60
+        Status           = '60 % (step 13 of 20) Format-Permission'
+    }
+    Write-Progress @Progress @ProgressUpdate
+    $CommandParameters = @{
+        Analysis                   = $BestPracticeEval
         ExcludeClassFilterContents = $ExcludeClassFilterContents
         FileFormat                 = $FileFormat
         GroupBy                    = $GroupBy
         IgnoreDomain               = $IgnoreDomain
-        IncludeFilterContents      = $IncludeFilterContents
+        IncludeFilterContents      = $IncludeAccountFilterContents
         OutputFormat               = $OutputFormat
         Permission                 = $Permissions
         ShortNameByID              = $ShortNameByID
@@ -8074,12 +8157,12 @@ end {
     $FormattedPermissions = Format-Permission @CommandParameters
     $ProgressUpdate = @{
         CurrentOperation = 'Export the report files'
-        PercentComplete  = 60
-        Status           = '60 % (step 13 of 20) Out-PermissionReport'
+        PercentComplete  = 65
+        Status           = '65 % (step 14 of 20) Out-PermissionFile'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
-        TargetPath = $TargetPath ; Parent = $Parents ; AclByPath = $AclByPath ; AceByGUID = $AceByGUID ; PrincipalByID = $PrincipalByID ;
+        BestPracticeEval = $BestPracticeEval ; TargetPath = $TargetPath ; Parent = $Parents ; AclByPath = $AclByPath ; AceByGUID = $AceByGUID ; PrincipalByID = $PrincipalByID ;
         Permission = $Permissions ; FormattedPermission = $FormattedPermissions ; BestPracticeIssue = $BestPracticeIssues ;
         Detail = $Detail ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; FileFormat = $FileFormat ;
         GroupBy = $GroupBy ; IgnoreDomain = $IgnoreDomain ; OutputDir = $OutputDir ; OutputFormat = $OutputFormat ;
@@ -8087,22 +8170,37 @@ end {
         LogFileList = $TranscriptFile, $LogFile ; LogParams = $Log ; StopWatch = $StopWatch
         ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn
     }
-    Write-LogMsg @Log -Text 'Out-PermissionReport' -Expand $CommandParameters
-    $ReportFile = Out-PermissionReport @CommandParameters
+    Write-LogMsg @Log -Text 'Out-PermissionFile' -Expand $CommandParameters
+    $ReportFile = Out-PermissionFile @CommandParameters
     $ProgressUpdate = @{
         CurrentOperation = 'Open the HTML report file (if the -Interactive switch was used)'
         PercentComplete  = 70
         Status           = '70 % (step 15 of 20) Invoke-Item'
     }
     Write-Progress @Progress @ProgressUpdate
-    if ($Interactive) {
-        Write-LogMsg @Log -Text "Invoke-Item '$ReportFile'"
-        Invoke-Item $ReportFile
+    if ($Interactive -and $ReportFile) {
+        Write-LogMsg @Log -Text "Invoke-Item -Path '$ReportFile'"
+        Invoke-Item -Path $ReportFile
     }
     $ProgressUpdate = @{
-        CurrentOperation = 'Output the result to the pipeline'
+        CurrentOperation = 'Send the results to a PRTG Custom XML Push sensor for tracking'
         PercentComplete  = 75
-        Status           = '75 % (step 16 of 20) Out-Permission'
+        Status           = '75 % (step 16 of 20) Send-PrtgXmlSensorOutput'
+    }
+    Write-Progress @Progress @ProgressUpdate
+    $CommandParameters = @{
+        XmlOutput    = $XMLOutput
+        PrtgProbe    = $PrtgProbe
+        PrtgProtocol = $PrtgProtocol
+        PrtgPort     = $PrtgPort
+        PrtgToken    = $PrtgToken
+    }
+    Write-LogMsg @Log -Text 'Send-PrtgXmlSensorOutput' -Expand $CommandParameters
+    Send-PrtgXmlSensorOutput @CommandParameters
+    $ProgressUpdate = @{
+        CurrentOperation = 'Output the result to the pipeline'
+        PercentComplete  = 80
+        Status           = '80 % (step 17 of 20) Out-Permission'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
@@ -8114,16 +8212,16 @@ end {
     Out-Permission @CommandParameters
     $ProgressUpdate = @{
         CurrentOperation = 'Cleanup CIM sessions'
-        PercentComplete  = 80
-        Status           = '80 % (step 17 of 20) Remove-CachedCimSession'
+        PercentComplete  = 85
+        Status           = '85 % (step 18 of 20) Remove-CachedCimSession'
     }
     Write-Progress @Progress @ProgressUpdate
     Write-LogMsg @Log -Text 'Remove-CachedCimSession -CimCache $CimCache'
     Remove-CachedCimSession -CimCache $CimCache
     $ProgressUpdate = @{
-        CurrentOperation = 'Write the log buffer to disk'
-        PercentComplete  = 85
-        Status           = '85 % (step 18 of 20) Export-LogCsv'
+        CurrentOperation = 'Export the buffered log messages to a CSV file'
+        PercentComplete  = 90
+        Status           = '95 % (step 19 of 20) Export-LogCsv'
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{

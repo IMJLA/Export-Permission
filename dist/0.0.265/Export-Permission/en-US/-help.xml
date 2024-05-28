@@ -278,15 +278,14 @@
           <dev:defaultValue>Permissions Report</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
-          <maml:name>GroupNameRule</maml:name>
+          <maml:name>AccountConvention</maml:name>
           <maml:description>
-            <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
+            <maml:para>Valid accounts that are allowed to appear in ACEs</maml:para>
             <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
-            <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
-            <maml:para>In the ScriptBlock, use string comparisons on the Name property</maml:para>
-            <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
-            <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
-            <maml:para>  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
+            <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance</maml:para>
+            <maml:para>In the ScriptBlock, any account properties are available for evaluation:</maml:para>
+            <maml:para>e.g. {$_.DomainNetbios -eq 'CONTOSO'} # Accounts used in ACEs should be in the CONTOSO domain e.g. {$_.Name -eq 'Group23'} # Accounts used in ACEs should be named Group23 e.g. {$ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23'}</maml:para>
+            <maml:para>The format of the ResolvedAccountName property is CONTOSO\Group1   where     CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)     and     Group1 is the samAccountName of the account</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
           <dev:type>
@@ -332,6 +331,23 @@
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+        <maml:name>AccountConvention</maml:name>
+        <maml:description>
+          <maml:para>Valid accounts that are allowed to appear in ACEs</maml:para>
+          <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
+          <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance</maml:para>
+          <maml:para>In the ScriptBlock, any account properties are available for evaluation:</maml:para>
+          <maml:para>e.g. {$_.DomainNetbios -eq 'CONTOSO'} # Accounts used in ACEs should be in the CONTOSO domain e.g. {$_.Name -eq 'Group23'} # Accounts used in ACEs should be named Group23 e.g. {$ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23'}</maml:para>
+          <maml:para>The format of the ResolvedAccountName property is CONTOSO\Group1   where     CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)     and     Group1 is the samAccountName of the account</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.ScriptBlock</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>{ $true }</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
         <maml:name>Detail</maml:name>
         <maml:description>
@@ -396,24 +412,6 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>Item</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
-        <maml:name>GroupNameRule</maml:name>
-        <maml:description>
-          <maml:para>Valid group names that are allowed to appear in ACEs</maml:para>
-          <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
-          <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any naming convention compliance</maml:para>
-          <maml:para>In the ScriptBlock, use string comparisons on the Name property</maml:para>
-          <maml:para>e.g. {$ .Name -like 'CONTOSO\Group1*' -or $ .Name -eq 'CONTOSO\Group23'}</maml:para>
-          <maml:para>The naming format that will be used for the groups is CONTOSO\Group1</maml:para>
-          <maml:para>  where CONTOSO is the NetBIOS name of the domain, and Group1 is the samAccountName of the group</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Management.Automation.ScriptBlock</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>{ $true }</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>IgnoreDomain</maml:name>

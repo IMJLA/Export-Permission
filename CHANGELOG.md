@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.265] - 2024-05-28 - restored prtg functionality
+
 ## [0.0.264] - 2024-05-22 - bugfix export-logcsv -progressparentid
 
 ## [0.0.263] - 2024-05-22 - implement out-permission to output objects
