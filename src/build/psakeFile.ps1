@@ -591,7 +591,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
     Write-Host "Current Location: $(Get-Location)"
 
-    Write-Host "Pester Tests: $($PesterConfiguration.Run.Path)"
+    Write-Host "Pester Tests: $($PesterConfiguration.Run.Path.Value)"
 
     Invoke-Pester -Configuration $PesterConfiguration
 
