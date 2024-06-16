@@ -512,7 +512,7 @@ task ConvertArt -depends BuildArt {
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
     $sourceSVG = [IO.Path]::Combine($Script:OutputDir, "favicon.svg")
     "`t. $ScriptToRun -Path '$sourceSVG'"
-    . $ScriptToRun -Path $sourceSVG -Width 512
+    . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 } -description 'Convert SVGs to PNG using Inkscape.'
 
 $pesterPreReqs = {

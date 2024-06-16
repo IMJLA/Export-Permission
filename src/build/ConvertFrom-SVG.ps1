@@ -15,7 +15,7 @@ param(
 
     [double]$Scale = 1.0,
 
-    [int[]]$Width,
+    [int[]]$ExportWidth,
 
     # Path to the Inkscape executable
     [ValidateScript( { Test-Path $_ } )]
@@ -25,15 +25,15 @@ param(
 
 begin {
 
-    if ($PSBoundParameters.ContainsKey('Width')) {
+    if ($PSBoundParameters.ContainsKey('ExportWidth')) {
 
-        Write-Host "Width parameter specified: $Width" -ForegroundColor Cyan
+        Write-Host "Width parameter specified: $ExportWidth" -ForegroundColor Cyan
 
         $ExportSizeParams = @{
             Scale = $Scale
-            Width = $Width
+            Width = $ExportWidth
         }
-        $WidthString = " -Width ($($Width -join ','))"
+        $WidthString = " -Width ($($ExportWidth -join ','))"
 
     } else {
 
