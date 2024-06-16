@@ -554,6 +554,12 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
         }
     }
 
+    if ($TestCodeCoverageEnabled) {
+        $TestCoverageEnabledString = '$true'
+    } else {
+        $TestCoverageEnabledString = '$false'
+    }
+
     $CommandString = @"
     `$PesterConfigParams = @{
         Run          = @{
@@ -570,7 +576,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
             Verbosity = 'Diagnostic'
         }
         TestResult   = @{
-            Enabled      = $true
+            Enabled      = `$true
             OutputPath   = '$TestsResultFile'
             OutputFormat = '$TestOutputFormat'
         }
