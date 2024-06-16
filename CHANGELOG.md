@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.322] - 2024-06-16 - troubleshoot convertfrom-svg
 ## [0.0.321] - 2024-06-16 - troubleshoot convertfrom-svg
 ## [0.0.320] - 2024-06-16 - troubleshoot convertfrom-svg
 ## [0.0.319] - 2024-06-16 - test
