@@ -2,7 +2,7 @@ BeforeDiscovery {
 
     Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'MetaFixers.psm1') -Verbose:$false -Force
 
-    $SourceCodePath = $PSScriptRoot -replace 'tests', 'src'
+    $SourceCodePath = [IO.Path]::Combine($PSScriptRoot.Replace('tests', 'src'), 'script')
 
     $MainScript = Get-ChildItem -LiteralPath $SourceCodePath -Include *.ps1
     #Write-Information "MainScript: $($MainScript | Format-List * | Out-String)"
