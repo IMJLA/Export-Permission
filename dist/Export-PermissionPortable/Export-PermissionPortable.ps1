@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.306
+.VERSION 0.0.307
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add invoke-inkscape build output to console for debugging
+troubleshoot inkscape
 
 .PRIVATEDATA
 
