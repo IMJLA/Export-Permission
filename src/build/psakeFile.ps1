@@ -145,7 +145,7 @@ properties {
 
 FormatTaskName {
     param($taskName)
-    Write-Host 'Task: ' -ForegroundColor Cyan -NoNewline
+    Write-Host "$NewLine`Task: " -ForegroundColor Cyan -NoNewline
     Write-Host $taskName -ForegroundColor Blue
 }
 
@@ -169,7 +169,7 @@ task Lint -precondition { $script:FindBuildModule } {
         SeverityThreshold = $LintSeverityThreshold
         SettingsPath      = $LintSettingsFile
     }
-    "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
+    "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'"
     Test-PSBuildScriptAnalysis @lintParams
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
 
@@ -189,7 +189,7 @@ task DetermineNewVersionNumber -Depends Lint {
         "`tThis is a new build"
         [version]$script:NewVersion = "$([int]$OldVersion.Major).$([int]$OldVersion.Minor).$([int]$OldVersion.Build + 1)"
     }
-    "`tNew Version: $script:NewVersion$NewLine"
+    "`tNew Version: $script:NewVersion"
 
     $script:BuildOutputFolder = [IO.Path]::Combine(
         $BuildOutDir,
@@ -204,7 +204,7 @@ task DetermineNewVersionNumber -Depends Lint {
 
 task UpdateScriptVersion -Depends DetermineNewVersionNumber {
 
-    "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'$NewLine"
+    "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
     Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
 
     # Supposedly will be resolved in 3.0.15 but right now there is a bug in Update-ScriptFileInfo that adds blank lines after the PSScriptInfo block
@@ -218,7 +218,7 @@ task UpdateScriptVersion -Depends DetermineNewVersionNumber {
 } -description 'Update PSScriptInfo with the new version.'
 
 task DeleteOldBuilds -depends UpdateScriptVersion {
-    "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force$NewLine"
+    "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
     Get-ChildItem -Directory -Path $BuildOutDir |
     Remove-Item -Recurse -Force
 } -description 'Rotate old builds out of the output directory.'
@@ -234,7 +234,7 @@ TODO
 #>
 
     $ChangeLog = [IO.Path]::Combine('..', '..', 'CHANGELOG.md')
-    $NewChanges = "## [$script:NewVersion] - $(Get-Date -format 'yyyy-MM-dd') - $CommitMessage$NewLine"
+    $NewChanges = "## [$script:NewVersion] - $(Get-Date -format 'yyyy-MM-dd') - $CommitMessage"
     "`tChange Log:  $ChangeLog"
     "`tNew Changes: $NewChanges"
     [string[]]$ChangeLogContents = Get-Content -Path $ChangeLog
@@ -253,7 +253,7 @@ TODO
 task BuildReleaseForDistribution -depends UpdateChangeLog {
 
     # Create a new output directory
-    "`tNew Release: $($script:BuildOutputFolder)$NewLine"
+    "`tNew Release: $($script:BuildOutputFolder)"
     $null = New-Item -Path $script:BuildOutputFolder -ItemType Directory
     $FolderName = $script:BuildOutputFolder | Split-Path -Leaf
 
@@ -266,7 +266,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
     if ($PSBoundParameters.ContainsKey('PortableVersionGuid')) {
 
         # Create a new output directory
-        "`tNew Release: $($script:BuildOutputFolderForPortableVersion)$NewLine"
+        "`tNew Release: $($script:BuildOutputFolderForPortableVersion)"
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
         # Read in the current contents of the script
@@ -403,7 +403,7 @@ task FindPlatyPS {
 
 task DeleteMarkdownHelp -depends BuildReleaseForDistribution -precondition { $script:PlatyPS } {
     $MarkdownDir = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
-    "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item$NewLine"
+    "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item"
     Get-ChildItem -Path $MarkdownDir -Recurse | Remove-Item
 } -description 'Delete existing Markdown files to prepare for PlatyPS to build new ones.'
 
@@ -432,7 +432,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         UseFullTypeName       = $true
         Verbose               = $VerbosePreference
     }
-    "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$OutputFolder'...$NewLine"
+    "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$OutputFolder'..."
     $MarkdownHelp = New-MarkdownHelp @newMDParams
 
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
@@ -456,7 +456,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 } -description 'Generate Markdown files from the comment-based help.'
 
 task BuildMAMLHelp -depends BuildMarkdownHelp -precondition { $script:PlatyPS } {
-    "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'$NewLine"
+    "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
 } -description 'Generates MAML-based help from PlatyPS Markdown files using PowerShellBuild to call New-ExternalHelp.'
 
@@ -505,12 +505,15 @@ task BuildOnlineHelp -depends BuildMAMLHelp {
 task BuildArt -depends BuildOnlineHelp {
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
     $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
+    "`t. $ScriptToRun -OutputDir '$OutputDir'"
     . $ScriptToRun -OutputDir $OutputDir
 } -description 'Build SVG art using PSSVG.'
 
 task ConvertArt -depends BuildArt {
+    $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
     $sourceSVG = [IO.Path]::Combine($Script:OutputDir, "favicon.svg")
-    . ./ConvertFrom-SVG.ps1 -Path $sourceSVG
+    "`t. $ScriptToRun -Path '$sourceSVG'"
+    . $ScriptToRun -Path $sourceSVG
 } -description 'Convert SVGs to PNG using Inkscape.'
 
 $pesterPreReqs = {
@@ -531,7 +534,7 @@ $pesterPreReqs = {
 }
 
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
-    $pesterParams = @{
+    $PesterConfigParams = @{
         Run          = @{
             Path = $TestsDir
         }
@@ -552,8 +555,37 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
         }
     }
 
-    $Config = New-PesterConfiguration -Hashtable $pesterParams
-    Invoke-Pester -Configuration $Config
+    $CommandString = @"
+    `$PesterConfigParams = @{
+        Run          = @{
+            Path = '$TestsDir'
+        }
+        CodeCoverage = @{
+            CoveragePercentTarget = $TestCodeCoverageThreshold
+            Enabled               = $TestCodeCoverageEnabled
+            OutputFormat          = '$TestCodeCoverageOutputFormat'
+            OutputPath            = '$TestCodeCoverageOutputFile'
+            Path                  = '$TestCodeCoverageFiles'
+        }
+        Output       = @{
+            Verbosity = 'Diagnostic'
+        }
+        TestResult   = @{
+            Enabled      = $true
+            OutputPath   = '$TestsResultFile'
+            OutputFormat = '$TestOutputFormat'
+        }
+    }
+"@
+    $CommandString
+
+    $CommandString = '$PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams'
+    "`t$CommandString"
+    $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
+
+    $CommandString = 'Invoke-Pester -Configuration $PesterConfiguration'
+    "`t$CommandString"
+    Invoke-Pester -Configuration $PesterConfiguration
 } -description 'Execute Pester tests'
 
 task SourceControl -depends UnitTests {
