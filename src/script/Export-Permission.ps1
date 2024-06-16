@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.326
+.VERSION 0.0.327
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-use io.path combine method
+test
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ use io.path combine method
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

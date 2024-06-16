@@ -9,7 +9,9 @@ param (
 
 )
 
-$srcDimensions = . ./Get-SVGDimension.ps1 -Content $Content
+Write-Host "CURRENT LOCATION: $(Get-Location)"
+$ScriptToRun = [IO.Path]::Combine('.', 'Get-SVGDimension.ps1')
+$srcDimensions = . $ScriptToRun -Content $Content
 
 if ($PSBoundParameters.ContainsKey('Width')) {
 
