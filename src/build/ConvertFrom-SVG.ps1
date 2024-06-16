@@ -27,13 +27,13 @@ begin {
 
     if ($PSBoundParameters.ContainsKey('ExportWidth')) {
 
-        Write-Host "Width parameter specified: $ExportWidth" -ForegroundColor Cyan
+        Write-Host "ExportWidth parameter specified: $ExportWidth" -ForegroundColor Cyan
 
         $ExportSizeParams = @{
             Scale = $Scale
             Width = $ExportWidth
         }
-        $WidthString = " -Width ($($ExportWidth -join ','))"
+        $WidthString = " -Width ($($ExportSizeParams['Width'] -join ','))"
 
     } else {
 
