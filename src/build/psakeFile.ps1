@@ -182,7 +182,7 @@ task GetScriptFileInfo -Depends Lint {
     "`t`$Script:ScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
     $Script:ScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
-}
+} -description 'Parse the ScriptFileInfo block at the beginning of the script.'
 
 task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
@@ -212,36 +212,19 @@ task UpdateScriptVersion -Depends DetermineNewVersionNumber {
 } -description 'Update PSScriptInfo with the new version.'
 
 task DeleteOldBuilds -depends UpdateScriptVersion {
+
     "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
     Get-ChildItem -Directory -Path $BuildOutDir |
     Remove-Item -Recurse -Force
+
 } -description 'Rotate old builds out of the output directory.'
 
 task UpdateChangeLog -depends DeleteOldBuilds -Action {
-    <#
-    TODO
-    This task runs before the Test task so that tests of the change log will pass
-    But I also need one that runs *after* the build to compare it against the previous build
-    The post-build UpdateChangeLog will automatically add to the change log any:
-        New/removed exported commands
-        New/removed files
-    #>
 
-    $ChangeLog = [IO.Path]::Combine('..', '..', 'CHANGELOG.md')
-    $NewChanges = "## [$script:NewVersion] - $(Get-Date -format 'yyyy-MM-dd') - $CommitMessage"
-    "`tChange Log:  $ChangeLog"
-    "`tNew Changes: $NewChanges"
-    [string[]]$ChangeLogContents = Get-Content -Path $ChangeLog
-    $LineNumberOfLastChange = Select-String -Path $ChangeLog -Pattern '^\#\# \[\d*\.\d*\.\d*\]' |
-    Select-Object -First 1 -ExpandProperty LineNumber
-    $HeaderLineCount = $LineNumberOfLastChange - 1
-    $NewChangeLogContents = [System.Collections.Specialized.StringCollection]::new()
-    $null = $NewChangeLogContents.AddRange(($ChangeLogContents |
-            Select-Object -First $HeaderLineCount))
-    $null = $NewChangeLogContents.Add($NewChanges)
-    $null = $NewChangeLogContents.AddRange(($ChangeLogContents |
-            Select-Object -Skip $HeaderLineCount))
-    $NewChangeLogContents | Out-File -FilePath $ChangeLog -Encoding utf8 -Force
+    $ScriptToRun = [IO.Path]::Combine('.', 'Update-ChangeLog.ps1')
+    "`t. $ScriptToRun -Version $script:NewVersion -CommitMessage '$CommitMessage'"
+    . $ScriptToRun -NewLine $NewLine -Version $script:NewVersion -CommitMessage $CommitMessage
+
 } -description 'Add an entry to the the Change Log.'
 
 task CreateReleaseFolder -depends UpdateChangeLog {
