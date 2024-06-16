@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.340] - 2024-06-16
+### Fixed
+- fix outdated metadata in portable script version
+
 ## [0.0.339] - 2024-06-16
 ### Changed
 - minor dependency updates

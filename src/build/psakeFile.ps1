@@ -1,6 +1,3 @@
-# Initialize the BuildHelpers environment variables here so they are usable in all child scopes including the psake properties block
-#BuildHelpers\Set-BuildEnvironment -Force
-
 properties {
 
     [boolean]$IncrementMajorVersion = $false
@@ -179,18 +176,18 @@ task Lint -precondition { $script:FindBuildModule } {
 
 task GetScriptFileInfo -Depends Lint {
 
-    "`t`$Script:ScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
-    $Script:ScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
+    "`t`$Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
+    $Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
 } -description 'Parse the ScriptFileInfo block at the beginning of the script.'
 
 task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
-    "`tOld Version: $($Script:ScriptFileInfo.Version)"
+    "`tOld Version: $($Script:OldScriptFileInfo.Version)"
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
-    "`t. $ScriptToRun -ScriptFileInfo `$Script:ScriptFileInfo -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
-    $script:NewVersion = . $ScriptToRun -ScriptFileInfo $Script:ScriptFileInfo -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
+    "`t. $ScriptToRun -ScriptFileInfo `$Script:OldScriptFileInfo -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
+    $script:NewVersion = . $ScriptToRun -ScriptFileInfo $Script:OldScriptFileInfo -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
 
     "`tNew Version: $script:NewVersion"
 
@@ -231,7 +228,7 @@ task CreateReleaseFolder -depends UpdateChangeLog {
 
     $script:BuildOutputFolder = [IO.Path]::Combine(
         $BuildOutDir,
-        $Script:ScriptFileInfo.Name
+        $Script:OldScriptFileInfo.Name
     )
 
     # Create a new output directory
@@ -246,7 +243,7 @@ task CreatePortableReleaseFolder -depends CreateReleaseFolder {
 
         $script:BuildOutputFolderForPortableVersion = [IO.Path]::Combine(
             $BuildOutDir,
-            "$($Script:ScriptFileInfo.Name)Portable"
+            "$($Script:OldScriptFileInfo.Name)Portable"
         )
 
         # Create a new output directory
@@ -287,8 +284,12 @@ task BuildPortableRelease -depends BuildRelease {
         # Add the first half of the script to our target collection (everything up until the place in our script we intend to insert all the module code)
         $null = $PortableScriptContent.Add($Matches.Groups[1].Value)
 
+        # Get updated Script metadata
+        "`t`$Script:NewScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
+        $Script:NewScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
+
         # Add the constituent code of each module
-        ForEach ($ThisModuleName in $Script:ScriptFileInfo.RequiredModules.Name) {
+        ForEach ($ThisModuleName in $Script:NewScriptFileInfo.RequiredModules.Name) {
 
             # Get the latest version of the module
             $ThisModule = Get-Module -Name $ThisModuleName -ListAvailable |
@@ -375,16 +376,17 @@ task BuildPortableRelease -depends BuildRelease {
 
         # Assign the correct GUID to the portable version of the script (it should be unique, not shared with the other script)
         $Properties = @{
-            Version      = $Script:ScriptFileInfo.Version
-            Description  = $Script:ScriptFileInfo.Description
-            Author       = $Script:ScriptFileInfo.Author
-            CompanyName  = $Script:ScriptFileInfo.CompanyName
-            Copyright    = $Script:ScriptFileInfo.Copyright
-            Tags         = $Script:ScriptFileInfo.Tags
-            ReleaseNotes = [string]$Script:ScriptFileInfo.ReleaseNotes
-            LicenseUri   = $Script:ScriptFileInfo.LicenseUri
-            ProjectUri   = $Script:ScriptFileInfo.ProjectUri
+            Version      = $Script:NewScriptFileInfo.Version
+            Description  = $Script:NewScriptFileInfo.Description
+            Author       = $Script:NewScriptFileInfo.Author
+            CompanyName  = $Script:NewScriptFileInfo.CompanyName
+            Copyright    = $Script:NewScriptFileInfo.Copyright
+            Tags         = $Script:NewScriptFileInfo.Tags
+            ReleaseNotes = [string]$Script:NewScriptFileInfo.ReleaseNotes
+            LicenseUri   = $Script:NewScriptFileInfo.LicenseUri
+            ProjectUri   = $Script:NewScriptFileInfo.ProjectUri
         }
+        "`t`New-ScriptFileInfo -Path '$PortableScriptFilePath' -Version '$($Script:NewScriptFileInfo.Version)' -Guid '$PortableVersionGuid' -Force"
         New-ScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
 
         # New-PSScriptFileInfo creates a file which is not accepted by Test-ScriptFileInfo (and therefore not accepted by PSGallery)
@@ -420,11 +422,11 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
         ErrorAction           = 'SilentlyContinue'
         Force                 = $true
-        Command               = $MainScript # [IO.Path]::Combine('..','..','src',"$($Script:ScriptFileInfo.Name).ps1")
+        Command               = $MainScript
         Metadata              = @{
-            'script guid'  = $Script:ScriptFileInfo.Guid
+            'script guid'  = $Script:NewScriptFileInfo.Guid
             locale         = $HelpDefaultLocale
-            'help version' = $Script:ScriptFileInfo.Version
+            'help version' = $Script:NewScriptFileInfo.Version
             #'download help link' = 'N/A'
         }
         # TODO: Using GitHub pages as a container for PowerShell Updatable Help https://gist.github.com/TheFreeman193/fde11aee6998ad4c40a314667c2a3005
@@ -576,7 +578,7 @@ task SourceControl -depends UnitTests {
     "`tgit commit -m $CommitMessage$NewLine"
     git commit -m $CommitMessage
 
-    "$NewLine`tgit push origin $CurrentBranch"
+    "$NewLine`tgit push origin $CurrentBranch$NewLine"
     git push origin $CurrentBranch
 
 } -description 'git add, commit, and push'
