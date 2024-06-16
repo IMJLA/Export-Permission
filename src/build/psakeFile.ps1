@@ -265,14 +265,15 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
 
     $script:ReleasedScript = Get-ChildItem -LiteralPath $script:BuildOutputFolder -Include *.ps1
 
-    if ($PSBoundParameters.ContainsKey('PortableVersionGuid')) {
+    if ($PortableVersionGuid) {
 
         # Create a new output directory
         "`tNew Release: $($script:BuildOutputFolderForPortableVersion)"
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
         # Read in the current contents of the script
-        $MainScriptContent = $MainScript | Get-Content -Raw
+        "`t'$MainScript' | Get-Content -Raw"
+        $MainScriptContent = Get-Content -LiteralPath $MainScript -Raw
 
         # Prep an empty collection of strings to store our new portable script
         $PortableScriptContent = [System.Collections.Generic.List[string]]::New()
@@ -588,11 +589,17 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 } -description 'Execute Pester tests'
 
 task SourceControl -depends UnitTests {
+
+    "`tgit branch --show-current"
+    "`tgit add ../.."
+    "`tgit commit -m $CommitMessage"
+    "`tgit push origin $CurrentBranch"
+
     $CurrentBranch = git branch --show-current
-    # Commit to Git
     git add .
     git commit -m $CommitMessage
     git push origin $CurrentBranch
+
 } -description 'git add, commit, and push'
 
 #task Publish -depends SourceControl {
