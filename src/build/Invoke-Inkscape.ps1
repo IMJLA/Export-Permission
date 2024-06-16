@@ -22,6 +22,6 @@ param (
 
 )
 
-$command = "& `"$ExecutablePath`" --export-filename=`"$ExportFileName`" --export-width=$ExportWidth --export-height=$ExportHeight `"$SourceFileName`""
-Write-Debug $command
-Invoke-Expression $command
+$Command = "& `"$ExecutablePath`" --export-filename=`"$ExportFileName`" --export-width=$ExportWidth --export-height=$ExportHeight `"$SourceFileName`""
+"`t$Command"
+Invoke-Expression $Command
