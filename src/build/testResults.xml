@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="1" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2024-06-16" time="11:05:54">
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="1" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2024-06-16" time="11:06:17">
   <environment user-domain="JLA-LoftHTPC" user="Owner" clr-version="8.0.4" machine-name="JLA-LOFTHTPC" os-version="10.0.19044" platform="Microsoft Windows 10 Pro|C:\WINDOWS|\Device\Harddisk0\Partition2" nunit-version="2.5.8.0" cwd="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\src\build" />
   <culture-info current-culture="en-US" current-uiculture="en-US" />
-  <test-suite type="TestFixture" name="Pester" executed="True" result="Success" success="True" time="0.2498" asserts="0" description="Pester">
+  <test-suite type="TestFixture" name="Pester" executed="True" result="Success" success="True" time="0.1923" asserts="0" description="Pester">
     <results>
-      <test-suite type="TestFixture" name="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\Export-Permission.tests.ps1" executed="True" result="Success" success="True" time="0.2206" asserts="0" description="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\Export-Permission.tests.ps1">
+      <test-suite type="TestFixture" name="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\Export-Permission.tests.ps1" executed="True" result="Success" success="True" time="0.1639" asserts="0" description="E:\Owner\Documents\Google Drive\Programs\Scripts\PowerShell\Export-Permission\tests\Export-Permission.tests.ps1">
         <results>
-          <test-suite type="TestFixture" name="Should include BUILTIN\Guests" executed="True" result="Success" success="True" time="0.0761" asserts="0" description="Should include BUILTIN\Guests">
+          <test-suite type="TestFixture" name="Should include BUILTIN\Guests" executed="True" result="Success" success="True" time="0.0502" asserts="0" description="Should include BUILTIN\Guests">
             <results>
-              <test-case description="the test" name="Should include BUILTIN\Guests.the test" time="0.0194" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="the test" name="Should include BUILTIN\Guests.the test" time="0.0308" asserts="0" success="True" result="Success" executed="True" />
             </results>
           </test-suite>
         </results>
