@@ -25,8 +25,6 @@ $InkscapeParams = @{
     SourceFileName = $Path
 }
 
-"`tCURRENT LOCATION: $(Get-Location)"
-
 $Folder = $Path | Split-Path
 
 ForEach ($Size in $ExportSize) {

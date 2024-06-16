@@ -564,17 +564,17 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
 task SourceControl -depends UnitTests {
 
-    "`tgit branch --show-current"
+    "`tgit branch --show-current$NewLine"
     $CurrentBranch = git branch --show-current
-    $CurrentBranch
+    "$CurrentBranch$NewLine"
 
     "`tgit add ../.."
     git add ../..
 
-    "`tgit commit -m $CommitMessage"
+    "`tgit commit -m $CommitMessage$NewLine"
     git commit -m $CommitMessage
 
-    "`tgit push origin $CurrentBranch$NewLine"
+    "`tgit push origin $CurrentBranch"
     git push origin $CurrentBranch
 
 } -description 'git add, commit, and push'
