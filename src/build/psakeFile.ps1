@@ -272,7 +272,6 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
         # Read in the current contents of the script
-        "`t'$MainScript' | Get-Content -Raw"
         $MainScriptContent = Get-Content -LiteralPath $MainScript -Raw
 
         # Prep an empty collection of strings to store our new portable script
@@ -596,7 +595,7 @@ task SourceControl -depends UnitTests {
     "`tgit push origin $CurrentBranch"
 
     $CurrentBranch = git branch --show-current
-    git add .
+    git add ../..
     git commit -m $CommitMessage
     git push origin $CurrentBranch
 

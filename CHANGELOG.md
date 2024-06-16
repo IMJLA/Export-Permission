@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.278] - 2024-06-16 - fix git add command due to new psakefile location
+## [0.0.277] - 2024-06-16 - fix psakefile after build changes
+## [0.0.276] - 2024-06-16 - fix psakefile after build changes
+## [0.0.275] - 2024-06-16 - fix psakefile after build changes
+## [0.0.274] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+## [0.0.3] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+## [0.0.2] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+## [0.0.1] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+## [0.0.272] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+## [0.0.271] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+
+## [0.0.270] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+
+## [0.0.269] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+
+## [0.0.268] - 2024-06-16 - implementing pssvg and docusaurus and inkscape
+
+## [0.0.267] - 2024-06-16 - implementing docusaurus and pssvg and inkscape
+
+## [0.0.266] - 2024-06-16 - implementing docusaurus and pssvg and inkscape
+
 ## [0.0.265] - 2024-05-28 - restored prtg functionality
 
 ## [0.0.264] - 2024-05-22 - bugfix export-logcsv -progressparentid

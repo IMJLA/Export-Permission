@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.265
+.VERSION 0.0.278
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-restored prtg functionality
+fix git add command due to new psakefile location
 
 .PRIVATEDATA
 
@@ -39,6 +39,8 @@ restored prtg functionality
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
+
 
 
 

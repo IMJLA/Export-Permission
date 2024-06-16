@@ -1,2 +1,2 @@
-# Don't check in the Output dir
-Output/
+# Don't check in the out dir because it contains PII
+out/

@@ -1,8 +1,8 @@
 ---
 external help file: -help.xml
-help version: 0.0.264
+help version: 0.0.277
 locale: en-US
-script name: Export-Permission.ps1
+script name: 
 online version:
 schema: 2.0.0
 script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
