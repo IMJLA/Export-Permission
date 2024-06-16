@@ -15,7 +15,7 @@ if ($PSBoundParameters.ContainsKey('Width')) {
 
     ForEach ($ThisWidth in $Width) {
 
-        $Scale = $Width / $srcDimensions.Width
+        $Scale = $ThisWidth / $srcDimensions.Width
 
         [PSCustomObject]@{
             Height = $srcDimensions.Height * $Scale

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.310
+.VERSION 0.0.311
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test with favicon width of 512
+bugfix Get-ExportSize and cleanup source control console output
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ test with favicon width of 512
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

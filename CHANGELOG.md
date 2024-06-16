@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.311] - 2024-06-16 - bugfix Get-ExportSize and cleanup source control console output
 ## [0.0.310] - 2024-06-16 - test with favicon width of 512
 ## [0.0.309] - 2024-06-16 - troubleshoot Export-Inkscape
 ## [0.0.308] - 2024-06-16 - troubleshoot inkscape
