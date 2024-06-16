@@ -166,7 +166,7 @@ task Lint -precondition { $script:FindBuildModule } {
         SeverityThreshold = $LintSeverityThreshold
         SettingsPath      = $LintSettingsFile
     }
-    "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'"
+    "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
     Test-PSBuildScriptAnalysis @lintParams
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
 
@@ -575,16 +575,13 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
             OutputFormat = '$TestOutputFormat'
         }
     }
+    `$PesterConfiguration = New-PesterConfiguration -Hashtable `$PesterConfigParams
+    Invoke-Pester -Configuration `$PesterConfiguration$NewLine
 "@
-    $CommandString
 
-    $CommandString = '$PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams'
-    "`t$CommandString"
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
-
-    $CommandString = 'Invoke-Pester -Configuration $PesterConfiguration'
-    "`t$CommandString"
     Invoke-Pester -Configuration $PesterConfiguration
+
 } -description 'Execute Pester tests'
 
 task SourceControl -depends UnitTests {

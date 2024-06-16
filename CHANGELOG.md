@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.282] - 2024-06-16 - fix psake output formatting
 ## [0.0.281] - 2024-06-16 - add out folder to gitignore
 ## [0.0.280] - 2024-06-16 - keep the out directory
 ## [0.0.279] - 2024-06-16 - clear test results from out directory
