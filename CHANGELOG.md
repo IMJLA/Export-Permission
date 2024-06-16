@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.316] - 2024-06-16 - add debugging for get-exportsize
 ## [0.0.315] - 2024-06-16 - add debugging for get-exportsize
 ## [0.0.314] - 2024-06-16 - add console output to debug convertfrom-svg
 ## [0.0.313] - 2024-06-16 - cleanup console output
