@@ -33,7 +33,7 @@ begin {
             Scale = $Scale
             Width = $ExportWidth
         }
-        $WidthString = " -Width ($($ExportSizeParams['Width'] -join ','))"
+        $WidthString = " -Width ($ExportWidth -join ','))"
 
     } else {
 
