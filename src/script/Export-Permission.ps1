@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.279
+.VERSION 0.0.280
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-clear test results from out directory
+keep the out directory
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ clear test results from out directory
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
