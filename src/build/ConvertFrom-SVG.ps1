@@ -54,7 +54,7 @@ process {
         [xml]$Content = Get-Content -Path $ThisPath
 
         "`t`$ExportSizes = . ./Get-ExportSize.ps1 -Content `$Content -Scale $Scale$WidthString"
-        $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content @ExportSizeParams
+        $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content -Width 512 # @ExportSizeParams
 
         $NewLine
 

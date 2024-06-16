@@ -11,7 +11,7 @@ param (
 
 $srcDimensions = . ./Get-SVGDimension.ps1 -Content $Content
 
-if ($Width) {
+if ($PSBoundParameters.ContainsKey('Width')) {
 
     Write-Host "Width parameter specified: $Width" -ForegroundColor Cyan
 
