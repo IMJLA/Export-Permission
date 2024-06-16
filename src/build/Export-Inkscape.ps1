@@ -27,7 +27,8 @@ $InkscapeParams = @{
 
 ForEach ($Size in $ExportSize) {
 
-    $ExportFileName = [System.IO.Path]::Combine($Path.Directory, "$($Path.Name)-$($Size.Width)`x$($Size.Height).$OutputFormat")
+    $FileName = "$($Path.BaseName)-$($Size.Width)`x$($Size.Height).$OutputFormat"
+    $ExportFileName = [System.IO.Path]::Combine($Path.Directory, $FileName)
     "`t. ./Invoke-Inkscape.ps1 -SourceFileName '$Path' -ExportFileName '$ExportFileName' -ExportWidth $($Size.Width) -ExportHeight $($Size.Height) -ExecutablePath '$ExecutablePath'"
     . ./Invoke-Inkscape.ps1 -ExportFileName $ExportFileName -ExportWidth $Size.Width -ExportHeight $Size.Height @InkscapeParams
 

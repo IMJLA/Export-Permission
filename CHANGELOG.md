@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.305] - 2024-06-16 - bugfix export-inkscape
 ## [0.0.304] - 2024-06-16 - troubleshoot inkscape
 ## [0.0.303] - 2024-06-16 - troubleshoot inkscape
 ## [0.0.302] - 2024-06-16 - reduce verbosity of psakefile output regarding pester now that troubleshooting and changes are complete
