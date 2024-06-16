@@ -252,7 +252,7 @@ task CreateReleaseFolder -depends UpdateChangeLog {
     )
 
     # Create a new output directory
-    "`tNew Release: $($script:BuildOutputFolder)"
+    "`tNew-Item -Path '$script:BuildOutputFolder' -ItemType Directory"
     $null = New-Item -Path $script:BuildOutputFolder -ItemType Directory
 
 }
@@ -267,7 +267,7 @@ task CreatePortableReleaseFolder -depends CreateReleaseFolder {
         )
 
         # Create a new output directory
-        "`tNew Release: $($script:BuildOutputFolderForPortableVersion)"
+        "`tNew-Item -Path '$script:BuildOutputFolderForPortableVersion' -ItemType Directory"
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
     }
