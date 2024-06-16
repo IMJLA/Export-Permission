@@ -23,20 +23,3 @@ $ChangeLog = [IO.Path]::Combine('..', '..', 'CHANGELOG.md')
 Add-ChangelogData -Type $Type -Data $CommitMessage -Path $ChangeLog
 "`tUpdate-Changelog -Version '$Version' -LinkMode 'None' -Path '$ChangeLog'"
 Update-Changelog -ReleaseVersion $Version -LinkMode 'None' -Path $ChangeLog
-
-<#
-$NewChanges = "## [$Version] - $(Get-Date -format 'yyyy-MM-dd')$NewLine### Changed$NewLine- $CommitMessage"
-"`tChange Log:  $ChangeLog"
-"`tNew Changes: $NewChanges"
-[string[]]$ChangeLogContents = Get-Content -Path $ChangeLog
-$LineNumberOfLastChange = Select-String -Path $ChangeLog -Pattern '^\#\# \[\d*\.\d*\.\d*\]' |
-Select-Object -First 1 -ExpandProperty LineNumber
-$HeaderLineCount = $LineNumberOfLastChange - 1
-$NewChangeLogContents = [System.Collections.Specialized.StringCollection]::new()
-$null = $NewChangeLogContents.AddRange(($ChangeLogContents |
-        Select-Object -First $HeaderLineCount))
-$null = $NewChangeLogContents.Add($NewChanges)
-$null = $NewChangeLogContents.AddRange(($ChangeLogContents |
-        Select-Object -Skip $HeaderLineCount))
-$NewChangeLogContents | Out-File -FilePath $ChangeLog -Encoding utf8 -Force
-#>

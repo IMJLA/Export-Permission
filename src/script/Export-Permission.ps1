@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.338
+.VERSION 0.0.339
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test build
+minor dependency updates
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ test build
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
