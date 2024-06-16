@@ -33,7 +33,7 @@ begin {
             Scale = $Scale
             Width = $ExportWidth
         }
-        $WidthString = " -Width ($ExportWidth -join ','))"
+        $WidthString = " -Width ($($ExportWidth -join ','))"
 
     } else {
 
@@ -53,8 +53,9 @@ process {
         "`t[xml]`$Content = Get-Content -Path '$ThisPath'"
         [xml]$Content = Get-Content -Path $ThisPath
 
-        "`t`$ExportSizes = . ./Get-ExportSize.ps1 -Content `$Content -Scale $Scale$WidthString"
-        $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content -Width 512 # @ExportSizeParams
+        $ScriptToRun = [IO.Path]::Combine('.', 'Get-ExportSize.ps1')
+        "`t`$ExportSizes = . $ScriptToRun -Content `$Content -Scale $Scale$WidthString"
+        $ExportSizes = . $ScriptToRun -Content $Content -Width 512 # @ExportSizeParams
 
         $NewLine
 
@@ -66,8 +67,9 @@ process {
             $NewLine
         }
 
-        "`t. ./Export-Inkscape.ps1 -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
-        . ./Export-Inkscape.ps1 -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
+        $ScriptToRun = [IO.Path]::Combine('.', 'Export-Inkscape.ps1')
+        "`t. $ScriptToRun -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
+        . $ScriptToRun -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
 
     }
 

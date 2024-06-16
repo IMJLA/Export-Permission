@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.326] - 2024-06-16 - use io.path combine method
 ## [0.0.325] - 2024-06-16 - troubleshoot get-exportsize
 ## [0.0.324] - 2024-06-16 - troubleshoot convertfrom-svg
 ## [0.0.323] - 2024-06-16 - troubleshoot convertfrom-svg

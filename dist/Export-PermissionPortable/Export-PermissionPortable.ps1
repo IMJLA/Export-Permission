@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.324
+.VERSION 0.0.325
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-troubleshoot convertfrom-svg
+troubleshoot get-exportsize
 
 .PRIVATEDATA
 
