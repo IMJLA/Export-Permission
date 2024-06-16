@@ -569,10 +569,6 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 "@
     $CommandString
 
-    Write-Host "Current Location: $(Get-Location)"
-
-    Write-Host "Pester Tests: $($PesterConfiguration.Run.Path.Value)"
-
     $PesterConfigParams = @{
         Run          = @{
             Path = $TestsDir
@@ -595,6 +591,10 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
     }
 
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
+
+    Write-Host "Current Location: $(Get-Location)"
+
+    Write-Host "Pester Tests: $($PesterConfiguration.Run.Path.Value)"
 
     Invoke-Pester -Configuration $PesterConfiguration
 
