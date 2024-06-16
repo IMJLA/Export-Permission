@@ -574,7 +574,7 @@ task SourceControl -depends UnitTests {
     "`tgit commit -m $CommitMessage$NewLine"
     git commit -m $CommitMessage
 
-    "`tgit push origin $CurrentBranch"
+    "$NewLine`tgit push origin $CurrentBranch"
     git push origin $CurrentBranch
 
 } -description 'git add, commit, and push'

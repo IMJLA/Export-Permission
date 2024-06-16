@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.312
+.VERSION 0.0.313
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-cleanup inkscape debug output
+cleanup console output
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ cleanup inkscape debug output
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

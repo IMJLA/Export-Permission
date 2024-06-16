@@ -27,14 +27,15 @@ begin {
 
     if ($PSBoundParameters.ContainsKey('Width')) {
 
-        $GetIconSizeParams = @{
+        $ExportSizeParams = @{
             Scale = $Scale
             Width = $Width
         }
+        $WidthString = " -Width ($($Width -join ','))"
 
     } else {
 
-        $GetIconSizeParams = @{
+        $ExportSizeParams = @{
             Scale = $Scale
         }
 
@@ -50,8 +51,8 @@ process {
         "`t[xml]`$Content = Get-Content -Path '$ThisPath'"
         [xml]$Content = Get-Content -Path $ThisPath
 
-        "`t`$ExportSizes = . ./Get-ExportSize.ps1 -Content `$Content $GetIconSizeParams"
-        $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content @GetIconSizeParams
+        "`t`$ExportSizes = . ./Get-ExportSize.ps1 -Content `$Content -Scale $Scale$WidthString"
+        $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content @ExportSizeParams
 
         "`t. ./Export-Inkscape.ps1 -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
         . ./Export-Inkscape.ps1 -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
