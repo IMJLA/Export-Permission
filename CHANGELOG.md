@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.338] - 2024-06-16
+### Changed
+- test build
+
 ## [0.0.337] - 2024-06-16
 ### Added
-- implement changelogmanagement module
 - implement changelogmanagement module
 
 ## [0.0.335] - 2024-06-16
