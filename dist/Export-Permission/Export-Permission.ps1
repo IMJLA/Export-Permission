@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.302
+.VERSION 0.0.303
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-reduce verbosity of psakefile output regarding pester now that troubleshooting and changes are complete
+troubleshoot inkscape
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ reduce verbosity of psakefile output regarding pester now that troubleshooting a
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

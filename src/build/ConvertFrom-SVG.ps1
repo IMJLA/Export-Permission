@@ -47,10 +47,13 @@ process {
     ForEach ($ThisPath in $Path) {
 
         # Read the SVG file and parse the XML, storing it as an object
+        "[xml]`$Content = Get-Content -Path '$ThisPath'"
         [xml]$Content = Get-Content -Path $ThisPath
 
+        "`$ExportSizes = . ./Get-ExportSize.ps1 -Content $Content $GetIconSizeParams"
         $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content @GetIconSizeParams
 
+        ". ./Export-Inkscape.ps1 -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
         . ./Export-Inkscape.ps1 -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
 
     }

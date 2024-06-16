@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.301
+.VERSION 0.0.302
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix SourceCode tests
+reduce verbosity of psakefile output regarding pester now that troubleshooting and changes are complete
 
 .PRIVATEDATA
 
