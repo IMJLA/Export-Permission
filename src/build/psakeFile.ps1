@@ -578,6 +578,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
     `$PesterConfiguration = New-PesterConfiguration -Hashtable `$PesterConfigParams
     Invoke-Pester -Configuration `$PesterConfiguration$NewLine
 "@
+    $CommandString
 
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
     Invoke-Pester -Configuration $PesterConfiguration
