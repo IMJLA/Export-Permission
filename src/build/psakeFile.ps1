@@ -614,8 +614,7 @@ task SourceControl -depends UnitTests {
 
 } -description 'git add, commit, and push'
 
-#task Publish -depends SourceControl {
-task Publish -depends SourceControl -precondition { -not [boolean]$NoPublish } {
+task Publish -depends SourceControl -precondition { -not $NoPublish } {
     Assert -conditionToCheck ($PublishPSRepositoryApiKey -or $PublishPSRepositoryCredential) -failureMessage "API key or credential not defined to authenticate with [$PublishPSRepository)] with."
 
     $publishParams = @{
