@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.302] - 2024-06-16 - reduce verbosity of psakefile output regarding pester now that troubleshooting and changes are complete
 ## [0.0.301] - 2024-06-16 - fix SourceCode tests
 ## [0.0.300] - 2024-06-16 - fix Pester invocatin
 ## [0.0.299] - 2024-06-16 - troubleshoot pester

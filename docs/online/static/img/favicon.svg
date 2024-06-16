@@ -14,16 +14,16 @@
   <circle cx="32" cy="16.5" r="1" stroke-linecap="round" stroke="black" stroke-width="1" fill="none" />
   <path d="M 32 17.5 l 0 1.5" stroke-linecap="round" stroke="black" stroke-width="1" fill="none" />
   <circle cx="12" cy="28" r="4" fill="none" stroke="black" stroke-width="1" />
-  <clipPath id="ef6d73c1-a7e4-4081-8261-efede371f822">
+  <clipPath id="1c92329b-7216-4b07-b1c8-fbce5e66d261">
     <path d="M 12 40 l 9 -9 0 -1 -18 0 0 10 z" />
   </clipPath>
-  <circle cx="12" cy="40" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#ef6d73c1-a7e4-4081-8261-efede371f822)" />
+  <circle cx="12" cy="40" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#1c92329b-7216-4b07-b1c8-fbce5e66d261)" />
   <path d="M11 39l3 3 7.5-7.5" fill="none" stroke="green" stroke-width="2" stroke-linecap="round" />
   <circle cx="37" cy="28" r="4" fill="none" stroke="black" stroke-width="1" />
-  <clipPath id="d2d51a77-cd83-49ca-86b6-af8fffc725b4">
+  <clipPath id="8c77a3fd-d378-4b11-88c5-49d22d7aa60f">
     <path d="M 37 40 l 9 -9 0 -1 -18 0 0 10 z" />
   </clipPath>
-  <circle cx="37" cy="40" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#d2d51a77-cd83-49ca-86b6-af8fffc725b4)" />
+  <circle cx="37" cy="40" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#8c77a3fd-d378-4b11-88c5-49d22d7aa60f)" />
   <circle cx="40" cy="39.2" r="4" fill="red" stroke="red" />
   <rect x="37" y="38.2" width="6.4" height="1.6" fill="white" />
 </svg>

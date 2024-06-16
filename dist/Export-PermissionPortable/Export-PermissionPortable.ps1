@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.300
+.VERSION 0.0.301
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix Pester invocatin
+fix SourceCode tests
 
 .PRIVATEDATA
 
