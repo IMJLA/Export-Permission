@@ -3,6 +3,10 @@
 
 properties {
 
+    [boolean]$IncrementMajorVersion = $false
+
+    [boolean]$IncrementMinorVersion = $false
+
     # Folder containing the script .ps1 file
     [System.IO.DirectoryInfo]$SourceCodeDir = [IO.Path]::Combine( '..', 'script' )
 
@@ -153,22 +157,25 @@ task Default -depends FindLinter, FindBuildModule, FindPlatyPS, DetectOperatingS
 # PSScriptAnalyzer, invoked by PowerShellBuild
 
 task FindLinter -precondition { $LintEnabled } {
+
     $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
-}
+
+} -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 task FindBuildModule -precondition { $script:FindLinter } {
+
     $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
-}
+
+} -description 'Find the prerequisite PSScriptAnalyzer PowerShellBuild module.'
 
 task Lint -precondition { $script:FindBuildModule } {
-    $lintParams = @{
-        Path              = $SourceCodeDir
-        SeverityThreshold = $LintSeverityThreshold
-        SettingsPath      = $LintSettingsFile
-    }
+
     "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
-    Test-PSBuildScriptAnalysis @lintParams
+    Test-PSBuildScriptAnalysis -Path $SourceCodeDir -SeverityThreshold $LintSeverityThreshold -SettingsPath $LintSettingsFile
+
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
+
+
 
 task GetScriptFileInfo -Depends Lint {
 
@@ -180,27 +187,12 @@ task GetScriptFileInfo -Depends Lint {
 task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
     "`tOld Version: $($Script:ScriptFileInfo.Version)"
-    $OldVersion = [version]$Script:ScriptFileInfo.Version
-    if ($IncrementMajorVersion) {
-        "`tThis is a new major version"
-        [version]$script:NewVersion = "$([int]$OldVersion.Major + 1).0.0"
-    } elseif ($IncrementMinorVersion) {
-        "`tThis is a new minor version"
-        [version]$script:NewVersion = "$([int]$OldVersion.Major).$([int]$OldVersion.Minor + 1).0"
-    } else {
-        "`tThis is a new build"
-        [version]$script:NewVersion = "$([int]$OldVersion.Major).$([int]$OldVersion.Minor).$([int]$OldVersion.Build + 1)"
-    }
-    "`tNew Version: $script:NewVersion"
 
-    $script:BuildOutputFolder = [IO.Path]::Combine(
-        $BuildOutDir,
-        $Script:ScriptFileInfo.Name
-    )
-    $script:BuildOutputFolderForPortableVersion = [IO.Path]::Combine(
-        $BuildOutDir,
-        "$($Script:ScriptFileInfo.Name)Portable"
-    )
+    $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
+    "`t. $ScriptToRun -ScriptFileInfo $Script:ScriptFileInfo -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
+    $script:NewVersion = . $ScriptToRun -ScriptFileInfo $Script:ScriptFileInfo -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
+
+    "`tNew Version: $script:NewVersion"
 
 } -description 'Increment the version number.'
 
@@ -252,24 +244,51 @@ task UpdateChangeLog -depends DeleteOldBuilds -Action {
     $NewChangeLogContents | Out-File -FilePath $ChangeLog -Encoding utf8 -Force
 } -description 'Add an entry to the the Change Log.'
 
-task BuildReleaseForDistribution -depends UpdateChangeLog {
+task CreateReleaseFolder -depends UpdateChangeLog {
+
+    $script:BuildOutputFolder = [IO.Path]::Combine(
+        $BuildOutDir,
+        $Script:ScriptFileInfo.Name
+    )
 
     # Create a new output directory
     "`tNew Release: $($script:BuildOutputFolder)"
     $null = New-Item -Path $script:BuildOutputFolder -ItemType Directory
-    $FolderName = $script:BuildOutputFolder | Split-Path -Leaf
 
-    # Copy the source script to the output folder
-    $MainScript |
-    Copy-Item -Destination $script:BuildOutputFolder
+}
 
-    $script:ReleasedScript = Get-ChildItem -LiteralPath $script:BuildOutputFolder -Include *.ps1
+task CreatePortableReleaseFolder -depends CreateReleaseFolder {
 
     if ($PortableVersionGuid) {
+
+        $script:BuildOutputFolderForPortableVersion = [IO.Path]::Combine(
+            $BuildOutDir,
+            "$($Script:ScriptFileInfo.Name)Portable"
+        )
 
         # Create a new output directory
         "`tNew Release: $($script:BuildOutputFolderForPortableVersion)"
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
+
+    }
+
+}
+
+task BuildRelease -depends CreatePortableReleaseFolder {
+
+    # Copy the source script to the output folder
+    "`tCopy-Item -Path '$MainScript' -Destination '$script:BuildOutputFolder'"
+    Copy-Item -Path $MainScript -Destination $script:BuildOutputFolder
+
+    $script:ReleasedScript = Get-ChildItem -LiteralPath $script:BuildOutputFolder -Include *.ps1
+
+} -description 'Copy the updated script to the output folder.'
+
+task BuildPortableRelease -depends BuildRelease {
+
+    $FolderName = $script:BuildOutputFolder | Split-Path -Leaf
+
+    if ($PortableVersionGuid) {
 
         # Read in the current contents of the script
         $MainScriptContent = Get-Content -LiteralPath $MainScript -Raw
@@ -400,7 +419,7 @@ task FindPlatyPS {
     $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 } -description 'Determine whether the PlatyPS PowerShell module is installed.'
 
-task DeleteMarkdownHelp -depends BuildReleaseForDistribution -precondition { $script:PlatyPS } {
+task DeleteMarkdownHelp -depends BuildPortableRelease -precondition { $script:PlatyPS } {
     $MarkdownDir = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
     "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item"
     Get-ChildItem -Path $MarkdownDir -Recurse | Remove-Item

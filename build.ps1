@@ -19,7 +19,11 @@ param(
 
     # Commit message for source control
     [parameter(Mandatory)]
-    [string]$CommitMessage
+    [string]$CommitMessage,
+
+    [switch]$IncrementMajorVersion,
+
+    [switch]$IncrementMinorVersion
 
 )
 
@@ -34,7 +38,13 @@ if (-not $NoPublish) {
     $Task.Add('Publish')
 }
 
-Write-Host "PSAKE TASKS: $Task"
+if ($IncrementMajorVersion) {
+    $Properties['IncrementMajorVersion'] = $true
+} else {
+    if ($IncrementMinorVersion) {
+        $Properties['IncrementMinorVersion'] = $true
+    }
+}
 
 # Execute psake task(s)
 $psakeFile = [IO.Path]::Combine('.', 'src', 'build', 'psakeFile.ps1')
