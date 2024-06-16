@@ -567,7 +567,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
         }
         CodeCoverage = @{
             CoveragePercentTarget = $TestCodeCoverageThreshold
-            Enabled               = $TestCodeCoverageEnabled
+            Enabled               = $TestCoverageEnabledString
             OutputFormat          = '$TestCodeCoverageOutputFormat'
             OutputPath            = '$TestCodeCoverageOutputFile'
             Path                  = '$TestCodeCoverageFiles'
