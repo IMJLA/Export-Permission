@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.288
+.VERSION 0.0.289
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix pester run path
+fix pester configuration
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ fix pester run path
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
