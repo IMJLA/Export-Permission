@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.313
+.VERSION 0.0.314
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-cleanup console output
+add console output to debug convertfrom-svg
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ cleanup console output
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

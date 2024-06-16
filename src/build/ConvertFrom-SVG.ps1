@@ -54,6 +54,16 @@ process {
         "`t`$ExportSizes = . ./Get-ExportSize.ps1 -Content `$Content -Scale $Scale$WidthString"
         $ExportSizes = . ./Get-ExportSize.ps1 -Content $Content @ExportSizeParams
 
+        $NewLine
+
+        "EXPORT SIZES: $($ExportSizes.Count)"
+        for ($i = 0; $i -lt $ExportSizes.Count; $i++) {
+            "-SIZE $($i + 1)"
+            "--HEIGHT $($ExportSizes[$i].Height)"
+            "--WIDTH $($ExportSizes[$i].Width)"
+            $NewLine
+        }
+
         "`t. ./Export-Inkscape.ps1 -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
         . ./Export-Inkscape.ps1 -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
 
