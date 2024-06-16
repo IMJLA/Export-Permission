@@ -1,8 +1,9 @@
 [cmdletbinding(DefaultParameterSetName = 'Task')]
 param(
+
     # Build task(s) to execute
     [parameter(ParameterSetName = 'task', position = 0)]
-    [string[]]$Task = 'default',
+    [string[]]$Task = @('default', 'publish'),
 
     [switch]$NoPublish,
 
@@ -19,6 +20,7 @@ param(
     # Commit message for source control
     [parameter(Mandatory)]
     [string]$CommitMessage
+
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,7 +31,9 @@ if (!($PSBoundParameters.ContainsKey('Parameters'))) {
 $Parameters['CommitMessage'] = $CommitMessage
 
 if ($NoPublish) {
-    $Properties['NoPublish'] = $true
+    if ($Task.Contains('Publish')) {
+        $Task.Remove('Publish')
+    }
 }
 
 # Execute psake task(s)
