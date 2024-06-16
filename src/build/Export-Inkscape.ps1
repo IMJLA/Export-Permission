@@ -25,6 +25,8 @@ $InkscapeParams = @{
     SourceFileName = $Path
 }
 
+"`tCURRENT LOCATION: $(Get-Location)"
+
 ForEach ($Size in $ExportSize) {
 
     $FileName = "$($Path.BaseName)-$($Size.Width)`x$($Size.Height).$OutputFormat"

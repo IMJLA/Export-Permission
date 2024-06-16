@@ -22,6 +22,8 @@ param (
 
 )
 
+"`tCURRENT LOCATION: $(Get-Location)"
+
 $Command = "& `"$ExecutablePath`" --export-filename=`"$ExportFileName`" --export-width=$ExportWidth --export-height=$ExportHeight `"$SourceFileName`""
 "`t$Command"
 Invoke-Expression $Command

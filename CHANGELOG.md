@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.307] - 2024-06-16 - troubleshoot inkscape
 ## [0.0.306] - 2024-06-16 - add invoke-inkscape build output to console for debugging
 ## [0.0.305] - 2024-06-16 - bugfix export-inkscape
 ## [0.0.304] - 2024-06-16 - troubleshoot inkscape
