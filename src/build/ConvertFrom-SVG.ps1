@@ -31,8 +31,7 @@ begin {
 
         $ExportSizeParams = @{
             Scale = $Scale
-            #Width = $Width
-            Width = 512
+            Width = $Width
         }
         $WidthString = " -Width ($($Width -join ','))"
 
