@@ -596,7 +596,7 @@ task SourceControl -depends UnitTests {
     "`tgit branch --show-current"
     "`tgit add ../.."
     "`tgit commit -m $CommitMessage"
-    "`tgit push origin $CurrentBranch"
+    "`tgit push origin $CurrentBranch$NewLine"
 
     $CurrentBranch = git branch --show-current
     git add ../..
