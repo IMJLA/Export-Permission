@@ -27,8 +27,6 @@ begin {
 
     if ($PSBoundParameters.ContainsKey('ExportWidth')) {
 
-        Write-Host "ExportWidth parameter specified: $ExportWidth" -ForegroundColor Cyan
-
         $ExportSizeParams = @{
             Scale = $Scale
             Width = $ExportWidth
@@ -58,14 +56,6 @@ process {
         $ExportSizes = . $ScriptToRun -Content $Content @ExportSizeParams
 
         $NewLine
-
-        "EXPORT SIZES: $($ExportSizes.Count)"
-        for ($i = 0; $i -lt $ExportSizes.Count; $i++) {
-            "-SIZE $($i + 1)"
-            "--HEIGHT $($ExportSizes[$i].Height)"
-            "--WIDTH $($ExportSizes[$i].Width)"
-            $NewLine
-        }
 
         $ScriptToRun = [IO.Path]::Combine('.', 'Export-Inkscape.ps1')
         "`t. $ScriptToRun -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"

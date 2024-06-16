@@ -9,13 +9,10 @@ param (
 
 )
 
-Write-Host "CURRENT LOCATION: $(Get-Location)"
 $ScriptToRun = [IO.Path]::Combine('.', 'Get-SVGDimension.ps1')
 $srcDimensions = . $ScriptToRun -Content $Content
 
 if ($PSBoundParameters.ContainsKey('Width')) {
-
-    Write-Host "Width parameter specified: $Width" -ForegroundColor Cyan
 
     ForEach ($ThisWidth in $Width) {
 
