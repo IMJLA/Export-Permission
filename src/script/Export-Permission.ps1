@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.327
+.VERSION 0.0.328
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test
+confirm fix of get-exportsize
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ test
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

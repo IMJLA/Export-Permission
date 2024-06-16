@@ -6,13 +6,13 @@ param (
 )
 
 if ([string]::IsNullOrEmpty($Content.svg.viewBox)) {
-    [double]$Height = $Content.svg.width.Replace('px', '')
-    [double]$Width = $Content.svg.width.Replace('px', '')
+    [double]$svgHeight = $Content.svg.width.Replace('px', '')
+    [double]$svgWidth = $Content.svg.width.Replace('px', '')
 } else {
-    $x, $y, [double]$Width, [double]$Height = $Content.svg.viewBox -split '[^\d]'
+    $x, $y, [double]$svgWidth, [double]$svgHeight = $Content.svg.viewBox -split '[^\d]'
 }
 
 [PSCustomObject]@{
-    Height = $Height
-    Width  = $Width
+    Height = $svgHeight
+    Width  = $svgWidth
 }

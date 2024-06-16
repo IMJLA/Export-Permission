@@ -55,7 +55,7 @@ process {
 
         $ScriptToRun = [IO.Path]::Combine('.', 'Get-ExportSize.ps1')
         "`t`$ExportSizes = . $ScriptToRun -Content `$Content -Scale $Scale$WidthString"
-        $ExportSizes = . $ScriptToRun -Content $Content -Width 512 # @ExportSizeParams
+        $ExportSizes = . $ScriptToRun -Content $Content #-Width 512 # @ExportSizeParams
 
         $NewLine
 
