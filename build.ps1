@@ -3,7 +3,7 @@ param(
 
     # Build task(s) to execute
     [parameter(ParameterSetName = 'task', position = 0)]
-    [string[]]$Task = @('default', 'publish'),
+    [System.Collections.Generic.List[string]]$Task = @('default'),
 
     [switch]$NoPublish,
 
@@ -30,10 +30,8 @@ if (!($PSBoundParameters.ContainsKey('Parameters'))) {
 }
 $Parameters['CommitMessage'] = $CommitMessage
 
-if ($NoPublish) {
-    if ($Task.Contains('Publish')) {
-        $Task.Remove('Publish')
-    }
+if (-not $NoPublish) {
+    $Task.Add('Publish')
 }
 
 Write-Host "PSAKE TASKS: $Task"
