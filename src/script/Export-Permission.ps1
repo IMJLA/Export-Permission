@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.330
+.VERSION 0.0.331
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove debug comments
+fix art tasks
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ remove debug comments
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

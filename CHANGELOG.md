@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.331] - 2024-06-16 - fix art tasks
 ## [0.0.330] - 2024-06-16 - remove debug comments
 ## [0.0.329] - 2024-06-16 - uncomment from debugging
 ## [0.0.328] - 2024-06-16 - confirm fix of get-exportsize
