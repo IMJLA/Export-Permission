@@ -571,7 +571,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
     $PesterConfigParams = @{
         Run          = @{
-            Path = $TestsDir
+            Path = "$TestsDir"
         }
         CodeCoverage = @{
             CoveragePercentTarget = $TestCodeCoverageThreshold
