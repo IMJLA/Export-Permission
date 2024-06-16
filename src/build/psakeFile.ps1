@@ -138,9 +138,6 @@ properties {
     $FoundScript = Get-ChildItem -Path $SearchPath -Include *.ps1
     $MainScript = [IO.Path]::Combine($SourceCodeDir, $FoundScript.Name)
 
-    # ScriptFileInfo containing the version of the main script before the build is run and the version is updated
-    $ScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
-
 }
 
 FormatTaskName {
@@ -173,12 +170,17 @@ task Lint -precondition { $script:FindBuildModule } {
     Test-PSBuildScriptAnalysis @lintParams
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
 
+task GetScriptFileInfo -Depends Lint {
 
+    "`t`$Script:ScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
+    $Script:ScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
-task DetermineNewVersionNumber -Depends Lint {
+}
 
-    "`tOld Version: $($ScriptFileInfo.Version)"
-    $OldVersion = [version]$ScriptFileInfo.Version
+task DetermineNewVersionNumber -Depends GetScriptFileInfo {
+
+    "`tOld Version: $($Script:ScriptFileInfo.Version)"
+    $OldVersion = [version]$Script:ScriptFileInfo.Version
     if ($IncrementMajorVersion) {
         "`tThis is a new major version"
         [version]$script:NewVersion = "$([int]$OldVersion.Major + 1).0.0"
@@ -193,11 +195,11 @@ task DetermineNewVersionNumber -Depends Lint {
 
     $script:BuildOutputFolder = [IO.Path]::Combine(
         $BuildOutDir,
-        $ScriptFileInfo.Name
+        $Script:ScriptFileInfo.Name
     )
     $script:BuildOutputFolderForPortableVersion = [IO.Path]::Combine(
         $BuildOutDir,
-        "$($ScriptFileInfo.Name)Portable"
+        "$($Script:ScriptFileInfo.Name)Portable"
     )
 
 } -description 'Increment the version number.'
@@ -272,9 +274,6 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         # Read in the current contents of the script
         $MainScriptContent = $MainScript | Get-Content -Raw
 
-        # Read the metadata of the script (we will use it to enumerate required modules)
-        $MainScriptFileInfoTest = Test-ScriptFileInfo -LiteralPath $MainScript -ErrorAction Continue
-
         # Prep an empty collection of strings to store our new portable script
         $PortableScriptContent = [System.Collections.Generic.List[string]]::New()
 
@@ -287,7 +286,7 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
         $null = $PortableScriptContent.Add($Matches.Groups[1].Value)
 
         # Add the constituent code of each module
-        ForEach ($ThisModuleName in $MainScriptFileInfoTest.RequiredModules.Name) {
+        ForEach ($ThisModuleName in $Script:ScriptFileInfo.RequiredModules.Name) {
 
             # Get the latest version of the module
             $ThisModule = Get-Module -Name $ThisModuleName -ListAvailable |
@@ -374,15 +373,15 @@ task BuildReleaseForDistribution -depends UpdateChangeLog {
 
         # Assign the correct GUID to the portable version of the script (it should be unique, not shared with the other script)
         $Properties = @{
-            Version      = $MainScriptFileInfoTest.Version
-            Description  = $MainScriptFileInfoTest.Description
-            Author       = $MainScriptFileInfoTest.Author
-            CompanyName  = $MainScriptFileInfoTest.CompanyName
-            Copyright    = $MainScriptFileInfoTest.Copyright
-            Tags         = $MainScriptFileInfoTest.Tags
-            ReleaseNotes = [string]$MainScriptFileInfoTest.ReleaseNotes
-            LicenseUri   = $MainScriptFileInfoTest.LicenseUri
-            ProjectUri   = $MainScriptFileInfoTest.ProjectUri
+            Version      = $Script:ScriptFileInfo.Version
+            Description  = $Script:ScriptFileInfo.Description
+            Author       = $Script:ScriptFileInfo.Author
+            CompanyName  = $Script:ScriptFileInfo.CompanyName
+            Copyright    = $Script:ScriptFileInfo.Copyright
+            Tags         = $Script:ScriptFileInfo.Tags
+            ReleaseNotes = [string]$Script:ScriptFileInfo.ReleaseNotes
+            LicenseUri   = $Script:ScriptFileInfo.LicenseUri
+            ProjectUri   = $Script:ScriptFileInfo.ProjectUri
         }
         New-ScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
 
@@ -419,11 +418,11 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
         ErrorAction           = 'SilentlyContinue'
         Force                 = $true
-        Command               = $MainScript # [IO.Path]::Combine('..','..','src',"$($ScriptFileInfo.Name).ps1")
+        Command               = $MainScript # [IO.Path]::Combine('..','..','src',"$($Script:ScriptFileInfo.Name).ps1")
         Metadata              = @{
-            'script guid'  = $ScriptFileInfo.Guid
+            'script guid'  = $Script:ScriptFileInfo.Guid
             locale         = $HelpDefaultLocale
-            'help version' = $ScriptFileInfo.Version
+            'help version' = $Script:ScriptFileInfo.Version
             #'download help link' = 'N/A'
         }
         # TODO: Using GitHub pages as a container for PowerShell Updatable Help https://gist.github.com/TheFreeman193/fde11aee6998ad4c40a314667c2a3005
