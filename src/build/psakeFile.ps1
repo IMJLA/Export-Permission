@@ -534,26 +534,8 @@ $pesterPreReqs = {
 
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
-    $PesterConfigParams = @{
-        Run          = @{
-            Path = $TestsDir
-        }
-        CodeCoverage = @{
-            CoveragePercentTarget = $TestCodeCoverageThreshold
-            Enabled               = $TestCodeCoverageEnabled
-            OutputFormat          = $TestCodeCoverageOutputFormat
-            OutputPath            = $TestCodeCoverageOutputFile
-            Path                  = $TestCodeCoverageFiles
-        }
-        Output       = @{
-            Verbosity = 'Diagnostic'
-        }
-        TestResult   = @{
-            Enabled      = $true
-            OutputPath   = $TestsResultFile
-            OutputFormat = $TestOutputFormat
-        }
-    }
+
+
 
     if ($TestCodeCoverageEnabled) {
         $TestCoverageEnabledString = '$true'
@@ -587,11 +569,32 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 "@
     $CommandString
 
-    $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
-
     Write-Host "Current Location: $(Get-Location)"
 
     Write-Host "Pester Tests: $($PesterConfiguration.Run.Path.Value)"
+
+    $PesterConfigParams = @{
+        Run          = @{
+            Path = $TestsDir
+        }
+        CodeCoverage = @{
+            CoveragePercentTarget = $TestCodeCoverageThreshold
+            Enabled               = $TestCodeCoverageEnabled
+            OutputFormat          = $TestCodeCoverageOutputFormat
+            OutputPath            = $TestCodeCoverageOutputFile
+            Path                  = $TestCodeCoverageFiles
+        }
+        Output       = @{
+            Verbosity = 'Diagnostic'
+        }
+        TestResult   = @{
+            Enabled      = $true
+            OutputPath   = $TestsResultFile
+            OutputFormat = $TestOutputFormat
+        }
+    }
+
+    $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
 
     Invoke-Pester -Configuration $PesterConfiguration
 
