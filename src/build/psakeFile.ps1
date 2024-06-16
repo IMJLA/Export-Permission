@@ -227,13 +227,13 @@ task DeleteOldBuilds -depends UpdateScriptVersion {
 
 task UpdateChangeLog -depends DeleteOldBuilds -Action {
     <#
-TODO
+    TODO
     This task runs before the Test task so that tests of the change log will pass
     But I also need one that runs *after* the build to compare it against the previous build
     The post-build UpdateChangeLog will automatically add to the change log any:
         New/removed exported commands
         New/removed files
-#>
+    #>
 
     $ChangeLog = [IO.Path]::Combine('..', '..', 'CHANGELOG.md')
     $NewChanges = "## [$script:NewVersion] - $(Get-Date -format 'yyyy-MM-dd') - $CommitMessage"
