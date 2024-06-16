@@ -189,12 +189,12 @@ task DetermineNewVersionNumber -Depends GetScriptFileInfo {
     "`tOld Version: $($Script:ScriptFileInfo.Version)"
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
-    "`t. $ScriptToRun -ScriptFileInfo $Script:ScriptFileInfo -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
+    "`t. $ScriptToRun -ScriptFileInfo `$Script:ScriptFileInfo -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
     $script:NewVersion = . $ScriptToRun -ScriptFileInfo $Script:ScriptFileInfo -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
 
     "`tNew Version: $script:NewVersion"
 
-} -description 'Increment the version number.'
+} -description 'Determine the new version number.'
 
 task UpdateScriptVersion -Depends DetermineNewVersionNumber {
 

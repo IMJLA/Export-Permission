@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.333
+.VERSION 0.0.334
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-split up psake build tasks
+cleanup console output
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ split up psake build tasks
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
