@@ -27,10 +27,11 @@ $InkscapeParams = @{
 
 "`tCURRENT LOCATION: $(Get-Location)"
 
-ForEach ($Size in $ExportSize) {
+$Folder = $Path | Split-Path
 
+ForEach ($Size in $ExportSize) {
     $FileName = "$($Path.BaseName)-$($Size.Width)`x$($Size.Height).$OutputFormat"
-    $ExportFileName = [System.IO.Path]::Combine($Path.Directory, $FileName)
+    $ExportFileName = [System.IO.Path]::Combine( $Folder, $FileName )
     "`t. ./Invoke-Inkscape.ps1 -SourceFileName '$Path' -ExportFileName '$ExportFileName' -ExportWidth $($Size.Width) -ExportHeight $($Size.Height) -ExecutablePath '$ExecutablePath'"
     . ./Invoke-Inkscape.ps1 -ExportFileName $ExportFileName -ExportWidth $Size.Width -ExportHeight $Size.Height @InkscapeParams
 
