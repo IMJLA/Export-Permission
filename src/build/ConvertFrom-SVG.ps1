@@ -27,6 +27,8 @@ begin {
 
     if ($PSBoundParameters.ContainsKey('Width')) {
 
+        Write-Host "Width parameter specified: $Width" -ForegroundColor Cyan
+
         $ExportSizeParams = @{
             Scale = $Scale
             Width = $Width

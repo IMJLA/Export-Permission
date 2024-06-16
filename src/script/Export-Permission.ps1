@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.316
+.VERSION 0.0.317
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add debugging for get-exportsize
+add debugging for convertfrom-svg
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ add debugging for get-exportsize
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
