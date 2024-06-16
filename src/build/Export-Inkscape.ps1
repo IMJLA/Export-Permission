@@ -30,6 +30,7 @@ $InkscapeParams = @{
 $Folder = $Path | Split-Path
 
 ForEach ($Size in $ExportSize) {
+
     $FileName = "$($Path.BaseName)-$($Size.Width)`x$($Size.Height).$OutputFormat"
     $ExportFileName = [System.IO.Path]::Combine( $Folder, $FileName )
     "`t. ./Invoke-Inkscape.ps1 -SourceFileName '$Path' -ExportFileName '$ExportFileName' -ExportWidth $($Size.Width) -ExportHeight $($Size.Height) -ExecutablePath '$ExecutablePath'"
