@@ -177,14 +177,14 @@ task GetScriptFileInfo {
 
 } -description 'Parse the ScriptFileInfo block at the beginning of the script.'
 
-task Lint -Depends GetScriptFileInfo -precondition { $script:FindBuildModule } {
+task Lint -depends GetScriptFileInfo -precondition { $script:FindBuildModule } {
 
     Write-Host "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
     Test-PSBuildScriptAnalysis -Path $SourceCodeDir -SeverityThreshold $LintSeverityThreshold -SettingsPath $LintSettingsFile
 
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
 
-task DetermineNewVersionNumber -Depends Lint {
+task DetermineNewVersionNumber -depends Lint {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
     Write-Host "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
@@ -192,7 +192,7 @@ task DetermineNewVersionNumber -Depends Lint {
 
 } -description 'Determine the new version number.'
 
-task UpdateScriptVersion -Depends DetermineNewVersionNumber {
+task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
     Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
     Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
