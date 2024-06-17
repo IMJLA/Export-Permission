@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.341
+.VERSION 0.0.342
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix extra newline in convertfrom-svg output
+improved Find-NewVersion
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ fix extra newline in convertfrom-svg output
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

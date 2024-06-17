@@ -1,11 +1,9 @@
 param (
-    $ScriptFileInfo,
+    [version]$OldVersion,
     [boolean]$IncrementMajorVersion,
     [boolean]$IncrementMinorVersion
 )
 
-
-$OldVersion = [version]$ScriptFileInfo.Version
 if ($IncrementMajorVersion) {
     Write-Host "`tThis is a new major version"
     [version]$NewVersion = "$([int]$OldVersion.Major + 1).0.0"

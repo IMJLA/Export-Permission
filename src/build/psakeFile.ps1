@@ -183,13 +183,12 @@ task GetScriptFileInfo -Depends Lint {
 
 task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
-    "`tOld Version: $($Script:OldScriptFileInfo.Version)"
-
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
-    "`t. $ScriptToRun -ScriptFileInfo `$Script:OldScriptFileInfo -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
-    $script:NewVersion = . $ScriptToRun -ScriptFileInfo $Script:OldScriptFileInfo -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
+    "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
+    $script:NewVersion = . $ScriptToRun -OldVersion $Script:OldScriptFileInfo.Version -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
 
-    "`tNew Version: $script:NewVersion"
+    Write-Host "New version:$NewLine" -ForegroundColor Yellow
+    $script:NewVersion
 
 } -description 'Determine the new version number.'
 
@@ -285,7 +284,6 @@ task BuildPortableRelease -depends BuildRelease {
         $null = $PortableScriptContent.Add($Matches.Groups[1].Value)
 
         # Get updated Script metadata
-        "`t`$Script:NewScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
         $Script:NewScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
         # Add the constituent code of each module
