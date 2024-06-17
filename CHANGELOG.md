@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.348] - 2024-06-16
+### Changed
+- move write-host functionality into find-newversion
+
 ## [0.0.347] - 2024-06-16
 ### Changed
 - cleanup newversion console output

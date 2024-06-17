@@ -185,16 +185,7 @@ task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
     "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
-    $script:NewVersion = . $ScriptToRun -OldVersion $Script:OldScriptFileInfo.Version -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
-
-    Write-Host "$NewLine`New version:" -ForegroundColor Yellow
-
-    # For reasons unknown, if we return the $script:NewVersion object here it holds up the pipeline and does not come out until several tasks later
-    # This messes up the console output, preventing other stdout output from appearing in the console.
-    # PSScriptAnalyzer does not do this; its object returns to the pipeline in the correct sequence
-    [string[]]$VersionTableLines = ($script:NewVersion | Format-Table | Out-String).Split($NewLine)
-    $VersionTableLines[0..2] | Write-Host -ForegroundColor Green
-    $VersionTableLines[3..$($VersionTableLines.Length - 2)] | Write-Host
+    $script:NewVersion = . $ScriptToRun -OldVersion $Script:OldScriptFileInfo.Version -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion -NewLine $NewLine
 
 } -description 'Determine the new version number.'
 

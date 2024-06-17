@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.347
+.VERSION 0.0.348
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-cleanup newversion console output
+move write-host functionality into find-newversion
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ cleanup newversion console output
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
