@@ -258,7 +258,6 @@ task BuildRelease -depends CreatePortableReleaseFolder {
 task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$PortableVersionGuid } {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'New-PortableScript.ps1')
-    Write-Host "`t. $ScriptToRun -BuildOutputFolder '$FolderName' -MainScript '$MainScript'"
     $ScriptResult = . $ScriptToRun -BuildOutputFolder $script:BuildOutputFolder -MainScript $MainScript
     $script:NewScriptFileInfo = $ScriptResult.NewScriptFileInfo
     $script:PortableScriptFilePath = $ScriptResult.PortableScriptFilePath

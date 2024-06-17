@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.350
+.VERSION 0.0.351
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add new-portablescript
+remove unnecessary host output in the buildportablerelease psake task
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ add new-portablescript
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
