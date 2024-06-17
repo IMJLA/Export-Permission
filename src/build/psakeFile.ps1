@@ -479,12 +479,15 @@ task Publish {
     # Only publish a release if we are working on the main branch
     $CurrentBranch = git branch --show-current
     if ($Publish -eq $true -and $CurrentBranch -eq 'main') {
-        # Publish to PSGallery
+
+        Write-Host "`tPublish-Script -Path '$($script:ReleasedScript.FullName)' -Repository $PublishPSRepository"
         Publish-Script @publishParams
         $publishParams['Path'] = $script:PortableScriptFilePath
         Publish-Script @publishParams
+
     }
-} -description 'Publish module to the defined PowerShell repository'
+
+} -description 'Publish the script to the specified PowerShell repository (PSGallery).'
 
 task ? -description 'Lists the available tasks' {
     'Available tasks:'
