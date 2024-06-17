@@ -227,11 +227,10 @@ task CreateReleaseFolder -depends UpdateChangeLog {
         $Script:OldScriptFileInfo.Name
     )
 
-    # Create a new output directory
     Write-Host "`tNew-Item -Path '$script:BuildOutputFolder' -ItemType Directory"
     $null = New-Item -Path $script:BuildOutputFolder -ItemType Directory
 
-}
+} -description 'Create a new folder for this release of the script.'
 
 task CreatePortableReleaseFolder -depends CreateReleaseFolder -precondition { [boolean]$PortableVersionGuid } {
 
@@ -240,11 +239,10 @@ task CreatePortableReleaseFolder -depends CreateReleaseFolder -precondition { [b
         "$($Script:OldScriptFileInfo.Name)Portable"
     )
 
-    # Create a new output directory
     Write-Host "`tNew-Item -Path '$script:BuildOutputFolderForPortableVersion' -ItemType Directory"
     $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
-}
+} -description 'Create a new folder for this release of the portable script.'
 
 task BuildRelease -depends CreatePortableReleaseFolder {
 
@@ -265,47 +263,57 @@ task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$Portab
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies.'
 
 task FindPlatyPS {
+
     $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+
 } -description 'Determine whether the PlatyPS PowerShell module is installed.'
 
-task DeleteMarkdownHelp -depends BuildPortableRelease -precondition { $script:PlatyPS } {
+task CreateMarkdownHelpFolder -depends BuildPortableRelease -precondition { -not (Test-Path -LiteralPath $MarkdownHelpDir) } {
+
+    Write-Host "`tNew-Item -Path '$MarkdownHelpDir' -ItemType Directory"
+    $null = New-Item -Path $MarkdownHelpDir -ItemType Directory
+
+} -description 'Create a new folder for the Markdown help documentation.'
+
+task DeleteMarkdownHelp -depends CreateMarkdownHelpFolder -precondition { $script:PlatyPS } {
+
     $MarkdownDir = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
     Write-Host "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item"
     Get-ChildItem -Path $MarkdownDir -Recurse | Remove-Item
+
 } -description 'Delete existing Markdown files to prepare for PlatyPS to build new ones.'
 
 task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 
-    if (-not (Test-Path -LiteralPath $MarkdownHelpDir)) {
-        New-Item -Path $MarkdownHelpDir -ItemType Directory > $null
-    }
-
-    $OutputFolder = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
-    $newMDParams = @{
+    $MarkdownParams = @{
         AlphabeticParamsOrder = $true
-        # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
-        ErrorAction           = 'SilentlyContinue'
-        Force                 = $true
         Command               = $MainScript
+        ErrorAction           = 'SilentlyContinue' # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
+        Force                 = $true
         Metadata              = @{
-            'script guid'  = $Script:NewScriptFileInfo.Guid
-            locale         = $HelpDefaultLocale
             'help version' = $Script:NewScriptFileInfo.Version
+            locale         = $HelpDefaultLocale
+            'script guid'  = $Script:NewScriptFileInfo.Guid
             #'download help link' = 'N/A'
         }
         # TODO: Using GitHub pages as a container for PowerShell Updatable Help https://gist.github.com/TheFreeman193/fde11aee6998ad4c40a314667c2a3005
         # OnlineVersionUrl = $GitHubPagesLinkForThisModule
-        OutputFolder          = $OutputFolder
+        OutputFolder          = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
         UseFullTypeName       = $true
         Verbose               = $VerbosePreference
     }
-    Write-Host "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$OutputFolder'..."
-    $MarkdownHelp = New-MarkdownHelp @newMDParams
+
+    Write-Host "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$($MarkdownParams['OutputFolder'])'..."
+    $script:MarkdownHelp = New-MarkdownHelp @MarkdownParams
+
+} -description 'Generate Markdown files from the comment-based help.'
+
+task FixMarkdownHelp -depends BuildMarkdownHelp {
 
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
-    $Markdown = Get-Content -LiteralPath $MarkdownHelp.FullName -Raw
+    $Markdown = Get-Content -LiteralPath $script:MarkdownHelp.FullName -Raw
     $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
-    $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $($MainScript.Name)"
+    $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $($Script:NewScriptFileInfo.Guid)"
 
     # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS
     $ParamToRemove = '-ProgressAction'
@@ -314,15 +322,20 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
     $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
     $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 
-    $NewMarkdown | Set-Content -LiteralPath $MarkdownHelp.FullName
+    Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$($script:MarkdownHelp.FullName)'"
+    $NewMarkdown | Set-Content -LiteralPath $script:MarkdownHelp.FullName
 
-    # Use the help for the script as the readme for the script
+} -description 'Fix issues with the Markdown files that were not handled by New-MarkdownHelp.'
+
+task BuildReadMe -depends FixMarkdownHelp {
+
     $ReadMe = [IO.Path]::Combine('..', '..', 'README.md')
-    $MarkdownHelp | Copy-Item -Destination $ReadMe -Force
+    Write-Host "`tCopy-Item -Path '$script:MarkdownHelp' -Destination '$ReadMe' -Force"
+    Copy-Item -Path $script:MarkdownHelp -Destination $ReadMe -Force
 
-} -description 'Generate Markdown files from the comment-based help.'
+} -description 'Use the help for the script as the readme for the script'
 
-task BuildMAMLHelp -depends BuildMarkdownHelp -precondition { $script:PlatyPS } {
+task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
 } -description 'Generates MAML-based help from PlatyPS Markdown files using PowerShellBuild to call New-ExternalHelp.'
