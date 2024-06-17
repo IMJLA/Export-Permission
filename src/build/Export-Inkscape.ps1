@@ -33,7 +33,7 @@ ForEach ($Size in $ExportSize) {
     $ExportFileName = [System.IO.Path]::Combine( $Folder, $FileName )
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Invoke-Inkscape.ps1')
-    "`t. $ScriptToRun -SourceFileName '$Path' -ExportFileName '$ExportFileName' -ExportWidth $($Size.Width) -ExportHeight $($Size.Height) -ExecutablePath '$ExecutablePath'"
+    Write-Host "`t. $ScriptToRun -SourceFileName '$Path' -ExportFileName '$ExportFileName' -ExportWidth $($Size.Width) -ExportHeight $($Size.Height) -ExecutablePath '$ExecutablePath'"
     . $ScriptToRun -ExportFileName $ExportFileName -ExportWidth $Size.Width -ExportHeight $Size.Height @InkscapeParams
 
 }

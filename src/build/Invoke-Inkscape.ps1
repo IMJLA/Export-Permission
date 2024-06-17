@@ -23,5 +23,5 @@ param (
 )
 
 $Command = "& `"$ExecutablePath`" --export-filename=`"$ExportFileName`" --export-width=$ExportWidth --export-height=$ExportHeight `"$SourceFileName`""
-"`t$Command"
+Write-Host "`t$Command"
 Invoke-Expression $Command

@@ -224,7 +224,6 @@ task DeleteOldBuilds -depends UpdateScriptVersion {
 task UpdateChangeLog -depends DeleteOldBuilds -Action {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Update-ChangeLog.ps1')
-    Write-Host "`t. $ScriptToRun -Version $script:NewVersion -CommitMessage '$CommitMessage'"
     . $ScriptToRun -NewLine $NewLine -Version $script:NewVersion -CommitMessage $CommitMessage
 
 } -description 'Add an entry to the the Change Log.'

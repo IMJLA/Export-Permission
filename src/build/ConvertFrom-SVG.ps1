@@ -48,15 +48,15 @@ process {
     ForEach ($ThisPath in $Path) {
 
         # Read the SVG file and parse the XML, storing it as an object
-        "`t[xml]`$Content = Get-Content -Path '$ThisPath'"
+        Write-Host "`t[xml]`$Content = Get-Content -Path '$ThisPath'"
         [xml]$Content = Get-Content -Path $ThisPath
 
         $ScriptToRun = [IO.Path]::Combine('.', 'Get-ExportSize.ps1')
-        "`t`$ExportSizes = . $ScriptToRun -Content `$Content -Scale $Scale$WidthString"
+        Write-Host "`t`$ExportSizes = . $ScriptToRun -Content `$Content -Scale $Scale$WidthString"
         $ExportSizes = . $ScriptToRun -Content $Content @ExportSizeParams
 
         $ScriptToRun = [IO.Path]::Combine('.', 'Export-Inkscape.ps1')
-        "`t. $ScriptToRun -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
+        Write-Host "`t. $ScriptToRun -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
         . $ScriptToRun -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
 
     }
