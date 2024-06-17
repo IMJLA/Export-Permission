@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.349
+.VERSION 0.0.350
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-all in on write-host
+add new-portablescript
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ all in on write-host
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

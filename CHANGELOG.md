@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.350] - 2024-06-16
+### Added
+- add new-portablescript
+
 ## [0.0.349] - 2024-06-16
 ### Changed
 - all in on write-host
