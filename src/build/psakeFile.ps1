@@ -143,7 +143,7 @@ properties {
 
 FormatTaskName {
     param($TaskName)
-    Write-Host "$NewLine`Executing task $TaskName" -ForegroundColor Cyan -NoNewline
+    Write-Host "$NewLine`Executing task $TaskName$NewLine" -ForegroundColor Cyan -NoNewline
 }
 
 task Default -depends FindLinter, FindBuildModule, FindPlatyPS, DetectOperatingSystem, SourceControl
