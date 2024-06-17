@@ -150,24 +150,30 @@ task Default -depends FindLinter, FindBuildModule, FindPlatyPS, DetectOperatingS
 
 task FindLinter -precondition { $LintEnabled } {
 
+    Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
     $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 task FindBuildModule -precondition { $script:FindLinter } {
 
+    Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
     $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShellBuild module.'
 
 task FindPlatyPS {
 
+    Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
     $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 
 } -description 'Determine whether the PlatyPS PowerShell module is installed.'
 
 task DetectOperatingSystem {
+
+    Write-Host "`tGet-CimInstance -ClassName CIM_OperatingSystem"
     $script:OS = (Get-CimInstance -ClassName CIM_OperatingSystem).Caption
+
 } -description 'Detect the operating system to determine whether MakeCab.exe is available to produce updateable help.'
 
 task GetScriptFileInfo {
