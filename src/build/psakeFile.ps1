@@ -189,7 +189,7 @@ task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
     Write-Host "$NewLine`New version:$NewLine" -ForegroundColor Yellow
 
-    $script:NewVersion
+    Write-Output $script:NewVersion
 
 } -description 'Determine the new version number.'
 
