@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.341] - 2024-06-16
+### Fixed
+- fix extra newline in convertfrom-svg output
+
 ## [0.0.340] - 2024-06-16
 ### Fixed
 - fix outdated metadata in portable script version

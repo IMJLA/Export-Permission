@@ -55,8 +55,6 @@ process {
         "`t`$ExportSizes = . $ScriptToRun -Content `$Content -Scale $Scale$WidthString"
         $ExportSizes = . $ScriptToRun -Content $Content @ExportSizeParams
 
-        $NewLine
-
         $ScriptToRun = [IO.Path]::Combine('.', 'Export-Inkscape.ps1')
         "`t. $ScriptToRun -Path '$ThisPath' -ExportSize `$ExportSizes -OutputFormat '$OutputFormat' -ExecutablePath '$ExecutablePath'"
         . $ScriptToRun -Path $ThisPath -ExportSize $ExportSizes -OutputFormat $OutputFormat -ExecutablePath $ExecutablePath
