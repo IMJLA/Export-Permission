@@ -314,6 +314,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 task FixMarkdownHelp -depends BuildMarkdownHelp {
 
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
+    Write-Host "$($script:MarkdownHelp.FullName)" -ForegroundColor Yellow
     $MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
     $Markdown = Get-Content -LiteralPath $MarkdownPath -Raw
     $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
