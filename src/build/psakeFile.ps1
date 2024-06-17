@@ -189,7 +189,12 @@ task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
     Write-Host "$NewLine`New version:$NewLine" -ForegroundColor Yellow
 
-    Write-Output $script:NewVersion
+    # For reasons unknown, if we return the $script:NewVersion object here it holds up the pipeline and does not come out until several tasks later
+    # This messes up the console output, preventing other stdout output from appearing in the console.
+    # PSScriptAnalyzer does not do this; its object returns to the pipeline in the correct sequence
+    [string[]]$VersionTableLines = ($script:NewVersion | Format-Table | Out-String).Split($NewLine)
+    $VersionTableLines[0..2] | Write-Host -ForegroundColor Green
+    $VersionTableLines[3..$($VersionTableLines.Length - 1)] | Write-Host
 
 } -description 'Determine the new version number.'
 

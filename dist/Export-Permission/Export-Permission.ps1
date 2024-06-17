@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.345
+.VERSION 0.0.346
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test
+fix newversion display bug during build
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ test
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
