@@ -167,7 +167,7 @@ task FindBuildModule -precondition { $script:FindLinter } {
 
 task Lint -precondition { $script:FindBuildModule } {
 
-    "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
+    Write-Host "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
     Test-PSBuildScriptAnalysis -Path $SourceCodeDir -SeverityThreshold $LintSeverityThreshold -SettingsPath $LintSettingsFile
 
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
@@ -176,7 +176,7 @@ task Lint -precondition { $script:FindBuildModule } {
 
 task GetScriptFileInfo -Depends Lint {
 
-    "`t`$Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
+    Write-Host "`t`$Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
     $Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
 } -description 'Parse the ScriptFileInfo block at the beginning of the script.'
@@ -184,14 +184,14 @@ task GetScriptFileInfo -Depends Lint {
 task DetermineNewVersionNumber -Depends GetScriptFileInfo {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
-    "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
+    Write-Host "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
     $script:NewVersion = . $ScriptToRun -OldVersion $Script:OldScriptFileInfo.Version -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion -NewLine $NewLine
 
 } -description 'Determine the new version number.'
 
 task UpdateScriptVersion -Depends DetermineNewVersionNumber {
 
-    "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
+    Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
     Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
 
     # Supposedly will be resolved in 3.0.15 but right now there is a bug in Update-ScriptFileInfo that adds blank lines after the PSScriptInfo block
@@ -206,7 +206,7 @@ task UpdateScriptVersion -Depends DetermineNewVersionNumber {
 
 task DeleteOldBuilds -depends UpdateScriptVersion {
 
-    "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
+    Write-Host "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
     Get-ChildItem -Directory -Path $BuildOutDir |
     Remove-Item -Recurse -Force
 
@@ -215,7 +215,7 @@ task DeleteOldBuilds -depends UpdateScriptVersion {
 task UpdateChangeLog -depends DeleteOldBuilds -Action {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Update-ChangeLog.ps1')
-    "`t. $ScriptToRun -Version $script:NewVersion -CommitMessage '$CommitMessage'"
+    Write-Host "`t. $ScriptToRun -Version $script:NewVersion -CommitMessage '$CommitMessage'"
     . $ScriptToRun -NewLine $NewLine -Version $script:NewVersion -CommitMessage $CommitMessage
 
 } -description 'Add an entry to the the Change Log.'
@@ -228,7 +228,7 @@ task CreateReleaseFolder -depends UpdateChangeLog {
     )
 
     # Create a new output directory
-    "`tNew-Item -Path '$script:BuildOutputFolder' -ItemType Directory"
+    Write-Host "`tNew-Item -Path '$script:BuildOutputFolder' -ItemType Directory"
     $null = New-Item -Path $script:BuildOutputFolder -ItemType Directory
 
 }
@@ -243,7 +243,7 @@ task CreatePortableReleaseFolder -depends CreateReleaseFolder {
         )
 
         # Create a new output directory
-        "`tNew-Item -Path '$script:BuildOutputFolderForPortableVersion' -ItemType Directory"
+        Write-Host "`tNew-Item -Path '$script:BuildOutputFolderForPortableVersion' -ItemType Directory"
         $null = New-Item -Path $script:BuildOutputFolderForPortableVersion -ItemType Directory
 
     }
@@ -253,7 +253,7 @@ task CreatePortableReleaseFolder -depends CreateReleaseFolder {
 task BuildRelease -depends CreatePortableReleaseFolder {
 
     # Copy the source script to the output folder
-    "`tCopy-Item -Path '$MainScript' -Destination '$script:BuildOutputFolder'"
+    Write-Host "`tCopy-Item -Path '$MainScript' -Destination '$script:BuildOutputFolder'"
     Copy-Item -Path $MainScript -Destination $script:BuildOutputFolder
 
     $script:ReleasedScript = Get-ChildItem -LiteralPath $script:BuildOutputFolder -Include *.ps1
@@ -381,7 +381,7 @@ task BuildPortableRelease -depends BuildRelease {
             LicenseUri   = $Script:NewScriptFileInfo.LicenseUri
             ProjectUri   = $Script:NewScriptFileInfo.ProjectUri
         }
-        "`t`New-ScriptFileInfo -Path '$PortableScriptFilePath' -Version '$($Script:NewScriptFileInfo.Version)' -Guid '$PortableVersionGuid' -Force"
+        Write-Host "`t`New-ScriptFileInfo -Path '$PortableScriptFilePath' -Version '$($Script:NewScriptFileInfo.Version)' -Guid '$PortableVersionGuid' -Force"
         New-ScriptFileInfo -Path $PortableScriptFilePath -Guid $PortableVersionGuid -Force @Properties
 
         # New-PSScriptFileInfo creates a file which is not accepted by Test-ScriptFileInfo (and therefore not accepted by PSGallery)
@@ -401,7 +401,7 @@ task FindPlatyPS {
 
 task DeleteMarkdownHelp -depends BuildPortableRelease -precondition { $script:PlatyPS } {
     $MarkdownDir = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
-    "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item"
+    Write-Host "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item"
     Get-ChildItem -Path $MarkdownDir -Recurse | Remove-Item
 } -description 'Delete existing Markdown files to prepare for PlatyPS to build new ones.'
 
@@ -430,7 +430,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         UseFullTypeName       = $true
         Verbose               = $VerbosePreference
     }
-    "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$OutputFolder'..."
+    Write-Host "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$OutputFolder'..."
     $MarkdownHelp = New-MarkdownHelp @newMDParams
 
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
@@ -454,7 +454,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 } -description 'Generate Markdown files from the comment-based help.'
 
 task BuildMAMLHelp -depends BuildMarkdownHelp -precondition { $script:PlatyPS } {
-    "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
+    Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
 } -description 'Generates MAML-based help from PlatyPS Markdown files using PowerShellBuild to call New-ExternalHelp.'
 
@@ -503,14 +503,14 @@ task BuildOnlineHelp -depends BuildMAMLHelp {
 task BuildArt -depends BuildOnlineHelp {
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
     $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
-    "`t. $ScriptToRun -OutputDir '$OutputDir'"
+    Write-Host "`t. $ScriptToRun -OutputDir '$OutputDir'"
     . $ScriptToRun -OutputDir $OutputDir
 } -description 'Build SVG art using PSSVG.'
 
 task ConvertArt -depends BuildArt {
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
     $sourceSVG = [IO.Path]::Combine($Script:OutputDir, "favicon.svg")
-    "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
+    Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 } -description 'Convert SVGs to PNG using Inkscape.'
 
@@ -533,7 +533,7 @@ $pesterPreReqs = {
 
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
-    "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
+    Write-Host "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
 
     $PesterConfigParams = @{
         Run          = @{
@@ -563,17 +563,17 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
 task SourceControl -depends UnitTests {
 
-    "`tgit branch --show-current$NewLine"
+    Write-Host "`tgit branch --show-current$NewLine"
     $CurrentBranch = git branch --show-current
-    "$CurrentBranch$NewLine"
+    Write-Host "$CurrentBranch$NewLine"
 
-    "`tgit add ../.."
+    Write-Host "`tgit add ../.."
     git add ../..
 
-    "`tgit commit -m $CommitMessage$NewLine"
+    Write-Host "`tgit commit -m $CommitMessage$NewLine"
     git commit -m $CommitMessage
 
-    "$NewLine`tgit push origin $CurrentBranch$NewLine"
+    Write-Host "$NewLine`tgit push origin $CurrentBranch$NewLine"
     git push origin $CurrentBranch
 
 } -description 'git add, commit, and push'
