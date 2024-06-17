@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.355
+.VERSION 0.0.356
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test run
+fix build bugs
 
 .PRIVATEDATA
 

@@ -178,7 +178,7 @@ task DetectOperatingSystem {
 
 task GetScriptFileInfo {
 
-    Write-Host "`t`$Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
+    Write-Host "`tTest-ScriptFileInfo -LiteralPath '$MainScript'"
     $Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
 } -description 'Parse the ScriptFileInfo block at the beginning of the script.'
