@@ -314,7 +314,8 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 task FixMarkdownHelp -depends BuildMarkdownHelp {
 
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
-    $Markdown = Get-Content -LiteralPath $script:MarkdownHelp.FullName -Raw
+    $MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
+    $Markdown = Get-Content -LiteralPath $MarkdownPath -Raw
     $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
     $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $($Script:NewScriptFileInfo.Guid)"
 
@@ -325,8 +326,8 @@ task FixMarkdownHelp -depends BuildMarkdownHelp {
     $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
     $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 
-    Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$($script:MarkdownHelp.FullName)'"
-    $NewMarkdown | Set-Content -LiteralPath $script:MarkdownHelp.FullName
+    Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$MarkdownPath'"
+    $NewMarkdown | Set-Content -LiteralPath $MarkdownPath
 
 } -description 'Fix issues with the Markdown files that were not handled by New-MarkdownHelp.'
 
