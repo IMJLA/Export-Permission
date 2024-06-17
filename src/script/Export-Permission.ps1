@@ -18,7 +18,7 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES 
+.EXTERNALMODULEDEPENDENCIES
 
 .REQUIREDSCRIPTS
 
@@ -29,7 +29,7 @@ remove unnecessary host output in the buildportablerelease psake task
 
 .PRIVATEDATA
 
-#> 
+#>
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -332,7 +332,6 @@ param (
     Currently supports NTFS folders
     TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
     #>
-    #
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,

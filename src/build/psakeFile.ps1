@@ -148,10 +148,6 @@ FormatTaskName {
 
 task Default -depends FindLinter, FindBuildModule, FindPlatyPS, DetectOperatingSystem, SourceControl
 
-
-
-# PSScriptAnalyzer, invoked by PowerShellBuild
-
 task FindLinter -precondition { $LintEnabled } {
 
     $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
@@ -164,23 +160,31 @@ task FindBuildModule -precondition { $script:FindLinter } {
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShellBuild module.'
 
-task Lint -precondition { $script:FindBuildModule } {
+task FindPlatyPS {
 
-    Write-Host "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
-    Test-PSBuildScriptAnalysis -Path $SourceCodeDir -SeverityThreshold $LintSeverityThreshold -SettingsPath $LintSettingsFile
+    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 
-} -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
+} -description 'Determine whether the PlatyPS PowerShell module is installed.'
 
+task DetectOperatingSystem {
+    $script:OS = (Get-CimInstance -ClassName CIM_OperatingSystem).Caption
+} -description 'Detect the operating system to determine whether MakeCab.exe is available to produce updateable help.'
 
-
-task GetScriptFileInfo -Depends Lint {
+task GetScriptFileInfo {
 
     Write-Host "`t`$Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath '$MainScript'"
     $Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
 } -description 'Parse the ScriptFileInfo block at the beginning of the script.'
 
-task DetermineNewVersionNumber -Depends GetScriptFileInfo {
+task Lint -Depends GetScriptFileInfo -precondition { $script:FindBuildModule } {
+
+    Write-Host "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
+    Test-PSBuildScriptAnalysis -Path $SourceCodeDir -SeverityThreshold $LintSeverityThreshold -SettingsPath $LintSettingsFile
+
+} -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
+
+task DetermineNewVersionNumber -Depends Lint {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
     Write-Host "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
@@ -261,12 +265,6 @@ task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$Portab
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies.'
 
-task FindPlatyPS {
-
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
-
-} -description 'Determine whether the PlatyPS PowerShell module is installed.'
-
 task CreateMarkdownHelpFolder -depends BuildPortableRelease -precondition { -not (Test-Path -LiteralPath $MarkdownHelpDir) } {
 
     Write-Host "`tNew-Item -Path '$MarkdownHelpDir' -ItemType Directory"
@@ -338,10 +336,6 @@ task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
 } -description 'Generates MAML-based help from PlatyPS Markdown files using PowerShellBuild to call New-ExternalHelp.'
-
-task DetectOperatingSystem {
-    $script:OS = (Get-CimInstance -ClassName CIM_OperatingSystem).Caption
-} -description 'Detect the operating system to determine whether MakeCab.exe is available to produce updateable help.'
 
 # Disabled this task for now, it does not work because New-ExternalHelp (invoked above by Build-PSBuildMAMLHelp) is not generating any MAML help files from the Markdown.
 #task BuildUpdatableHelp -depends BuildMAMLHelp {
