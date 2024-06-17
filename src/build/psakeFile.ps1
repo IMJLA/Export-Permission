@@ -271,10 +271,10 @@ task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$Portab
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies.'
 
-task CreateMarkdownHelpFolder -depends BuildPortableRelease -precondition { -not (Test-Path -LiteralPath $MarkdownHelpDir) } {
+task CreateMarkdownHelpFolder -depends BuildPortableRelease {
 
     Write-Host "`tNew-Item -Path '$MarkdownHelpDir' -ItemType Directory"
-    $null = New-Item -Path $MarkdownHelpDir -ItemType Directory
+    $null = New-Item -Path $MarkdownHelpDir -ItemType Directory -ErrorAction SilentlyContinue
 
 } -description 'Create a new folder for the Markdown help documentation.'
 
@@ -314,9 +314,8 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 task FixMarkdownHelp -depends BuildMarkdownHelp {
 
     # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
-    Write-Host "$($script:MarkdownHelp.FullName)" -ForegroundColor Yellow
-    $MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
-    $Markdown = Get-Content -LiteralPath $MarkdownPath -Raw
+    $Script:MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
+    $Markdown = Get-Content -LiteralPath $Script:MarkdownPath -Raw
     $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
     $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $($Script:NewScriptFileInfo.Guid)"
 
@@ -327,18 +326,18 @@ task FixMarkdownHelp -depends BuildMarkdownHelp {
     $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
     $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 
-    Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$MarkdownPath'"
-    $NewMarkdown | Set-Content -LiteralPath $MarkdownPath
+    Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$Script:MarkdownPath'"
+    $NewMarkdown | Set-Content -LiteralPath $Script:MarkdownPath
 
 } -description 'Fix issues with the Markdown files that were not handled by New-MarkdownHelp.'
 
 task BuildReadMe -depends FixMarkdownHelp {
 
     $ReadMe = [IO.Path]::Combine('..', '..', 'README.md')
-    Write-Host "`tCopy-Item -Path '$script:MarkdownHelp' -Destination '$ReadMe' -Force"
-    Copy-Item -Path $script:MarkdownHelp -Destination $ReadMe -Force
+    Write-Host "`tCopy-Item -Path '$($Script:MarkdownPath)' -Destination '$ReadMe' -Force"
+    Copy-Item -Path $Script:MarkdownPath -Destination $ReadMe -Force
 
-} -description 'Use the help for the script as the readme for the script'
+} -description 'Use the help for the script as the readme for the script.'
 
 task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"

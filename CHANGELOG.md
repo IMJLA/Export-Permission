@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.352] - 2024-06-16
+### Fixed
+- fix remove broken precondition on createmarkdownhelpfolder psake task
+
 ## [0.0.351] - 2024-06-16
 ### Removed
 - remove unnecessary host output in the buildportablerelease psake task

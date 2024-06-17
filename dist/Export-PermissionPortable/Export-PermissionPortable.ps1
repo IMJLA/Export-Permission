@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.351
+.VERSION 0.0.352
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove unnecessary host output in the buildportablerelease psake task
+fix remove broken precondition on createmarkdownhelpfolder psake task
 
 .PRIVATEDATA
 
@@ -74,7 +74,6 @@ Behavior:
 
 #>
 param (
-    #
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,

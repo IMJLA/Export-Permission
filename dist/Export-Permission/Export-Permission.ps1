@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.351
+.VERSION 0.0.352
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove unnecessary host output in the buildportablerelease psake task
+fix remove broken precondition on createmarkdownhelpfolder psake task
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ remove unnecessary host output in the buildportablerelease psake task
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -332,7 +333,6 @@ param (
     Currently supports NTFS folders
     TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
     #>
-    #
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
