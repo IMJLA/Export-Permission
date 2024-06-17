@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.352
+.VERSION 0.0.353
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix remove broken precondition on createmarkdownhelpfolder psake task
+test run
 
 .PRIVATEDATA
 
