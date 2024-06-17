@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.344] - 2024-06-16
+### Changed
+- reduce verbosity of find-newversion to host
+
 ## [0.0.343] - 2024-06-16
 ### Changed
 - test

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.343
+.VERSION 0.0.344
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-test
+reduce verbosity of find-newversion to host
 
 .PRIVATEDATA
 

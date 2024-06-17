@@ -187,7 +187,8 @@ task DetermineNewVersionNumber -Depends GetScriptFileInfo {
     "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
     $script:NewVersion = . $ScriptToRun -OldVersion $Script:OldScriptFileInfo.Version -IncrementMajorVersion $IncrementMajorVersion -IncrementMinorVersion $IncrementMinorVersion
 
-    Write-Host "New version:$NewLine" -ForegroundColor Yellow
+    Write-Host "$NewLine`New version:$NewLine" -ForegroundColor Yellow
+
     $script:NewVersion
 
 } -description 'Determine the new version number.'
