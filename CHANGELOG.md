@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.355] - 2024-06-16
+### Changed
+- test run
+
 ## [0.0.354] - 2024-06-16
 ### Added
 - implement write-host in build scripts

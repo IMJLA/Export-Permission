@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.354
+.VERSION 0.0.355
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement write-host in build scripts
+test run
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ implement write-host in build scripts
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

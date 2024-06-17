@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.354
+help version: 0.0.355
 locale: en-US
 script name: 
 online version:

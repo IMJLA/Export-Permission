@@ -272,7 +272,7 @@ task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$Portab
 
 task CreateMarkdownHelpFolder -depends BuildPortableRelease {
 
-    Write-Host "`tNew-Item -Path '$MarkdownHelpDir' -ItemType Directory"
+    Write-Host "`tNew-Item -Path '$MarkdownHelpDir' -ItemType Directory -ErrorAction SilentlyContinue"
     $null = New-Item -Path $MarkdownHelpDir -ItemType Directory -ErrorAction SilentlyContinue
 
 } -description 'Create a new folder for the Markdown help documentation.'
@@ -308,7 +308,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
     Write-Host "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$($MarkdownParams['OutputFolder'])'..."
     $script:MarkdownHelp = New-MarkdownHelp @MarkdownParams
 
-} -description 'Generate Markdown files from the comment-based help.'
+} -description 'Build Markdown files from the comment-based help by using PlatyPS.'
 
 task FixMarkdownHelp -depends BuildMarkdownHelp {
 
@@ -328,7 +328,7 @@ task FixMarkdownHelp -depends BuildMarkdownHelp {
     Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$Script:MarkdownPath'"
     $NewMarkdown | Set-Content -LiteralPath $Script:MarkdownPath
 
-} -description 'Fix issues with the Markdown files that were not handled by New-MarkdownHelp.'
+} -description 'Fix issues with the Markdown files that were not handled by PlatyPS.'
 
 task BuildReadMe -depends FixMarkdownHelp {
 
@@ -341,7 +341,7 @@ task BuildReadMe -depends FixMarkdownHelp {
 task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
-} -description 'Generates MAML-based help from PlatyPS Markdown files using PowerShellBuild to call New-ExternalHelp.'
+} -description 'Build MAML help from the Markdown files by using PlatyPS invoked by PowerShellBuild.'
 
 # Disabled this task for now, it does not work because New-ExternalHelp (invoked above by Build-PSBuildMAMLHelp) is not generating any MAML help files from the Markdown.
 #task BuildUpdatableHelp -depends BuildMAMLHelp {
@@ -375,11 +375,11 @@ task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
         New-ExternalHelpCab @cabParams 2> $null
     }
 
-} -description 'Build an updatable .cab help file based on the Markdown help files.'
+} -description 'Build an updatable .cab help file based on the Markdown help files by using PlatyPS.'
 
 task BuildOnlineHelp -depends BuildMAMLHelp {
 
-} -description 'Build an Online help website based on the Markdown help files using Docusaurus.'
+} -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
 
 task BuildArt -depends BuildOnlineHelp {
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
@@ -440,7 +440,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
     Invoke-Pester -Configuration $PesterConfiguration
 
-} -description 'Execute Pester tests'
+} -description 'Perform unit tests using Pester.'
 
 task SourceControl -depends UnitTests {
 
