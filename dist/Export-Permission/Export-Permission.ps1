@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.357
+.VERSION 0.0.358
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add host output for publication step
+update psrunspace module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ add host output for publication step
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

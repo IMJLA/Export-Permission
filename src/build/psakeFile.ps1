@@ -160,14 +160,14 @@ task FindBuildModule -precondition { $script:FindLinter } {
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
     $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
 
-} -description 'Find the prerequisite PSScriptAnalyzer PowerShellBuild module.'
+} -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 task FindPlatyPS {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
     $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 
-} -description 'Determine whether the PlatyPS PowerShell module is installed.'
+} -description 'Find the prerequisite PlatyPS PowerShell module.'
 
 task DetectOperatingSystem {
 
@@ -312,21 +312,9 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 
 task FixMarkdownHelp -depends BuildMarkdownHelp {
 
-    # Workaround a bug in New-MarkdownHelp with the Command ParameterSet
     $Script:MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
-    $Markdown = Get-Content -LiteralPath $Script:MarkdownPath -Raw
-    $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $($MainScript.Name)"
-    $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $($Script:NewScriptFileInfo.Guid)"
-
-    # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS
-    $ParamToRemove = '-ProgressAction'
-    $Pattern = "### $ParamToRemove\r?\n[\S\s\r\n]*?(?=#{2,3}?)"
-    $NewMarkdown = [regex]::replace($NewMarkdown, $pattern, '')
-    $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
-    $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
-
-    Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$Script:MarkdownPath'"
-    $NewMarkdown | Set-Content -LiteralPath $Script:MarkdownPath
+    $ScriptToRun = [IO.Path]::Combine('.', 'Repair-MarkdownHelp.ps1')
+    . $ScriptToRun -Path $Script:MarkdownPath -ScriptName $MainScript.Name -ScriptGuid $Script:NewScriptFileInfo.Guid
 
 } -description 'Fix issues with the Markdown files that were not handled by PlatyPS.'
 
@@ -339,8 +327,10 @@ task BuildReadMe -depends FixMarkdownHelp {
 } -description 'Use the help for the script as the readme for the script.'
 
 task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
+
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
+
 } -description 'Build MAML help from the Markdown files by using PlatyPS invoked by PowerShellBuild.'
 
 # Disabled this task for now, it does not work because New-ExternalHelp (invoked above by Build-PSBuildMAMLHelp) is not generating any MAML help files from the Markdown.
@@ -382,17 +372,21 @@ task BuildOnlineHelp -depends BuildMAMLHelp {
 } -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
 
 task BuildArt -depends BuildOnlineHelp {
+
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
     $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
     Write-Host "`t. $ScriptToRun -OutputDir '$OutputDir'"
     . $ScriptToRun -OutputDir $OutputDir
+
 } -description 'Build SVG art using PSSVG.'
 
 task ConvertArt -depends BuildArt {
+
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
     $sourceSVG = [IO.Path]::Combine($Script:OutputDir, "favicon.svg")
     Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
+
 } -description 'Convert SVGs to PNG using Inkscape.'
 
 $pesterPreReqs = {

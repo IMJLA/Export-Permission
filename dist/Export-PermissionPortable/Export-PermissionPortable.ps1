@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.357
+.VERSION 0.0.358
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add host output for publication step
+update psrunspace module
 
 .PRIVATEDATA
 
@@ -1972,6 +1972,7 @@ function Get-DirectoryEntry {
         [string[]]$PropertiesToLoad,
         [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
         [hashtable]$DirectoryEntryCache = ([hashtable]::Synchronized(@{})),
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
         [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
         [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
         [string]$ThisHostName = (HOSTNAME.EXE),
@@ -7155,7 +7156,7 @@ function Add-PsCommand {
     )
     begin {
         $LogParams = @{
-            LogBuffer  = $LogBuffer
+            Buffer       = $LogBuffer
             ThisHostname = $TodaysHostname
             Type         = $DebugOutputStream
             WhoAmI       = $WhoAmI
@@ -7164,7 +7165,7 @@ function Add-PsCommand {
             DebugOutputStream = $DebugOutputStream
             TodaysHostname    = $TodaysHostname
             WhoAmI            = $WhoAmI
-            LogBuffer       = $LogBuffer
+            LogBuffer         = $LogBuffer
         }
         if ($CommandInfo -eq $null) {
             $CommandInfo = Get-PsCommandInfo @CommandInfoParams -Command $Command
@@ -7223,7 +7224,7 @@ function Add-PsModule {
     )
     begin {
         $LogParams = @{
-            LogBuffer  = $LogBuffer
+            Buffer       = $LogBuffer
             ThisHostname = $TodaysHostname
             Type         = $DebugOutputStream
             WhoAmI       = $WhoAmI
@@ -7370,7 +7371,7 @@ function Get-PsCommandInfo {
         [hashtable]$LogBuffer = $Global:LogMessages
     )
     $LogParams = @{
-        LogBuffer  = $LogBuffer
+        Buffer       = $LogBuffer
         ThisHostname = $TodaysHostname
         Type         = $DebugOutputStream
         WhoAmI       = $WhoAmI
@@ -7439,7 +7440,7 @@ function Open-Thread {
             $Progress['Id'] = 0
         }
         $LogParams = @{
-            LogBuffer  = $LogBuffer
+            Buffer       = $LogBuffer
             ThisHostname = $TodaysHostname
             Type         = $DebugOutputStream
             WhoAmI       = $WhoAmI
@@ -7448,7 +7449,7 @@ function Open-Thread {
             DebugOutputStream = $DebugOutputStream
             TodaysHostname    = $TodaysHostname
             WhoAmI            = $WhoAmI
-            LogBuffer       = $LogBuffer
+            LogBuffer         = $LogBuffer
         }
         [int64]$CurrentObjectIndex = 0
         $ThreadCount = @($InputObject).Count
@@ -7585,7 +7586,7 @@ function Split-Thread {
     )
     begin {
         $LogParams = @{
-            LogBuffer    = $LogBuffer
+            Buffer       = $LogBuffer
             ThisHostname = $TodaysHostname
             Type         = $DebugOutputStream
             WhoAmI       = $WhoAmI
@@ -7712,7 +7713,7 @@ function Wait-Thread {
     )
     begin {
         $LogParams = @{
-            LogBuffer  = $LogBuffer
+            Buffer       = $LogBuffer
             ThisHostname = $TodaysHostname
             Type         = $DebugOutputStream
             WhoAmI       = $WhoAmI

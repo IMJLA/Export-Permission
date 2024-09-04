@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.358] - 2024-09-03
+### Changed
+- update psrunspace module
+
 ## [0.0.357] - 2024-06-16
 ### Added
 - add host output for publication step
