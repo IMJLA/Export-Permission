@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.361
+.VERSION 0.0.362
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -7645,14 +7645,11 @@ function Split-Thread {
         $Global:TimedOut = $false
     }
     end {
-        $AllInputObjects = $input
-        Write-LogMsg @LogParams -Text " # Entered end block. Sending $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
-        Write-LogMsg @LogParams -Text " # Received '$(($AllInputObjects | Measure-Object).Count)' objects with the `$input automatic variable."
-        Write-LogMsg @LogParams -Text " # Received '$(($InputObject | Measure-Object).Count)' objects with the `InputObject parameter."
+        Write-LogMsg @LogParams -Text " # Entered end block. Sending $(($InputObject | Measure-Object).Count)' input objects and $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
         $ThreadParameters = @{
             Command              = $Command
             InputParameter       = $InputParameter
-            InputObject          = $AllInputObjects
+            InputObject          = $InputObject
             AddParam             = $AddParam
             AddSwitch            = $AddSwitch
             ObjectStringProperty = $ObjectStringProperty
