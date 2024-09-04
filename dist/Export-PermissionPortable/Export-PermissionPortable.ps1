@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.363
+.VERSION 0.0.364
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-single-threaded by default at least until multithreading is more rigorously tested
+update adsi module
 
 .PRIVATEDATA
 
@@ -1049,6 +1049,7 @@ function ConvertTo-DistinguishedName {
         [string[]]$Domain,
         [Parameter(ParameterSetName = 'NetBIOS')]
         [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
         [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'FQDN')]
         [string[]]$DomainFQDN,
         [string]$InitType = 'ADS_NAME_INITTYPE_GC',
@@ -1065,7 +1066,7 @@ function ConvertTo-DistinguishedName {
         $LogParams = @{
             ThisHostname = $ThisHostname
             Type         = $DebugOutputStream
-            Buffer = $LogBuffer
+            Buffer       = $LogBuffer
             WhoAmI       = $WhoAmI
         }
         $LoggingParams = @{
@@ -1835,7 +1836,6 @@ function Get-AdsiServer {
         }
         $CimParams = @{
             CimCache          = $CimCache
-            ComputerName      = $ThisFqdn
             DebugOutputStream = $DebugOutputStream
             ThisFqdn          = $ThisFqdn
         }
@@ -2182,75 +2182,75 @@ function Get-WinNTGroupMember {
         Sort-Object -Unique
     }
     process {
-        ForEach ($ThisDirEntry in $DirectoryEntry) {
-            $SourceDomain = $ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf
-            if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -eq 'group') {
-                $DirectoryMembers = & { $ThisDirEntry.Invoke('Members') } 2>$null
-                Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members # For $($ThisDirEntry.Path)"
-                $MembersToGet = @{
-                    'WinNTMembers' = @()
-                }
-                $MemberParams = @{
-                    DirectoryEntryCache = $DirectoryEntryCache
-                    PropertiesToLoad    = $PropertiesToLoad
-                    DomainsByNetbios    = $DomainsByNetbios
-                    LogBuffer           = $LogBuffer
-                    WhoAmI              = $WhoAmI
-                    CimCache            = $CimCache
-                    ThisFqdn            = $ThisFqdn
-                }
-                ForEach ($DirectoryMember in $DirectoryMembers) {
-                    $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
-                    $MemberDomainDn = $null
-                    if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)') {
-                        Write-LogMsg @LogParams -Text " # '$DirectoryPath' has a domain of '$($Matches.Domain)' and an account name of '$($Matches.Acct)'"
-                        $MemberName = $Matches.Acct
-                        $MemberDomainNetbios = $Matches.Domain
-                        $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
-                        if ($DomainCacheResult) {
-                            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$MemberDomainNetBios'"
-                            if ( "WinNT:\\$MemberDomainNetbios" -ne $SourceDomain ) {
-                                $MemberDomainDn = $DomainCacheResult.DistinguishedName
-                            }
-                        } else {
-                            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',')"
-                        }
-                        if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
-                            Write-LogMsg @LogParams -Text " # '$DirectoryPath' is named '$($Matches.Acct)' and is on ADSI server '$($Matches.Middle)' joined to the domain '$($Matches.Domain)'"
-                            if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
-                                $MemberDomainDn = $null
-                            }
-                        }
-                    } else {
-                        Write-LogMsg @LogParams -Text " # '$DirectoryPath' does not match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)'"
+ForEach ($ThisDirEntry in $DirectoryEntry) {
+    $SourceDomain = $ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf
+    if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -eq 'group') {
+        $DirectoryMembers = & { $ThisDirEntry.Invoke('Members') } 2>$null
+        Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members # For $($ThisDirEntry.Path)"
+        $MembersToGet = @{
+            'WinNTMembers' = @()
+        }
+        $MemberParams = @{
+            DirectoryEntryCache = $DirectoryEntryCache
+            PropertiesToLoad    = $PropertiesToLoad
+            DomainsByNetbios    = $DomainsByNetbios
+            LogBuffer           = $LogBuffer
+            WhoAmI              = $WhoAmI
+            CimCache            = $CimCache
+            ThisFqdn            = $ThisFqdn
+        }
+        ForEach ($DirectoryMember in $DirectoryMembers) {
+            $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
+            $MemberDomainDn = $null
+            if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)') {
+                Write-LogMsg @LogParams -Text " # '$DirectoryPath' has a domain of '$($Matches.Domain)' and an account name of '$($Matches.Acct)'"
+                $MemberName = $Matches.Acct
+                $MemberDomainNetbios = $Matches.Domain
+                $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
+                if ($DomainCacheResult) {
+                    Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$MemberDomainNetBios'"
+                    if ( "WinNT:\\$MemberDomainNetbios" -ne $SourceDomain ) {
+                        $MemberDomainDn = $DomainCacheResult.DistinguishedName
                     }
-                    if ($MemberDomainDn) {
-                        Write-LogMsg @LogParams -Text " # '$MemberName' is a domain security principal"
-                        $MembersToGet["LDAP://$MemberDomainDn"] += "(samaccountname=$MemberName)"
-                    } else {
-                        Write-LogMsg @LogParams -Text " # '$DirectoryPath' is a local security principal"
-                        $MembersToGet['WinNTMembers'] += $DirectoryPath
+                } else {
+                    Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',')"
+                }
+                if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
+                    Write-LogMsg @LogParams -Text " # '$DirectoryPath' is named '$($Matches.Acct)' and is on ADSI server '$($Matches.Middle)' joined to the domain '$($Matches.Domain)'"
+                    if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
+                        $MemberDomainDn = $null
                     }
-                }
-                ForEach ($ThisMember in $MembersToGet['WinNTMembers']) {
-                    $MemberParams['DirectoryPath'] = $ThisMember
-                    Write-LogMsg @LogParams -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath'"
-                    $MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
-                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
-                }
-                $MembersToGet.Remove('WinNTMembers')
-                $MembersToGet.Keys |
-                ForEach-Object {
-                    $MemberParams['DirectoryPath'] = $_
-                    $MemberParams['Filter'] = "(|$($MembersToGet[$_]))"
-                    $MemberDirectoryEntries = Search-Directory @MemberParams
-                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntries -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
                 }
             } else {
-                Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' is not a group"
+                Write-LogMsg @LogParams -Text " # '$DirectoryPath' does not match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)'"
+            }
+            if ($MemberDomainDn) {
+                Write-LogMsg @LogParams -Text " # '$MemberName' is a domain security principal"
+                $MembersToGet["LDAP://$MemberDomainDn"] += "(samaccountname=$MemberName)"
+            } else {
+                Write-LogMsg @LogParams -Text " # '$DirectoryPath' is a local security principal"
+                $MembersToGet['WinNTMembers'] += $DirectoryPath
             }
         }
+        ForEach ($ThisMember in $MembersToGet['WinNTMembers']) {
+            $MemberParams['DirectoryPath'] = $ThisMember
+            Write-LogMsg @LogParams -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath'"
+            $MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
+            Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+        }
+        $MembersToGet.Remove('WinNTMembers')
+        $MembersToGet.Keys |
+        ForEach-Object {
+            $MemberParams['DirectoryPath'] = $_
+            $MemberParams['Filter'] = "(|$($MembersToGet[$_]))"
+            $MemberDirectoryEntries = Search-Directory @MemberParams
+            Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntries -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+        }
+    } else {
+        Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' is not a group"
     }
+}
+}
 }
 function Invoke-ComObject {
     param (

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.363
+.VERSION 0.0.364
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-single-threaded by default at least until multithreading is more rigorously tested
+update adsi module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ single-threaded by default at least until multithreading is more rigorously test
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
