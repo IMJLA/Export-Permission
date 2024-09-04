@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.358
+.VERSION 0.0.359
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -7648,6 +7648,7 @@ function Split-Thread {
     end {
         $AllInputObjects = $input
         Write-LogMsg @LogParams -Text " # Entered end block. Sending $(($CommandsToAdd | Measure-Object).Count) PsCommandInfos to Open-Thread for '$Command'"
+        Write-LogMsg @LogParams -Text " # Received '$(($AllInputObjects | Measure-Object).Count)' objects to the InputObject parameter."
         $ThreadParameters = @{
             Command              = $Command
             InputParameter       = $InputParameter
