@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.362
+.VERSION 0.0.363
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psrunspace module
+single-threaded by default at least until multithreading is more rigorously tested
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update psrunspace module
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -422,7 +423,8 @@ param (
     [scriptblock]$AccountConvention = { $true },
 
     # Number of asynchronous threads to use
-    [uint16]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
+    # Recommended starting with the # of logical CPUs (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
+    [uint16]$ThreadCount = 1,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
     [switch]$Interactive,

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.362
+.VERSION 0.0.363
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psrunspace module
+single-threaded by default at least until multithreading is more rigorously tested
 
 .PRIVATEDATA
 
@@ -86,7 +86,7 @@ param (
     [int]$RecurseDepth = -1,
     [string]$Title = 'Permissions Report',
     [scriptblock]$AccountConvention = { $true },
-    [uint16]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
+    [uint16]$ThreadCount = 1,
     [switch]$Interactive,
     [string]$PrtgProbe,
     [string]$PrtgProtocol,

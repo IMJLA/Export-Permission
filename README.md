@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.362
+help version: 0.0.363
 locale: en-US
 script name: 
 online version:
@@ -684,6 +684,7 @@ Accept wildcard characters: False
 
 ### -ThreadCount
 Number of asynchronous threads to use
+Recommended starting with the # of logical CPUs (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
 
 ```yaml
 Type: System.UInt16
@@ -692,7 +693,7 @@ Aliases:
 
 Required: False
 Position: 10
-Default value: (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
+Default value: 1
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

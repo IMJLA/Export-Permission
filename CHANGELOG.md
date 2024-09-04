@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.363] - 2024-09-03
+### Changed
+- single-threaded by default at least until multithreading is more rigorously tested
+
 ## [0.0.362] - 2024-09-03
 ### Changed
 - update psrunspace module

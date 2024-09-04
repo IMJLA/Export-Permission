@@ -52,14 +52,14 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
           <maml:name>ThreadCount</maml:name>
           <maml:description>
-            <maml:para>Number of asynchronous threads to use</maml:para>
+            <maml:para>Number of asynchronous threads to use Recommended starting with the # of logical CPUs (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
           <dev:type>
             <maml:name>System.UInt16</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>(Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</dev:defaultValue>
+          <dev:defaultValue>1</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
           <maml:name>PrtgProbe</maml:name>
@@ -605,14 +605,14 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>ThreadCount</maml:name>
         <maml:description>
-          <maml:para>Number of asynchronous threads to use</maml:para>
+          <maml:para>Number of asynchronous threads to use Recommended starting with the # of logical CPUs (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
         <dev:type>
           <maml:name>System.UInt16</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>(Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum</dev:defaultValue>
+        <dev:defaultValue>1</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
         <maml:name>Title</maml:name>
