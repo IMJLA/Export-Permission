@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.366
+.VERSION 0.0.367
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix get-directoryentry caching
+update dev tests, integrate bugfixes from dependencies
 
 .PRIVATEDATA
 
@@ -4432,7 +4432,6 @@ function Select-PermissionTableProperty {
             ForEach ($Object in $InputObject) {
                 $Accounts = @{}
                 ForEach ($AceList in $Object.Access) {
-                    if (-not $AceList.Account.ResolvedAccountName) { pause }
                     $AccountName = $ShortNameByID[$AceList.Account.ResolvedAccountName]
                     if ($AccountName) {
                         ForEach ($ACE in $AceList.Access) {
@@ -4844,7 +4843,10 @@ function Format-Permission {
                                 Item       = $NetworkPath.Item
                                 Access     = $NetworkPath.Access
                             })
-                        $Selection.AddRange([PSCustomObject[]]$NetworkPath.$Prop)
+                        $ChildItems = [PSCustomObject[]]$NetworkPath.$Prop
+                        if ($ChildItems) {
+                            $Selection.AddRange($ChildItems)
+                        }
                     } else {
                         $Selection = $NetworkPath.$Prop
                     }

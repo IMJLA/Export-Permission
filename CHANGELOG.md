@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.367] - 2024-09-15
+### Changed
+- update dev tests, integrate bugfixes from dependencies
+
 ## [0.0.366] - 2024-09-15
 ### Fixed
 - bugfix get-directoryentry caching

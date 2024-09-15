@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.366
+.VERSION 0.0.367
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix get-directoryentry caching
+update dev tests, integrate bugfixes from dependencies
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix get-directoryentry caching
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
