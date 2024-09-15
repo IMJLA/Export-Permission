@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.365] - 2024-09-14
+### Fixed
+- bugfixes and additional debug tests
+
 ## [0.0.364] - 2024-09-04
 ### Changed
 - update adsi module

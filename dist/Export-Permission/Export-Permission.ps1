@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.364
+.VERSION 0.0.365
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update adsi module
+bugfixes and additional debug tests
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update adsi module
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -754,11 +755,11 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
-        ACEsByResolvedID       = $AceGuidByID
-        CimCache               = $CimCache
-        CurrentDomain          = $CurrentDomain
-        NoGroupMembers         = $NoMembers
-        PrincipalsByResolvedID = $PrincipalByID
+        ACEsByResolvedID = $AceGuidByID
+        CimCache         = $CimCache
+        CurrentDomain    = $CurrentDomain
+        NoGroupMembers   = $NoMembers
+        PrincipalByID    = $PrincipalByID
     }
     Write-LogMsg @Log -Text "Get-PermissionPrincipal" -Expand $CommandParameters, $LogThis, $CacheParams
     Get-PermissionPrincipal @CommandParameters @LogThis @CacheParams

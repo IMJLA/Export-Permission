@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.364
+.VERSION 0.0.365
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update adsi module
+bugfixes and additional debug tests
 
 .PRIVATEDATA
 
@@ -478,56 +478,78 @@ class FakeDirectoryEntry {
         $This.Parent = $DirectoryPath.Substring(0, $LastSlashIndex)
         $This.Path = $DirectoryPath
         $This.SchemaEntry = [System.DirectoryServices.DirectoryEntry]
-        switch -regex ($DirectoryPath) {
-            'CREATOR OWNER$' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-3-0'
-                $This.Description = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
-                $This.SchemaClassName = 'user'
-            }
-            'SYSTEM$' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-18'
-                $This.Description = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
-                $This.SchemaClassName = 'user'
-            }
-            'INTERACTIVE$' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-4'
-                $This.Description = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
-                $This.SchemaClassName = 'group'
-            }
-            'Authenticated Users$' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
-                $This.Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
-                $This.SchemaClassName = 'group'
-            }
-            'TrustedInstaller$' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
-                $This.Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
-                $This.SchemaClassName = 'user'
-            }
-            'ALL APPLICATION PACKAGES$' {
+        switch -Wildcard ($DirectoryPath) {
+            '*/ALL APPLICATION PACKAGES' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-1'
                 $This.Description = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
                 $This.SchemaClassName = 'group'
+                break
             }
-            'ALL RESTRICTED APPLICATION PACKAGES$' {
+            '*/ALL RESTRICTED APPLICATION PACKAGES' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
                 $This.Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
                 $This.SchemaClassName = 'group'
+                break
             }
-            'Everyone$' {
+            '*/ANONYMOUS LOGON' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-7'
+                $This.Description = 'A user who has connected to the computer without supplying a user name and password. Not a member of Authenticated Users.'
+                $This.SchemaClassName = 'user'
+                break
+            }
+            '*/Authenticated Users' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
+                $This.Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
+                $This.SchemaClassName = 'group'
+                break
+            }
+            '*/CREATOR OWNER' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
+                $This.Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
+                $This.SchemaClassName = 'group'
+                break
+            }
+            '*/CREATOR OWNER' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-3-0'
+                $This.Description = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
+                $This.SchemaClassName = 'user'
+                break
+            }
+            '*/Everyone' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-1-0'
                 $This.Description = "A group that includes all users; aka 'World'."
                 $This.SchemaClassName = 'group'
+                break
             }
-            'LOCAL SERVICE$' {
+            '*/INTERACTIVE' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-4'
+                $This.Description = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
+                $This.SchemaClassName = 'group'
+                break
+            }
+            '*/LOCAL SERVICE' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-19'
                 $This.Description = 'A local service account'
                 $This.SchemaClassName = 'user'
+                break
             }
-            'NETWORK SERVICE$' {
+            '*/NETWORK SERVICE' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-20'
                 $This.Description = 'A network service account'
                 $This.SchemaClassName = 'user'
+                break
+            }
+            '*/SYSTEM' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-18'
+                $This.Description = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
+                $This.SchemaClassName = 'user'
+                break
+            }
+            '*/TrustedInstaller' {
+                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+                $This.Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
+                $This.SchemaClassName = 'user'
+                break
             }
         }
         $This.Properties = @{
@@ -600,14 +622,6 @@ function Add-SidInfo {
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
         [string]$DebugOutputStream = 'Debug'
     )
-    begin {
-        $LogParams = @{
-            ThisHostname = $ThisHostname
-            Type         = $DebugOutputStream
-            Buffer = $LogBuffer
-            WhoAmI       = $WhoAmI
-        }
-    }
     process {
         ForEach ($Object in $InputObject) {
             $SID = $null
@@ -615,7 +629,7 @@ function Add-SidInfo {
             $DomainObject = $null
             if ($null -eq $Object) {
                 continue
-            } elseif ($Object.objectSid.Value ) {
+            } elseif ($Object.objectSid.Value) {
                 if ( $Object.objectSid.Value.GetType().FullName -ne 'System.Management.Automation.PSMethod' ) {
                     [string]$SID = [System.Security.Principal.SecurityIdentifier]::new([byte[]]$Object.objectSid.Value, 0)
                 }
@@ -644,6 +658,7 @@ function Add-SidInfo {
                 $DomainObject = $Object.Domain
             }
             if (-not $DomainObject) {
+                if (-not $SID) { pause }
                 $DomainSid = $SID.Substring(0, $Sid.LastIndexOf("-"))
                 $DomainObject = $DomainsBySid[$DomainSid]
             }
@@ -677,7 +692,7 @@ function ConvertFrom-IdentityReferenceResolved {
         [string]$IdentityReference,
         [switch]$NoGroupMembers,
         [hashtable]$ACEsByResolvedID = ([hashtable]::Synchronized(@{})),
-        [hashtable]$PrincipalsByResolvedID = ([hashtable]::Synchronized(@{})),
+        [hashtable]$PrincipalById = ([hashtable]::Synchronized(@{})),
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
         [string]$DebugOutputStream = 'Debug',
         [hashtable]$CimCache = ([hashtable]::Synchronized(@{})),
@@ -694,7 +709,7 @@ function ConvertFrom-IdentityReferenceResolved {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer = $LogBuffer
+        Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     $LoggingParams = @{
@@ -703,7 +718,7 @@ function ConvertFrom-IdentityReferenceResolved {
         WhoAmI       = $WhoAmI
     }
     $AccessControlEntries = $ACEsByResolvedID[$IdentityReference]
-    if ($null -eq $PrincipalsByResolvedID[$IdentityReference]) {
+    if ($null -eq $PrincipalById[$IdentityReference]) {
         Write-LogMsg @LogParams -Text " # ADSI Principal cache miss for '$IdentityReference'"
         $GetDirectoryEntryParams = @{
             DirectoryEntryCache = $DirectoryEntryCache
@@ -721,9 +736,9 @@ function ConvertFrom-IdentityReferenceResolved {
         }
         $split = $IdentityReference.Split('\')
         $DomainNetBIOS = $split[0]
-        $SamaccountnameOrSid = $split[1]
+        $SamAccountNameOrSid = $split[1]
         if (
-            $null -ne $SamaccountnameOrSid -and
+            $null -ne $SamAccountNameOrSid -and
             @($AccessControlEntries.AdsiProvider)[0] -eq 'LDAP'
         ) {
             Write-LogMsg @LogParams -Text " # '$IdentityReference' is a domain security principal"
@@ -739,7 +754,7 @@ function ConvertFrom-IdentityReferenceResolved {
                 }
                 $SearchDirectoryParams['DirectoryPath'] = Add-DomainFqdnToLdapPath -DirectoryPath "LDAP://$DomainNetBIOS" -ThisFqdn $ThisFqdn -CimCache $CimCache @LogParams
             }
-            $SearchDirectoryParams['Filter'] = "(samaccountname=$SamaccountnameOrSid)"
+            $SearchDirectoryParams['Filter'] = "(samaccountname=$SamAccountNameOrSid)"
             $SearchDirectoryParams['PropertiesToLoad'] = @(
                 'objectClass',
                 'objectSid',
@@ -754,8 +769,9 @@ function ConvertFrom-IdentityReferenceResolved {
                 'Title',
                 'primaryGroupToken'
             )
-            $Params = $SearchDirectoryParams.Keys | ForEach-Object {
-                "-$_ '$($SearchDirectoryParams[$_])'"
+            $Params = ForEach ($ParamName in $SearchDirectoryParams.Keys) {
+                $ParamValue = ConvertTo-PSCodeString -InputObject $SearchDirectoryParams[$ParamName]
+                "-$ParamName $ParamValue"
             }
             Write-LogMsg @LogParams -Text "Search-Directory $($Params -join ' ')"
             try {
@@ -774,8 +790,9 @@ function ConvertFrom-IdentityReferenceResolved {
             $SearchDirectoryParams['DirectoryPath'] = "LDAP://$DomainFQDN/cn=partitions,cn=configuration,$DomainDn"
             $SearchDirectoryParams['Filter'] = "(&(objectcategory=crossref)(dnsroot=$DomainFQDN)(netbiosname=*))"
             $SearchDirectoryParams['PropertiesToLoad'] = 'netbiosname'
-            $Params = $SearchDirectoryParams.Keys | ForEach-Object {
-                "-$_ '$($SearchDirectoryParams[$_])'"
+            $Params = ForEach ($ParamName in $SearchDirectoryParams.Keys) {
+                $ParamValue = ConvertTo-PSCodeString -InputObject $SearchDirectoryParams[$ParamName]
+                "-$ParamName $ParamValue"
             }
             Write-LogMsg @LogParams -Text "Search-Directory $($Params -join ' ')"
             $DomainCrossReference = Search-Directory @SearchDirectoryParams @LoggingParams
@@ -803,8 +820,9 @@ function ConvertFrom-IdentityReferenceResolved {
                 'Title',
                 'primaryGroupToken'
             )
-            $Params = $SearchDirectoryParams.Keys | ForEach-Object {
-                "-$_ '$($SearchDirectoryParams[$_])'"
+            $Params = ForEach ($ParamName in $SearchDirectoryParams.Keys) {
+                $ParamValue = ConvertTo-PSCodeString -InputObject $SearchDirectoryParams[$ParamName]
+                "-$ParamName $ParamValue"
             }
             Write-LogMsg @LogParams -Text "Search-Directory $($Params -join ' ')"
             try {
@@ -816,10 +834,10 @@ function ConvertFrom-IdentityReferenceResolved {
             }
         } else {
             Write-LogMsg @LogParams -Text " # '$IdentityReference' is a local security principal or unresolved SID"
-            if ($null -eq $SamaccountnameOrSid) { $SamaccountnameOrSid = $IdentityReference }
-            if ($SamaccountnameOrSid -like "S-1-*") {
+            if ($null -eq $SamAccountNameOrSid) { $SamAccountNameOrSid = $IdentityReference }
+            if ($SamAccountNameOrSid -like "S-1-*") {
                 Write-LogMsg @LogParams -Text "$($IdentityReference) is an unresolved SID"
-                $DomainSid = $SamaccountnameOrSid.Substring(0, $SamaccountnameOrSid.LastIndexOf("-"))
+                $DomainSid = $SamAccountNameOrSid.Substring(0, $SamAccountNameOrSid.LastIndexOf("-"))
                 if ($DomainSid -eq $CurrentDomain.SIDString) {
                     Write-LogMsg @LogParams -Text "$($IdentityReference) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
                 } else {
@@ -834,8 +852,9 @@ function ConvertFrom-IdentityReferenceResolved {
                     $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/Users,group"
                     $DomainDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -DomainsByNetbios $DomainsByNetbios @LoggingParams
                 }
-                $Params = $GetDirectoryEntryParams.Keys | ForEach-Object {
-                    "-$_ '$($GetDirectoryEntryParams[$_])'"
+                $Params = ForEach ($ParamName in $GetDirectoryEntryParams.Keys) {
+                    $ParamValue = ConvertTo-PSCodeString -InputObject $GetDirectoryEntryParams[$ParamName]
+                    "-$ParamName $ParamValue"
                 }
                 Write-LogMsg @LogParams -Text "Get-DirectoryEntry $($Params -join ' ')"
                 try {
@@ -847,14 +866,14 @@ function ConvertFrom-IdentityReferenceResolved {
                 }
                 $MembersOfUsersGroup = Get-WinNTGroupMember -DirectoryEntry $UsersGroup -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
                 $DirectoryEntry = $MembersOfUsersGroup |
-                Where-Object -FilterScript { ($SamaccountnameOrSid -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
+                Where-Object -FilterScript { ($SamAccountNameOrSid -eq [System.Security.Principal.SecurityIdentifier]::new([byte[]]$_.Properties['objectSid'].Value, 0)) }
             } else {
                 Write-LogMsg @LogParams -Text " # '$IdentityReference' is a local security principal"
                 $DomainNetbiosCacheResult = $DomainsByNetbios[$DomainNetBIOS]
                 if ($DomainNetbiosCacheResult) {
-                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainNetbiosCacheResult.Dns)/$SamaccountnameOrSid"
+                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$($DomainNetbiosCacheResult.Dns)/$SamAccountNameOrSid"
                 } else {
-                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/$SamaccountnameOrSid"
+                    $GetDirectoryEntryParams['DirectoryPath'] = "WinNT://$DomainNetBIOS/$SamAccountNameOrSid"
                 }
                 $GetDirectoryEntryParams['PropertiesToLoad'] = @(
                     'members',
@@ -871,8 +890,9 @@ function ConvertFrom-IdentityReferenceResolved {
                     'Title',
                     'primaryGroupToken'
                 )
-                $Params = $GetDirectoryEntryParams.Keys | ForEach-Object {
-                    "-$_ $($GetDirectoryEntryParams[$_])"
+                $Params = ForEach ($ParamName in $GetDirectoryEntryParams.Keys) {
+                    $ParamValue = ConvertTo-PSCodeString -InputObject $GetDirectoryEntryParams[$ParamName]
+                    "-$ParamName $ParamValue"
                 }
                 Write-LogMsg @LogParams -Text "Get-DirectoryEntry $($Params -join ' ')"
                 try {
@@ -929,7 +949,7 @@ function ConvertFrom-IdentityReferenceResolved {
                                 Domain = [pscustomobject]@{
                                     Dns     = $DomainNetBIOS
                                     Netbios = $DomainNetBIOS
-                                    Sid     = @($SamaccountnameOrSid -split '-')[-1]
+                                    Sid     = @($SamAccountNameOrSid -split '-')[-1]
                                 }
                             }
                         }
@@ -943,7 +963,7 @@ function ConvertFrom-IdentityReferenceResolved {
                             $ResolvedAccountName = "$($OutputProperties['Domain'].Netbios)\$($ThisMember.Name)"
                         }
                         $OutputProperties['ResolvedAccountName'] = $ResolvedAccountName
-                        $PrincipalsByResolvedID[$ResolvedAccountName] = [PSCustomObject]$OutputProperties
+                        $PrincipalById[$ResolvedAccountName] = [PSCustomObject]$OutputProperties
                         $ACEsByResolvedID[$ResolvedAccountName] = $AccessControlEntries
                         $ResolvedAccountName
                     }
@@ -956,7 +976,7 @@ function ConvertFrom-IdentityReferenceResolved {
             Write-LogMsg @LogParams -Text " # '$IdentityReference' could not be matched to a DirectoryEntry"
             $LogParams['Type'] = $DebugOutputStream
         }
-        $PrincipalsByResolvedID[$IdentityReference] = [PSCustomObject]$PropertiesToAdd
+        $PrincipalById[$IdentityReference] = [PSCustomObject]$PropertiesToAdd
     }
 }
 function ConvertFrom-PropertyValueCollectionToString {
@@ -965,7 +985,7 @@ function ConvertFrom-PropertyValueCollectionToString {
     )
     $SubType = & { $PropertyValueCollection.Value.GetType().FullName } 2>$null
     switch ($SubType) {
-        'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $PropertyValueCollection.Value }
+        'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $PropertyValueCollection.Value ; break }
         default { "$($PropertyValueCollection.Value)" }
     }
 }
@@ -975,7 +995,7 @@ function ConvertFrom-ResultPropertyValueCollectionToString {
     )
     $SubType = & { $ResultPropertyValueCollection.Value.GetType().FullName } 2>$null
     switch ($SubType) {
-        'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $ResultPropertyValueCollection.Value }
+        'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $ResultPropertyValueCollection.Value ; break }
         default { "$($ResultPropertyValueCollection.Value)" }
     }
 }
@@ -1643,11 +1663,13 @@ function Get-AdsiGroup {
             $GroupParams['DirectoryPath'] = "$DirectoryPath/$GroupName"
             $GroupMemberParams['DirectoryEntry'] = Get-DirectoryEntry @GroupParams
             $FullMembers = Get-WinNTGroupMember @GroupMemberParams
+            break
         }
         '^$' {
             $GroupParams['DirectoryPath'] = "WinNT://localhost/$GroupName"
             $GroupMemberParams['DirectoryEntry'] = Get-DirectoryEntry @GroupParams
             $FullMembers = Get-WinNTGroupMember @GroupMemberParams
+            break
         }
         default {
             if ($GroupName) {
@@ -1996,35 +2018,49 @@ function Get-DirectoryEntry {
     $DirectoryEntry = $null
     if ($null -eq $DirectoryEntryCache[$DirectoryPath]) {
         switch -regex ($DirectoryPath) {
-            '^WinNT:\/\/.*\/CREATOR OWNER$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-            }
-            '^WinNT:\/\/.*\/SYSTEM$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-            }
-            '^WinNT:\/\/.*\/INTERACTIVE$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-            }
-            '^WinNT:\/\/.*\/Authenticated Users$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-            }
-            '^WinNT:\/\/.*\/TrustedInstaller$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-            }
             '^WinNT:\/\/.*\/ALL APPLICATION PACKAGES$' {
                 $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
             }
             '^WinNT:\/\/.*\/ALL RESTRICTED APPLICATION PACKAGES$' {
                 $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
+            }
+            '^WinNT:\/\/.*\/ANONYMOUS LOGON$' {
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
+            }
+            '^WinNT:\/\/.*\/Authenticated Users$' {
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
+            }
+            '^WinNT:\/\/.*\/CREATOR OWNER$' {
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
             }
             '^WinNT:\/\/.*\/Everyone$' {
                 $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
+            }
+            '^WinNT:\/\/.*\/INTERACTIVE$' {
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
             }
             '^WinNT:\/\/.*\/LOCAL SERVICE$' {
                 $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
             }
             '^WinNT:\/\/.*\/NETWORK SERVICE$' {
                 $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
+            }
+            '^WinNT:\/\/.*\/SYSTEM$' {
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
+            }
+            '^WinNT:\/\/.*\/TrustedInstaller$' {
+                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
+                break
             }
             '^$' {
                 Write-LogMsg @LogParams -Text "'$ThisHostname' does not seem to be domain-joined since the SearchRoot Path is empty. Defaulting to WinNT provider for localhost instead."
@@ -2047,6 +2083,7 @@ function Get-DirectoryEntry {
                 Add-SidInfo -DomainsBySid $DomainsBySid @LoggingParams
                 $DirectoryEntry |
                 Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
+                break
             }
             default {
                 Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
@@ -2055,6 +2092,7 @@ function Get-DirectoryEntry {
                 } else {
                     $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
                 }
+                break
             }
         }
         $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
@@ -2278,58 +2316,79 @@ function New-FakeDirectoryEntry {
     $StartIndex = $LastSlashIndex + 1
     $Name = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
     $Parent = $DirectoryPath.Substring(0, $LastSlashIndex)
-    $Path = $DirectoryPath
     $SchemaEntry = [System.DirectoryServices.DirectoryEntry]
-    switch -regex ($DirectoryPath) {
-        'CREATOR OWNER$' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-3-0'
-            $Description = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
-            $SchemaClassName = 'user'
-        }
-        'SYSTEM$' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-18'
-            $Description = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
-            $SchemaClassName = 'user'
-        }
-        'INTERACTIVE$' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-4'
-            $Description = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
-            $SchemaClassName = 'group'
-        }
-        'Authenticated Users$' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
-            $Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
-            $SchemaClassName = 'group'
-        }
-        'TrustedInstaller$' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
-            $Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
-            $SchemaClassName = 'user'
-        }
-        'ALL APPLICATION PACKAGES$' {
+    switch -Wildcard ($DirectoryPath) {
+        '*/ALL APPLICATION PACKAGES' {
             $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-1'
             $Description = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
             $SchemaClassName = 'group'
+            break
         }
-        'ALL RESTRICTED APPLICATION PACKAGES$' {
+        '*/ALL RESTRICTED APPLICATION PACKAGES' {
             $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
             $Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
             $SchemaClassName = 'group'
+            break
         }
-        'Everyone$' {
+        '*/ANONYMOUS LOGON' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-7'
+            $Description = 'A user who has connected to the computer without supplying a user name and password. Not a member of Authenticated Users.'
+            $SchemaClassName = 'user'
+            break
+        }
+        '*/Authenticated Users' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
+            $Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
+            $SchemaClassName = 'group'
+            break
+        }
+        '*/CREATOR OWNER' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
+            $Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
+            $SchemaClassName = 'group'
+            break
+        }
+        '*/CREATOR OWNER' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-3-0'
+            $Description = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
+            $SchemaClassName = 'user'
+            break
+        }
+        '*/Everyone' {
             $objectSid = ConvertTo-SidByteArray -SidString 'S-1-1-0'
             $Description = "A group that includes all users; aka 'World'."
             $SchemaClassName = 'group'
+            break
         }
-        'LOCAL SERVICE$' {
+        '*/INTERACTIVE' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-4'
+            $Description = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
+            $SchemaClassName = 'group'
+            break
+        }
+        '*/LOCAL SERVICE' {
             $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-19'
             $Description = 'A local service account'
             $SchemaClassName = 'user'
+            break
         }
-        'NETWORK SERVICE$' {
+        '*/NETWORK SERVICE' {
             $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-20'
             $Description = 'A network service account'
             $SchemaClassName = 'user'
+            break
+        }
+        '*/SYSTEM' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-18'
+            $Description = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
+            $SchemaClassName = 'user'
+            break
+        }
+        '*/TrustedInstaller' {
+            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+            $Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
+            $SchemaClassName = 'user'
+            break
         }
     }
     $Properties = @{
@@ -2344,7 +2403,7 @@ function New-FakeDirectoryEntry {
         objectSid       = $objectSid
         SchemaClassName = $SchemaClassName
         Parent          = $Parent
-        Path            = $Path
+        Path            = $DirectoryPath
         SchemaEntry     = $SchemaEntry
         Properties      = $Properties
     }
@@ -2390,7 +2449,7 @@ function Resolve-IdentityReference {
     $ServerNetBIOS = $AdsiServer.Netbios
     $CacheResult = $CimCache[$ServerNetBIOS]['Win32_AccountBySID'][$IdentityReference]
     if ($CacheResult) {
-        Write-LogMsg @LogParams -Text " # 'Win32_AccountBySID' cache hit for '$IdentityReference' on '$ServerNetBios'"
+        Write-LogMsg @LogParams -Text " # Win32_AccountBySID CIM instance cache hit for '$IdentityReference' on '$ServerNetBios'"
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
             SIDString                = $CacheResult.SID
@@ -2398,7 +2457,7 @@ function Resolve-IdentityReference {
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
-        Write-LogMsg @LogParams -Text " # 'Win32_AccountBySID' cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @LogParams -Text " # Win32_AccountBySID CIM instance cache miss for '$IdentityReference' on '$ServerNetBIOS'"
     }
     $split = $IdentityReference.Split('\')
     $DomainNetBIOS = $ServerNetBIOS
@@ -2406,7 +2465,7 @@ function Resolve-IdentityReference {
     if ($Name) {
         $CacheResult = $CimCache[$ServerNetBIOS]['Win32_AccountByCaption']["$ServerNetBIOS\$Name"]
         if ($CacheResult) {
-            Write-LogMsg @LogParams -Text " # 'Win32_AccountByCaption' cache hit for '$ServerNetBIOS\$Name' on '$ServerNetBIOS'"
+            Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache hit for '$ServerNetBIOS\$Name' on '$ServerNetBIOS'"
             if ($ServerNetBIOS -eq $CacheResult.Domain) {
                 $DomainDns = $AdsiServer.Dns
             }
@@ -2430,12 +2489,12 @@ function Resolve-IdentityReference {
                 IdentityReferenceDns     = "$DomainDns\$($CacheResult.Name)"
             }
         } else {
-            Write-LogMsg @LogParams -Text " # 'Win32_AccountByCaption' cache miss for '$ServerNetBIOS\$Name' on '$ServerNetBIOS'"
+            Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$Name' on '$ServerNetBIOS'"
         }
     }
     $CacheResult = $CimCache[$ServerNetBIOS]['Win32_AccountByCaption']["$ServerNetBIOS\$IdentityReference"]
     if ($CacheResult) {
-        Write-LogMsg @LogParams -Text " # 'Win32_AccountByCaption' cache hit for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache hit for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS'"
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
             SIDString                = $CacheResult.SID
@@ -2443,7 +2502,7 @@ function Resolve-IdentityReference {
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
-        Write-LogMsg @LogParams -Text " # 'Win32_AccountByCaption' cache miss for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS'"
     }
     switch -Wildcard ($IdentityReference) {
         "S-1-*" {
@@ -4353,6 +4412,7 @@ function Select-PermissionTableProperty {
             ForEach ($Object in $InputObject) {
                 $Accounts = @{}
                 ForEach ($AceList in $Object.Access) {
+                    if (-not $AceList.Account.ResolvedAccountName) { pause }
                     $AccountName = $ShortNameByID[$AceList.Account.ResolvedAccountName]
                     if ($AccountName) {
                         ForEach ($ACE in $AceList.Access) {
@@ -4818,11 +4878,18 @@ function Get-AccessControlList {
         [String]$DebugOutputStream = 'Debug',
         [String]$TodaysHostname = (HOSTNAME.EXE),
         [String]$WhoAmI = (whoami.EXE),
-        [Hashtable]$LogBuffer = ([Hashtable]::Synchronized(@{})),
+        [hashtable]$LogBuffer = ([Hashtable]::Synchronized(@{})),
         [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
         [int]$ProgressParentId,
-        [Hashtable]$Output = [Hashtable]::Synchronized(@{})
+        [hashtable]$Output = [Hashtable]::Synchronized(@{}),
+        [hashtable]$WarningCache = [Hashtable]::Synchronized(@{})
     )
+    $LogParams = @{
+        ThisHostname = $TodaysHostname
+        Type         = $DebugOutputStream
+        Buffer       = $LogBuffer
+        WhoAmI       = $WhoAmI
+    }
     $Progress = @{
         Activity = 'Get-AccessControlList'
     }
@@ -4851,6 +4918,7 @@ function Get-AccessControlList {
         WhoAmI            = $WhoAmI
         OwnerCache        = $OwnerCache
         ACLsByPath        = $Output
+        WarningCache      = $WarningCache
     }
     $TargetIndex = 0
     $ParentCount = $TargetPath.Keys.Count
@@ -4902,6 +4970,10 @@ function Get-AccessControlList {
         }
         Write-Progress @ChildProgress -Completed
     }
+    if ($WarningCache.Keys.Count -ge 1) {
+        $LogParams['Type'] = 'Warning' 
+        Write-LogMsg @LogParams -Text " # Errors on $($WarningCache.Keys.Count) items while getting access control lists.  See verbose log for details."
+    }
     Write-Progress @Progress -Status '50% (step 2 of 2) Find non-inherited owners for parent and child items' -CurrentOperation 'Find non-inherited owners for parent and child items' -PercentComplete 50
     $ChildProgress['Activity'] = 'Get ACL owners'
     $GrandChildProgress['Activity'] = 'Get ACL owners'
@@ -4949,7 +5021,7 @@ function Get-AccessControlList {
                 DebugOutputStream = $DebugOutputStream
                 TodaysHostname    = $TodaysHostname
                 WhoAmI            = $WhoAmI
-                LogBuffer       = $LogBuffer
+                LogBuffer         = $LogBuffer
                 Threads           = $ThreadCount
                 ProgressParentId  = $ChildProgress['Id']
                 AddParam          = $GetOwnerAce
@@ -4989,7 +5061,7 @@ function Get-CachedCimInstance {
     }
     $CimCacheResult = $CimCache[$ComputerName]
     if ($CimCacheResult) {
-        Write-LogMsg @Log -Text "  cache hit for '$ComputerName'"
+        Write-LogMsg @Log -Text "  server cache hit for '$ComputerName'"
         $CimCacheSubresult = $CimCacheResult[$InstanceCacheKey]
         if ($CimCacheSubresult) {
             Write-LogMsg @Log -Text "  instance cache hit for '$InstanceCacheKey' on '$ComputerName'"
@@ -4998,7 +5070,7 @@ function Get-CachedCimInstance {
             Write-LogMsg @Log -Text "  instance cache miss for '$InstanceCacheKey' on '$ComputerName'"
         }
     } else {
-        Write-LogMsg @Log -Text "  cache miss for '$ComputerName'"
+        Write-LogMsg @Log -Text "  server cache miss for '$ComputerName'"
     }
     $CimSession = Get-CachedCimSession -ComputerName $ComputerName -CimCache $CimCache -ThisFqdn $ThisFqdn @Log
     if ($CimSession) {
@@ -5055,7 +5127,7 @@ function Get-CachedCimSession {
     }
     $CimCacheResult = $CimCache[$ComputerName]
     if ($CimCacheResult) {
-        Write-LogMsg @Log -Text "  cache hit for '$ComputerName'"
+        Write-LogMsg @Log -Text "  server cache hit for '$ComputerName'"
         $CimCacheSubresult = $CimCacheResult['CimSession']
         if ($CimCacheSubresult) {
             Write-LogMsg @Log -Text "  session cache hit for '$ComputerName'"
@@ -5064,7 +5136,7 @@ function Get-CachedCimSession {
             Write-LogMsg @Log -Text "  session cache miss for '$ComputerName'"
         }
     } else {
-        Write-LogMsg @Log -Text "  cache miss for '$ComputerName'"
+        Write-LogMsg @Log -Text "  server cache miss for '$ComputerName'"
         $CimCache[$ComputerName] = [Hashtable]::Synchronized(@{})
     }
     if (
@@ -5092,7 +5164,7 @@ function Get-PermissionPrincipal {
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
         [String]$DebugOutputStream = 'Debug',
         [int]$ThreadCount = (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum,
-        [Hashtable]$PrincipalsByResolvedID = ([Hashtable]::Synchronized(@{})),
+        [Hashtable]$PrincipalByID = ([Hashtable]::Synchronized(@{})),
         [Hashtable]$ACEsByResolvedID = ([Hashtable]::Synchronized(@{})),
         [Hashtable]$CimCache = ([Hashtable]::Synchronized(@{})),
         [Hashtable]$DirectoryEntryCache = ([Hashtable]::Synchronized(@{})),
@@ -5126,19 +5198,19 @@ function Get-PermissionPrincipal {
         WhoAmI       = $WhoAmI
     }
     $ADSIConversionParams = @{
-        DirectoryEntryCache    = $DirectoryEntryCache
-        DomainsBySID           = $DomainsBySID
-        DomainsByNetbios       = $DomainsByNetbios
-        DomainsByFqdn          = $DomainsByFqdn
-        ThisHostName           = $ThisHostName
-        ThisFqdn               = $ThisFqdn
-        WhoAmI                 = $WhoAmI
-        LogBuffer              = $LogBuffer
-        CimCache               = $CimCache
-        DebugOutputStream      = $DebugOutputStream
-        PrincipalsByResolvedID = $PrincipalsByResolvedID 
-        ACEsByResolvedID       = $ACEsByResolvedID 
-        CurrentDomain          = $CurrentDomain
+        DirectoryEntryCache = $DirectoryEntryCache
+        DomainsBySID        = $DomainsBySID
+        DomainsByNetbios    = $DomainsByNetbios
+        DomainsByFqdn       = $DomainsByFqdn
+        ThisHostName        = $ThisHostName
+        ThisFqdn            = $ThisFqdn
+        WhoAmI              = $WhoAmI
+        LogBuffer           = $LogBuffer
+        CimCache            = $CimCache
+        DebugOutputStream   = $DebugOutputStream
+        PrincipalByID       = $PrincipalByID 
+        ACEsByResolvedID    = $ACEsByResolvedID 
+        CurrentDomain       = $CurrentDomain
     }
     if ($ThreadCount -eq 1) {
         if ($NoGroupMembers) {
@@ -5169,7 +5241,7 @@ function Get-PermissionPrincipal {
             ObjectStringProperty = 'Name'
             TodaysHostname       = $ThisHostname
             WhoAmI               = $WhoAmI
-            LogBuffer          = $LogBuffer
+            LogBuffer            = $LogBuffer
             Threads              = $ThreadCount
             ProgressParentId     = $Progress['Id']
             AddParam             = $ADSIConversionParams
@@ -6477,6 +6549,42 @@ function ConvertTo-DnsFqdn {
     Write-LogMsg @Log -Text "[System.Net.Dns]::GetHostByName('$ComputerName')"
     [System.Net.Dns]::GetHostByName($ComputerName).HostName 
 }
+function ConvertTo-PSCodeString {
+    [OutputType([System.String])]
+    [CmdletBinding()]
+    param (
+        $InputObject
+    )
+    if ($InputObject) {
+        switch ($InputObject.GetType().FullName) {
+            'System.Collections.Hashtable' {
+                $Strings = ForEach ($OriginalKey in $InputObject.Keys) {
+                    $Key = ConvertTo-PSCodeString -InputObject $OriginalKey
+                    $Value = ConvertTo-PSCodeString -InputObject $InputObject[$OriginalKey]
+                    "$Key=$Value"
+                }
+                "@{$($Strings -join ';')}"
+            }
+            'System.Object[]' {
+                $Strings = ForEach ($Object in $InputObject) {
+                    ConvertTo-PSCodeString -InputObject $Object
+                }
+                "@($($Strings -join ','))"
+            }
+            'System.String' {
+                if ($InputObject.Contains("'")) {
+                    $Value = $InputObject.Replace('"', '`"')
+                    "`"$Value`""
+                } else {
+                    "'$InputObject'"
+                }
+            }
+            default { "$InputObject" }
+        }
+    } else {
+        "`$null"
+    }
+}
 function Export-LogCsv {
     [OutputType([System.String])]
     [CmdletBinding()]
@@ -6641,7 +6749,7 @@ function GetDirectories {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer  = $LogBuffer
+        Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     Write-LogMsg @LogParams -Text "[System.IO.Directory]::GetDirectories('$TargetPath','$SearchPattern',[System.IO.SearchOption]::$SearchOption)"
@@ -6657,17 +6765,18 @@ function GetDirectories {
         $result = [System.IO.Directory]::GetDirectories($TargetPath, $SearchPattern, [System.IO.SearchOption]::TopDirectoryOnly)
     }
     catch {
-        $WarningCache[$_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')] = $null
+        $ThisWarning = $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+        $WarningCache[$ThisWarning] = $null
         if (-not $PSBoundParameters.ContainsKey('WarningCache')) {
             $LogParams['Type'] = 'Warning' 
             ForEach ($Warning in $WarningCache.Keys) {
-                Write-LogMsg @LogParams -Text $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
+                Write-LogMsg @LogParams -Text $ThisWarning
             }
         }
         return
     }
     $GetSubfolderParams = @{
-        LogBuffer       = $LogBuffer
+        LogBuffer         = $LogBuffer
         ThisHostname      = $ThisHostname
         DebugOutputStream = $DebugOutputStream
         WhoAmI            = $WhoAmI
@@ -6887,8 +6996,9 @@ function Get-DirectorySecurity {
         [string]$ThisHostname = (HOSTNAME.EXE),
         [string]$WhoAmI = (whoami.EXE),
         [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
-        [hashtable]$LogBuffer = ([hashtable]::Synchronized(@{})),
-        [hashtable]$ACLsByPath = [hashtable]::Synchronized(@{})
+        [hashtable]$LogBuffer = @{},
+        [hashtable]$ACLsByPath = @{},
+        [hashtable]$WarningCache = @{}
     )
     $LogParams = @{
         ThisHostname = $ThisHostname
@@ -6897,14 +7007,18 @@ function Get-DirectorySecurity {
         WhoAmI       = $WhoAmI
     }
     Write-LogMsg @LogParams -Text "[System.Security.AccessControl.DirectorySecurity]::new('$LiteralPath', '$Sections')"
-    $DirectorySecurity = & { [System.Security.AccessControl.DirectorySecurity]::new(
-            $LiteralPath,
-            $Sections
-        )
-    } 2>$null
-    if ($null -eq $DirectorySecurity) {
-        $LogParams['Type'] = 'Warning' 
-        Write-LogMsg @LogParams -Text "# Found no ACL for '$LiteralPath'"
+    try {
+        $DirectorySecurity = & { [System.Security.AccessControl.DirectorySecurity]::new(
+                $LiteralPath,
+                $Sections
+            )
+        } 2>$null
+    }
+    catch {
+        $ThisWarning = $_.Exception.Message.Replace('Exception calling ".ctor" with "2" argument(s): ', '').Replace('"', '')
+        $WarningCache[$LiteralPath] = $ThisWarning
+        $LogParams['Type'] = 'Verbose' 
+        Write-LogMsg @LogParams -Text " # Error getting ACL for '$LiteralPath': '$ThisWarning'"
         $LogParams['Type'] = $DebugOutputStream
         return
     }
@@ -6973,13 +7087,15 @@ function Get-OwnerAce {
         $SourceAccessList.Owner -ne $ParentOwner -and
         $SourceAccessList.Owner -ne $ParentOwner.IdentityReference
     ) {
-        $ACLsByPath[$Item].Owner = [PSCustomObject]@{
-            IdentityReference = $SourceAccessList.Owner
-            AccessControlType = [System.Security.AccessControl.AccessControlType]::Allow
-            FileSystemRights  = [System.Security.AccessControl.FileSystemRights]::FullControl
-            InheritanceFlags  = $InheritanceFlags
-            IsInherited       = $false
-            PropagationFlags  = [System.Security.AccessControl.PropagationFlags]::None
+        if ($ACLsByPath[$Item]) {
+            $ACLsByPath[$Item].Owner = [PSCustomObject]@{
+                IdentityReference = $SourceAccessList.Owner
+                AccessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                FileSystemRights  = [System.Security.AccessControl.FileSystemRights]::FullControl
+                InheritanceFlags  = $InheritanceFlags
+                IsInherited       = $false
+                PropagationFlags  = [System.Security.AccessControl.PropagationFlags]::None
+            }
         }
     }
 }
@@ -7011,11 +7127,11 @@ function Get-Subfolder {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer  = $LogBuffer
+        Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     $GetSubfolderParams = @{
-        LogBuffer       = $LogBuffer
+        LogBuffer         = $LogBuffer
         ThisHostname      = $ThisHostname
         DebugOutputStream = $DebugOutputStream
         WhoAmI            = $WhoAmI
@@ -7038,13 +7154,31 @@ function Get-Subfolder {
             Default {
                 $RecurseDepth = $RecurseDepth - 1
                 Write-LogMsg @LogParams -Text "Get-ChildItem '$TargetPath' -Force -Name -Recurse -Attributes Directory -Depth $RecurseDepth"
-                (Get-ChildItem $TargetPath -Force -Recurse -Attributes Directory -Depth $RecurseDepth).FullName
+                (Get-ChildItem $TargetPath -Force -Recurse -Attributes Directory -Depth $RecurseDepth -ErrorVariable $GCIErrors -ErrorAction SilentlyContinue).FullName
+                if ($GCIErrors.Count -gt 0) {
+                    $LogParams['Type'] = 'Warning' 
+                    Write-LogMsg @LogParams -Text "$($GCIErrors.Count) errors while getting directories of '$TargetPath'.  See verbose log for details."
+                    $LogParams['Type'] = 'Verbose' 
+                    ForEach ($Warning in $GCIErrors) {
+                        Write-LogMsg @LogParams -Text " # $($Warning.Exception.Message)"
+                    }
+                }
             }
         }
     }
     else {
         Write-LogMsg @LogParams -Text "Get-ChildItem '$TargetPath' -Recurse"
-        Get-ChildItem $TargetPath -Recurse | Where-Object -FilterScript { $_.PSIsContainer } | ForEach-Object { $_.FullName }
+        Get-ChildItem $TargetPath -Recurse -ErrorVariable $GCIErrors -ErrorAction SilentlyContinue |
+        Where-Object -FilterScript { $_.PSIsContainer } |
+        ForEach-Object { $_.FullName }
+        if ($GCIErrors.Count -gt 0) {
+            $LogParams['Type'] = 'Warning' 
+            Write-LogMsg @LogParams -Text "$($GCIErrors.Count) errors while getting directories of '$TargetPath'.  See verbose log for details."
+            $LogParams['Type'] = 'Verbose' 
+            ForEach ($Warning in $GCIErrors) {
+                Write-LogMsg @LogParams -Text " # $($Warning.Exception.Message)"
+            }
+        }
     }
 }
 function New-NtfsAclIssueReport {
@@ -8075,11 +8209,11 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
-        ACEsByResolvedID       = $AceGuidByID
-        CimCache               = $CimCache
-        CurrentDomain          = $CurrentDomain
-        NoGroupMembers         = $NoMembers
-        PrincipalsByResolvedID = $PrincipalByID
+        ACEsByResolvedID = $AceGuidByID
+        CimCache         = $CimCache
+        CurrentDomain    = $CurrentDomain
+        NoGroupMembers   = $NoMembers
+        PrincipalByID    = $PrincipalByID
     }
     Write-LogMsg @Log -Text "Get-PermissionPrincipal" -Expand $CommandParameters, $LogThis, $CacheParams
     Get-PermissionPrincipal @CommandParameters @LogThis @CacheParams
