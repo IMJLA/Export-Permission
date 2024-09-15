@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.365
+.VERSION 0.0.366
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfixes and additional debug tests
+bugfix get-directoryentry caching
 
 .PRIVATEDATA
 
@@ -498,12 +498,6 @@ class FakeDirectoryEntry {
                 break
             }
             '*/Authenticated Users' {
-                $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
-                $This.Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
-                $This.SchemaClassName = 'group'
-                break
-            }
-            '*/CREATOR OWNER' {
                 $This.objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
                 $This.Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
                 $This.SchemaClassName = 'group'
@@ -2015,53 +2009,147 @@ function Get-DirectoryEntry {
         LogBuffer    = $LogBuffer
         WhoAmI       = $WhoAmI
     }
-    $DirectoryEntry = $null
-    if ($null -eq $DirectoryEntryCache[$DirectoryPath]) {
+    $SidTypes = @{
+        1 = 'user' 
+        2 = 'group' 
+        3 = 'SidTypeDomain'
+        4 = 'SidTypeAlias'
+        5 = 'group' 
+        6 = 'SidTypeDeletedAccount'
+        7 = 'SidTypeInvalid'
+        8 = 'SidTypeUnknown'
+        9 = 'computer' 
+    }
+    $KnownSIDs = @{
+        'S-1-15-2-1'                                                     = @{
+            'Description'     = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
+            'Name'            = 'ALL APPLICATION PACKAGES'
+            'SchemaClassName' = 'group'
+        }
+        'S-1-15-2-2'                                                     = @{
+            'Description'     = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
+            'Name'            = 'ALL RESTRICTED APPLICATION PACKAGES'
+            'SchemaClassName' = 'group'
+        }
+        'S-1-15-7'                                                       = @{
+            'Description'     = 'A user who has connected to the computer without supplying a user name and password. Not a member of Authenticated Users.'
+            'Name'            = 'ANONYMOUS LOGON'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-5-11'                                                       = @{
+            'Description'     = 'A group that includes all users and computers with identities that have been authenticated.'
+            'Name'            = 'Authenticated Users'
+            'SchemaClassName' = 'group'
+        }
+        'S-1-3-0'                                                        = @{
+            'Description'     = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
+            'Name'            = 'CREATOR OWNER'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-1-0'                                                        = @{
+            'Description'     = "A group that includes all users; aka 'World'."
+            'Name'            = 'Everyone'
+            'SchemaClassName' = 'group'
+        }
+        'S-1-5-4'                                                        = @{
+            'Description'     = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
+            'Name'            = 'INTERACTIVE'
+            'SchemaClassName' = 'group'
+        }
+        'S-1-5-19'                                                       = @{
+            'Description'     = 'A local service account'
+            'Name'            = 'LOCAL SERVICE'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-5-20'                                                       = @{
+            'Description'     = 'A network service account'
+            'Name'            = 'NETWORK SERVICE'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-5-18'                                                       = @{
+            'Description'     = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
+            'Name'            = 'SYSTEM'
+            'SchemaClassName' = 'computer'
+        }
+        'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464' = @{
+            'Description'     = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
+            'Name'            = 'TrustedInstaller'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-5-80-880578595-1860270145-482643319-2788375705-1540778122'  = @{
+            'Description'     = 'Windows Event Log service account'
+            'Name'            = 'EventLog'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-5-80-242729624-280608522-2219052887-3187409060-2225943459'  = @{
+            'Description'     = 'Windows Cryptographic service account'
+            'Name'            = 'CryptSvc'
+            'SchemaClassName' = 'user'
+        }
+        'S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420' = @{
+            'Description'     = 'Windows Diagnostics service account'
+            'Name'            = 'WdiServiceHost'
+            'SchemaClassName' = 'user'
+        }
+    }
+    $KnownNames = @{}
+    ForEach ($KnownSID in $KnownSIDs.Keys) {
+        $KnownNames[$KnownSIDs[$KnownSID]] = $Known
+    }
+    $LastSlashIndex = $DirectoryPath.LastIndexOf('/')
+    $StartIndex = $LastSlashIndex + 1
+    $AccountName = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
+    $ParentDirectoryPath = $DirectoryPath.Substring(0, $LastSlashIndex)
+    $FirstSlashIndex = $ParentDirectoryPath.IndexOf('/')
+    $ParentPath = $ParentDirectoryPath.Substring($FirstSlashIndex + 2, $ParentDirectoryPath.Length - $FirstSlashIndex - 2)
+    if ($ParentPath.Contains('/')) {
+        $FirstSlashIndex = $ParentPath.IndexOf('/')
+        $Server = $ParentPath.Substring(0, $FirstSlashIndex)
+    } else {
+        $Server = $ParentPath
+    }
+    $CimServer = $CimCache[$Server]
+    if ($CimServer) {
+        Write-LogMsg @LogParams -Text "  server cache hit for '$Server'"
+        $ID = "$Server\$AccountName"
+        $CimCacheResult = $CimServer['Win32_AccountByCaption'][$ID]
+        if ($CimCacheResult) {
+            Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache hit for '$ID' on '$Server'"
+            $FakeDirectoryEntry = @{
+                'Description'   = $CimCacheResult.Description
+                'SID'           = $CimCacheResult.SID
+                'DirectoryPath' = $DirectoryPath
+            }
+            $SIDCacheResult = $KnownSIDs[$CimCacheResult.SID]
+            if ($SIDCacheResult) {
+                $FakeDirectoryEntry['SchemaClassName'] = $SIDCacheResult['SchemaClassName']
+            } else {
+                Write-LogMsg @LogParams -Text " # Known SIDs cache miss for '$($CimCacheResult.SID)'"
+                $NameCacheResult = $KnownNames[$AccountName]
+                if ($NameCacheResult) {
+                    $FakeDirectoryEntry['Description'] = $NameCacheResult['Description']
+                    $FakeDirectoryEntry['SchemaClassName'] = $NameCacheResult['SchemaClassName']
+                } else {
+                    Write-LogMsg @LogParams -Text " # Known Account Names cache miss for '$AccountName'"
+                }
+            }
+            if ($FakeDirectoryEntry['Description'] -eq $ID) {
+                if ($SIDCacheResult) {
+                    $FakeDirectoryEntry['Description'] = $SIDCacheResult['Description']
+                }
+            }
+            if ($CimCacheResult.SidType) {
+                $FakeDirectoryEntry['SchemaClassName'] = $SidTypes[$CimCacheResult.SidType]
+            }
+            $DirectoryEntry = New-FakeDirectoryEntry @FakeDirectoryEntry
+        } else {
+            Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ID' on '$Server'"
+        }
+    } else {
+        Write-LogMsg @LogParams -Text "  server cache miss for '$Server'"
+    }
+    if ($null -eq $DirectoryEntry) {
         switch -regex ($DirectoryPath) {
-            '^WinNT:\/\/.*\/ALL APPLICATION PACKAGES$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/ALL RESTRICTED APPLICATION PACKAGES$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/ANONYMOUS LOGON$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/Authenticated Users$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/CREATOR OWNER$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/Everyone$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/INTERACTIVE$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/LOCAL SERVICE$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/NETWORK SERVICE$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/SYSTEM$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
-            '^WinNT:\/\/.*\/TrustedInstaller$' {
-                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath
-                break
-            }
             '^$' {
                 Write-LogMsg @LogParams -Text "'$ThisHostname' does not seem to be domain-joined since the SearchRoot Path is empty. Defaulting to WinNT provider for localhost instead."
                 $CimParams = @{
@@ -2095,6 +2183,8 @@ function Get-DirectoryEntry {
                 break
             }
         }
+    }
+    if ($null -eq $DirectoryEntryCache[$DirectoryPath]) {
         $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
     } else {
         $DirectoryEntry = $DirectoryEntryCache[$DirectoryPath]
@@ -2310,87 +2400,17 @@ function Invoke-ComObject {
 }
 function New-FakeDirectoryEntry {
     param (
-        [string]$DirectoryPath
+        [string]$DirectoryPath,
+        [string]$SID,
+        [string]$Description,
+        [string]$SchemaClassName
     )
     $LastSlashIndex = $DirectoryPath.LastIndexOf('/')
     $StartIndex = $LastSlashIndex + 1
     $Name = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
     $Parent = $DirectoryPath.Substring(0, $LastSlashIndex)
     $SchemaEntry = [System.DirectoryServices.DirectoryEntry]
-    switch -Wildcard ($DirectoryPath) {
-        '*/ALL APPLICATION PACKAGES' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-1'
-            $Description = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
-            $SchemaClassName = 'group'
-            break
-        }
-        '*/ALL RESTRICTED APPLICATION PACKAGES' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
-            $Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
-            $SchemaClassName = 'group'
-            break
-        }
-        '*/ANONYMOUS LOGON' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-7'
-            $Description = 'A user who has connected to the computer without supplying a user name and password. Not a member of Authenticated Users.'
-            $SchemaClassName = 'user'
-            break
-        }
-        '*/Authenticated Users' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-15-2-2'
-            $Description = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
-            $SchemaClassName = 'group'
-            break
-        }
-        '*/CREATOR OWNER' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-11'
-            $Description = 'Any user who accesses the system through a sign-in process has the Authenticated Users identity.'
-            $SchemaClassName = 'group'
-            break
-        }
-        '*/CREATOR OWNER' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-3-0'
-            $Description = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
-            $SchemaClassName = 'user'
-            break
-        }
-        '*/Everyone' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-1-0'
-            $Description = "A group that includes all users; aka 'World'."
-            $SchemaClassName = 'group'
-            break
-        }
-        '*/INTERACTIVE' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-4'
-            $Description = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
-            $SchemaClassName = 'group'
-            break
-        }
-        '*/LOCAL SERVICE' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-19'
-            $Description = 'A local service account'
-            $SchemaClassName = 'user'
-            break
-        }
-        '*/NETWORK SERVICE' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-20'
-            $Description = 'A network service account'
-            $SchemaClassName = 'user'
-            break
-        }
-        '*/SYSTEM' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-18'
-            $Description = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
-            $SchemaClassName = 'user'
-            break
-        }
-        '*/TrustedInstaller' {
-            $objectSid = ConvertTo-SidByteArray -SidString 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
-            $Description = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
-            $SchemaClassName = 'user'
-            break
-        }
-    }
+    $objectSid = ConvertTo-SidByteArray -SidString $SID
     $Properties = @{
         Name            = $Name
         Description     = $Description
