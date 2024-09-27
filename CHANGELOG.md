@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.369] - 2024-09-26
+### Changed
+- update adsi module to properly handle capability sids
+- updated adsi module to properly handle app authority capability SIDs
+
 ## [0.0.367] - 2024-09-15
 ### Changed
 - update dev tests, integrate bugfixes from dependencies

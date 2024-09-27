@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.367
+.VERSION 0.0.369
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update dev tests, integrate bugfixes from dependencies
+update adsi module to properly handle capability sids
 
 .PRIVATEDATA
 
@@ -39,6 +39,8 @@ update dev tests, integrate bugfixes from dependencies
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
+
 
 
 
@@ -710,6 +712,7 @@ end {
     }
     Write-LogMsg @Log -Text '$ServerFqdns = Find-ServerFqdn' -Expand $CommandParameters, $LogThis -ExpandKeyMap @{ TargetPath = '$Items' }
     $ServerFqdns = Find-ServerFqdn @CommandParameters @LogThis
+
     $ProgressUpdate = @{
         CurrentOperation = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
         PercentComplete  = 25

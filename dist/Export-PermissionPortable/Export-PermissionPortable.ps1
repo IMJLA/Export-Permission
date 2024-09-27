@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.367
+.VERSION 0.0.369
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update dev tests, integrate bugfixes from dependencies
+update adsi module to properly handle capability sids
 
 .PRIVATEDATA
 
@@ -556,6 +556,205 @@ class FakeDirectoryEntry {
     [void]RefreshCache([string[]]$Nonsense) {}
     [void]Invoke([string]$Nonsense) {}
 }
+function ConvertFrom-AppCapabilitySid {
+    param (
+        [string]$SID
+    )
+    $KnownDeviceInterfaceGuids = @{
+        'BFA794E4-F964-4FDB-90F6-51056BFE4B44' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Location Services access (device capability {BFA794E4-F964-4FDB-90F6-51056BFE4B44})'
+            'Name'            = 'Location services'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Location services'
+        }
+        'E5323777-F976-4f5b-9B55-B94699C46E44' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Camera access (device capability {E5323777-F976-4f5b-9B55-B94699C46E44})'
+            'Name'            = 'Your camera'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your camera'
+        }
+        '2EEF81BE-33FA-4800-9670-1CD474972C3F' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Microphone access (device capability {2EEF81BE-33FA-4800-9670-1CD474972C3F})'
+            'Name'            = 'Your microphone'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your microphone'
+        }
+        '52079E78-A92B-413F-B213-E8FE35712E72' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Notifications access (device capability {52079E78-A92B-413F-B213-E8FE35712E72})'
+            'Name'            = 'Your notifications'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your notifications'
+        }
+        'C1D23ACC-752B-43E5-8448-8D0E519CD6D6' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Account Information access (name, picture, etc.) (device capability {C1D23ACC-752B-43E5-8448-8D0E519CD6D6})'
+            'Name'            = 'Your account information'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your account information'
+        }
+        '7D7E8402-7C54-4821-A34E-AEEFD62DED93' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Contacts access (device capability {7D7E8402-7C54-4821-A34E-AEEFD62DED93})'
+            'Name'            = 'Your contacts'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your contacts'
+        }
+        'D89823BA-7180-4B81-B50C-7E471E6121A3' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Calendar access (device capability {D89823BA-7180-4B81-B50C-7E471E6121A3})'
+            'Name'            = 'Your calendar'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your calendar'
+        }
+        '8BC668CF-7728-45BD-93F8-CF2B3B41D7AB' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Call History access (device capability {8BC668CF-7728-45BD-93F8-CF2B3B41D7AB})'
+            'Name'            = 'Your call history'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your call history'
+        }
+        '9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with access to read and send Email (device capability {9231CB4C-BF57-4AF3-8C55-FDA7BFCC04C5})'
+            'Name'            = 'Email'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Email'
+        }
+        '21157C1F-2651-4CC1-90CA-1F28B02263F6' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with access to read and send SMS and MMS messages (device capability {21157C1F-2651-4CC1-90CA-1F28B02263F6})'
+            'Name'            = 'Messages (text or MMS)' 
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Messages (text or MMS)'
+        }
+        'A8804298-2D5F-42E3-9531-9C8C39EB29CE' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with access to control radios (device capability {A8804298-2D5F-42E3-9531-9C8C39EB29CE})'
+            'Name'            = 'Radio control'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Radio control'
+        }
+        '9D9E0118-1807-4F2E-96E4-2CE57142E196' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Activity Sensor access (device capability {9D9E0118-1807-4F2E-96E4-2CE57142E196})'
+            'Name'            = 'Your activity sensors'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your activity sensors'
+        } 
+        'B19F89AF-E3EB-444B-8DEA-202575A71599' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with access to unknown device capability {B19F89AF-E3EB-444B-8DEA-202575A71599})'
+            'Name'            = 'Unknown device capability from SettingsHandlers_Privacy.dll {B19F89AF-E3EB-444B-8DEA-202575A71599}'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Unknown device capability from SettingsHandlers_Privacy.dll {B19F89AF-E3EB-444B-8DEA-202575A71599}'
+        } 
+        'E6AD100E-5F4E-44CD-BE0F-2265D88D14F5' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with access to unknown device capability {E6AD100E-5F4E-44CD-BE0F-2265D88D14F5})'
+            'Name'            = 'Unknown device capability from LocationPermissions.dll {E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Unknown device capability from LocationPermissions.dll {E6AD100E-5F4E-44CD-BE0F-2265D88D14F5}'
+        } 
+        'E83AF229-8640-4D18-A213-E22675EBB2C3' = @{
+            'SID'             = $SID
+            'SchemaClassName' = 'group'
+            'Description'     = 'Apps with Custom Sensor access (device capability {E83AF229-8640-4D18-A213-E22675EBB2C3})'
+            'Name'            = 'Custom Sensor device capability'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your custom sensors'
+        } 
+    }
+    $Split = $SID.Split('-')
+    switch ($Split.Count) {
+        8 { $CountOf32BitNumbers = 4 ; break }
+        13 {
+            $Capability = $Split[5..12] -join '-'
+            return @{
+                'SID'             = $SID
+                'SchemaClassName' = 'group'
+                'Description'     = "Apps w/ App Capability $Capability"
+                'Name'            = $SID
+                'NTAccount'       = "APPLICATION PACKAGE AUTHORITY\$SID"
+            }
+        }
+        default {
+            return @{
+                'SID'             = $SID
+                'SchemaClassName' = 'group'
+                'Description'     = "Unknown App Capability $SID"
+                'Name'            = $SID
+                'NTAccount'       = "APPLICATION PACKAGE AUTHORITY\$SID"
+            }
+        }
+    }
+    $Substring = $SID
+    $i = 0
+    $ReversedDecimal = do {
+        $Last = $Substring.LastIndexOf('-')
+        $Substring.Substring($Last + 1, $Substring.Length - $Last - 1)
+        $Substring = $Substring.Substring(0, $Last) ; $i++
+    } while ($i -lt $CountOf32BitNumbers)
+    $Bytes = For ($n = ($ReversedDecimal.Length - 1); $n -ge 0 ; $n = $n - 1 ) {
+        $ThisNumber = $ReversedDecimal[$n]
+        for ( $i = 3; $i -ge 0; $i-- ) {
+            '{0:X2}' -f ($ThisNumber -band 0xff) 
+            $ThisNumber = $ThisNumber -shr 8
+        }
+    }
+    $Guid = $Bytes[3], $Bytes[2], $Bytes[1], $Bytes[0], '-', $Bytes[5], $Bytes[4], '-', $Bytes[7], $Bytes[6], '-', $Bytes[8], $Bytes[9], '-', $($Bytes[10..15] -join '') -join ''
+    $KnownGuid = $KnownDeviceInterfaceGuids[$Guid]
+    if ($KnownGuid) {
+        return $KnownGuid
+    } else {
+        return @{
+            'SID'             = $SID
+            'Description'     = "Apps w/ access to app capability {$Guid}"
+            'SchemaClassName' = 'group'
+            'Name'            = $SID
+            'NTAccount'       = "APPLICATION PACKAGE AUTHORITY\$SID"
+        }
+    }
+}
+function Get-SidTypeMap {
+    return @{
+        1 = 'user' 
+        2 = 'group' 
+        3 = 'SidTypeDomain'
+        4 = 'SidTypeAlias'
+        5 = 'group' 
+        6 = 'SidTypeDeletedAccount'
+        7 = 'SidTypeInvalid'
+        8 = 'SidTypeUnknown'
+        9 = 'computer' 
+    }
+}
+function Split-DirectoryPath {
+    param ([string]$DirectoryPath)
+    $LastSlashIndex = $DirectoryPath.LastIndexOf('/')
+    $StartIndex = $LastSlashIndex + 1
+    $AccountName = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
+    $ParentDirectoryPath = $DirectoryPath.Substring(0, $LastSlashIndex)
+    $FirstSlashIndex = $ParentDirectoryPath.IndexOf('/')
+    $ParentPath = $ParentDirectoryPath.Substring($FirstSlashIndex + 2, $ParentDirectoryPath.Length - $FirstSlashIndex - 2)
+    $FirstSlashIndex = $ParentPath.IndexOf('/')
+    if ($FirstSlashIndex -ne (-1)) {
+        $Server = $ParentPath.Substring(0, $FirstSlashIndex)
+        if ($Server.Equals('WORKGROUP')) {
+            $FirstSlashIndex = $ParentPath.IndexOf('/')
+            $Server = $ParentPath.Substring($FirstSlashIndex + 1, $ParentPath.Length - $FirstSlashIndex - 1)
+        }
+    } else {
+        $Server = $ParentPath
+    }
+    if ($Server -ne 'JLA-LoftHTPC') { pause }
+    return @{
+        'AccountName' = $AccountName
+        'Server'      = $Server
+    }
+}
 function Add-DomainFqdnToLdapPath {
     [OutputType([System.String])]
     param (
@@ -652,7 +851,6 @@ function Add-SidInfo {
                 $DomainObject = $Object.Domain
             }
             if (-not $DomainObject) {
-                if (-not $SID) { pause }
                 $DomainSid = $SID.Substring(0, $Sid.LastIndexOf("-"))
                 $DomainObject = $DomainsBySid[$DomainSid]
             }
@@ -830,12 +1028,12 @@ function ConvertFrom-IdentityReferenceResolved {
             Write-LogMsg @LogParams -Text " # '$IdentityReference' is a local security principal or unresolved SID"
             if ($null -eq $SamAccountNameOrSid) { $SamAccountNameOrSid = $IdentityReference }
             if ($SamAccountNameOrSid -like "S-1-*") {
-                Write-LogMsg @LogParams -Text "$($IdentityReference) is an unresolved SID"
+                Write-LogMsg @LogParams -Text " # '$($IdentityReference)' is an unresolved SID"
                 $DomainSid = $SamAccountNameOrSid.Substring(0, $SamAccountNameOrSid.LastIndexOf("-"))
                 if ($DomainSid -eq $CurrentDomain.SIDString) {
-                    Write-LogMsg @LogParams -Text "$($IdentityReference) belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
+                    Write-LogMsg @LogParams -Text " # '$($IdentityReference)' belongs to the current domain.  Could be a deleted user.  ?possibly a foreign security principal corresponding to an offline trusted domain or deleted user in the trusted domain?"
                 } else {
-                    Write-LogMsg @LogParams -Text "$($IdentityReference) does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
+                    Write-LogMsg @LogParams -Text " # '$($IdentityReference)' does not belong to the current domain. Could be a local security principal or belong to an unresolvable domain."
                 }
                 $DomainObject = $DomainsBySID[$DomainSid]
                 if ($DomainObject) {
@@ -899,8 +1097,9 @@ function ConvertFrom-IdentityReferenceResolved {
             }
         }
         $PropertiesToAdd = @{
-            DomainDn      = $DomainDn
-            DomainNetbios = $DomainNetBIOS
+            DomainDn            = $DomainDn
+            DomainNetbios       = $DomainNetBIOS
+            ResolvedAccountName = $IdentityReference
         }
         if ($null -ne $DirectoryEntry) {
             ForEach ($Prop in ($DirectoryEntry | Get-Member -View All -MemberType Property, NoteProperty).Name) {
@@ -929,7 +1128,7 @@ function ConvertFrom-IdentityReferenceResolved {
                     $Members = (Get-AdsiGroupMember -Group $DirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams).FullMembers
                 } else {
                     Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is a WinNT security principal for '$IdentityReference'"
-                    if ( $DirectoryEntry.SchemaClassName -eq 'group') {
+                    if ( $DirectoryEntry.SchemaClassName -in @('group', 'SidTypeWellKnownGroup', 'SidTypeAlias')) {
                         Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' is a WinNT group for '$IdentityReference'"
                         $Members = Get-WinNTGroupMember -DirectoryEntry $DirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
                     }
@@ -966,7 +1165,7 @@ function ConvertFrom-IdentityReferenceResolved {
             $PropertiesToAdd['Members'] = $GroupMembers
             Write-LogMsg @LogParams -Text " # '$($DirectoryEntry.Path)' has $(($Members | Measure-Object).Count) members for '$IdentityReference'"
         } else {
-            $LogParams['Type'] = 'Warning' 
+            $LogParams['Type'] = 'Verbose' 
             Write-LogMsg @LogParams -Text " # '$IdentityReference' could not be matched to a DirectoryEntry"
             $LogParams['Type'] = $DebugOutputStream
         }
@@ -1513,23 +1712,22 @@ function Expand-WinNTGroupMember {
         ForEach ($ThisEntry in $DirectoryEntry) {
             if (!($ThisEntry.Properties)) {
                 $LogParams['Type'] = 'Warning' 
-                Write-LogMsg @LogParams -Text "'$ThisEntry' has no properties"
+                Write-LogMsg @LogParams -Text " # '$ThisEntry' has no properties # For '$($ThisEntry.Path)'"
                 $LogParams['Type'] = $DebugOutputStream
             } elseif ($ThisEntry.Properties['objectClass'] -contains 'group') {
-                Write-LogMsg @LogParams -Text "'$($ThisEntry.Path)' is an ADSI group"
+                Write-LogMsg @LogParams -Text " # Is an ADSI group # For '$($ThisEntry.Path)'"
                 $AdsiGroup = Get-AdsiGroup -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DirectoryPath $ThisEntry.Path -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
                 Add-SidInfo -InputObject $AdsiGroup.FullMembers -DomainsBySid $DomainsBySid @LoggingParams
             } else {
                 if ($ThisEntry.SchemaClassName -eq 'group') {
-                    Write-LogMsg @LogParams -Text "'$($ThisEntry.Path)' is a WinNT group"
+                    Write-LogMsg @LogParams -Text " # Is a WinNT group # For '$($ThisEntry.Path)'"
                     if ($ThisEntry.GetType().FullName -eq 'System.Collections.Hashtable') {
-                        Write-LogMsg @LogParams -Text "$($ThisEntry.Path)' is a special group with no direct memberships"
+                        Write-LogMsg @LogParams -Text " # Is a special group with no direct memberships # '$($ThisEntry.Path)'"
                         Add-SidInfo -InputObject $ThisEntry -DomainsBySid $DomainsBySid @LoggingParams
                     } else {
-                        Get-WinNTGroupMember -DirectoryEntry $ThisEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
                     }
                 } else {
-                    Write-LogMsg @LogParams -Text "$($ThisEntry.Path)' is a user account"
+                    Write-LogMsg @LogParams -Text " # Is a user account # For '$($ThisEntry.Path)'"
                     Add-SidInfo -InputObject $ThisEntry -DomainsBySid $DomainsBySid @LoggingParams
                 }
             }
@@ -1830,7 +2028,9 @@ function Get-AdsiServer {
         [hashtable]$LogBuffer = ([hashtable]::Synchronized(@{})),
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
         [string]$DebugOutputStream = 'Debug',
-        [switch]$RemoveCimSession
+        [switch]$RemoveCimSession,
+        [hashtable]$WellKnownSIDBySID = (Get-KnownSidHashTable),
+        [hashtable]$WellKnownSIDByName = @{}
     )
     begin {
         $LogParams = @{
@@ -1876,12 +2076,14 @@ function Get-AdsiServer {
             Write-LogMsg @LogParams -Text "Get-CachedCimInstance -ComputerName '$DomainFqdn' -ClassName 'Win32_Account'"
             $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainFqdn -ClassName 'Win32_Account' -KeyProperty Caption -CacheByProperty @('Caption', 'SID') @CimParams @LoggingParams
             $OutputObject = [PSCustomObject]@{
-                DistinguishedName = $DomainDn
-                Dns               = $DomainFqdn
-                Sid               = $DomainSid
-                Netbios           = $DomainNetBIOS
-                AdsiProvider      = $AdsiProvider
-                Win32Accounts     = $Win32Accounts
+                DistinguishedName  = $DomainDn
+                Dns                = $DomainFqdn
+                Sid                = $DomainSid
+                Netbios            = $DomainNetBIOS
+                AdsiProvider       = $AdsiProvider
+                Win32Accounts      = $Win32Accounts
+                WellKnownSIDBySID  = $WellKnownSIDBySID
+                WellKnownSIDByName = $WellKnownSIDByName
             }
             $DomainsBySid[$OutputObject.Sid] = $OutputObject
             $DomainsByNetbios[$OutputObject.Netbios] = $OutputObject
@@ -1917,12 +2119,14 @@ function Get-AdsiServer {
                 Remove-CimSession -CimSession $CimSession
             }
             $OutputObject = [PSCustomObject]@{
-                DistinguishedName = $DomainDn
-                Dns               = $DomainDnsName
-                Sid               = $DomainSid
-                Netbios           = $DomainNetBIOS
-                AdsiProvider      = $AdsiProvider
-                Win32Accounts     = $Win32Accounts
+                DistinguishedName  = $DomainDn
+                Dns                = $DomainDnsName
+                Sid                = $DomainSid
+                Netbios            = $DomainNetBIOS
+                AdsiProvider       = $AdsiProvider
+                Win32Accounts      = $Win32Accounts
+                WellKnownSIDBySID  = $WellKnownSIDBySID
+                WellKnownSIDByName = $WellKnownSIDByName
             }
             $DomainsBySid[$OutputObject.Sid] = $OutputObject
             $DomainsByNetbios[$OutputObject.Netbios] = $OutputObject
@@ -2009,196 +2213,1011 @@ function Get-DirectoryEntry {
         LogBuffer    = $LogBuffer
         WhoAmI       = $WhoAmI
     }
-    $SidTypes = @{
-        1 = 'user' 
-        2 = 'group' 
-        3 = 'SidTypeDomain'
-        4 = 'SidTypeAlias'
-        5 = 'group' 
-        6 = 'SidTypeDeletedAccount'
-        7 = 'SidTypeInvalid'
-        8 = 'SidTypeUnknown'
-        9 = 'computer' 
+    $SidTypes = Get-SidTypeMap
+    $SplitDirectoryPath = Split-DirectoryPath -DirectoryPath $DirectoryPath
+    $AccountName = $SplitDirectoryPath['AccountName']
+    $Server = $SplitDirectoryPath['Server']
+    $CimServer = $CimCache[$Server]
+    $CacheResult = $DirectoryEntryCache[$DirectoryPath]
+    if ($null -eq $CacheResult) {
+        Write-LogMsg @LogParams -Text " # DirectoryEntryCache miss # for '$DirectoryPath'"
+        if ($CimServer) {
+            Write-LogMsg @LogParams -Text "  server cache hit for '$Server' # for '$DirectoryPath'"
+            $ID = "$Server\$AccountName"
+            $CimCacheResult = $CimServer['Win32_AccountByCaption'][$ID]
+            if ($CimCacheResult) {
+                Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache hit for '$ID' on '$Server' # for '$DirectoryPath'"
+                $FakeDirectoryEntry = @{
+                    'Description'   = $CimCacheResult.Description
+                    'SID'           = $CimCacheResult.SID
+                    'DirectoryPath' = $DirectoryPath
+                }
+                if ($CimCacheResult.SIDType) {
+                    $FakeDirectoryEntry['SchemaClassName'] = $SidTypes[[int]$CimCacheResult.SIDType]
+                }
+                $DirectoryEntry = New-FakeDirectoryEntry @FakeDirectoryEntry
+            } else {
+                Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ID' on '$Server' # for '$DirectoryPath'"
+                $DomainCacheResult = $DomainsByFqdn[$Server]
+                if ($DomainCacheResult) {
+                    $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
+                    if ($SIDCacheResult) {
+                        Write-LogMsg @LogParams -Text " # Well-known SID by SID cache hit for '$ID' on host with FQDN '$Server' # for '$DirectoryPath'"
+                        $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
+                    } else {
+                        Write-LogMsg @LogParams -Text " # Well-known SID by SID cache miss for '$ID' on host with FQDN '$Server' # for '$DirectoryPath'"
+                        $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
+                        if ($NameCacheResult) {
+                            Write-LogMsg @LogParams -Text " # Well-known SID by name cache hit for '$AccountName' on host with FQDN '$Server' # for '$DirectoryPath'"
+                            $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
+                        } else {
+                            Write-LogMsg @LogParams -Text " # Well-known SID by name cache miss for '$AccountName' on host with FQDN '$Server' # for '$DirectoryPath'"
+                        }
+                    }
+                } else {
+                    $DomainCacheResult = $DomainsByNetbios[$Server]
+                    if ($DomainCacheResult) {
+                        $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
+                        if ($SIDCacheResult) {
+                            Write-LogMsg @LogParams -Text " # Well-known SID by SID cache hit for '$ID' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                            $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
+                        } else {
+                            Write-LogMsg @LogParams -Text " # Well-known SID by SID cache miss for '$ID' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                            $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
+                            if ($NameCacheResult) {
+                                Write-LogMsg @LogParams -Text " # Well-known SID by name cache hit for '$AccountName' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
+                            } else {
+                                Write-LogMsg @LogParams -Text " # Well-known SID by name cache miss for '$AccountName' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                            }
+                        }
+                    } else {
+                        $DomainCacheResult = $DomainsBySid[$Server]
+                        if ($DomainCacheResult) {
+                            $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
+                            if ($SIDCacheResult) {
+                                Write-LogMsg @LogParams -Text " # Well-known SID by SID cache hit for '$ID' on host with SID '$Server' # for '$DirectoryPath'"
+                                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
+                            } else {
+                                Write-LogMsg @LogParams -Text " # Well-known SID by SID cache miss for '$ID' on host with SID '$Server' # for '$DirectoryPath'"
+                                $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
+                                if ($NameCacheResult) {
+                                    Write-LogMsg @LogParams -Text " # Well-known SID by name cache hit for '$AccountName' on host with SID '$Server' # for '$DirectoryPath'"
+                                    $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
+                                } else {
+                                    Write-LogMsg @LogParams -Text " # Well-known SID by name cache miss for '$AccountName' on host with SID '$Server' # for '$DirectoryPath'"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Write-LogMsg @LogParams -Text "  server cache miss for '$Server' # for '$DirectoryPath'"
+        }
+        if ($null -eq $DirectoryEntry) {
+            switch -regex ($DirectoryPath) {
+                '^$' {
+                    Write-LogMsg @LogParams -Text " # The SearchRoot Path is empty, indicating '$ThisHostname' is not domain-joined. Defaulting to WinNT provider for localhost instead. # for '$DirectoryPath'"
+                    $CimParams = @{
+                        CimCache          = $CimCache
+                        ComputerName      = $ThisFqdn
+                        DebugOutputStream = $DebugOutputStream
+                        ThisFqdn          = $ThisFqdn
+                    }
+                    $Workgroup = (Get-CachedCimInstance -ClassName 'Win32_ComputerSystem' -KeyProperty Name @CimParams @LoggingParams).Workgroup
+                    $DirectoryPath = "WinNT://$Workgroup/$ThisHostname"
+                    Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
+                    if ($Credential) {
+                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
+                    } else {
+                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
+                    }
+                    $SampleUser = @(
+                        $DirectoryEntry.PSBase.Children |
+                        Where-Object -FilterScript { $_.schemaclassname -eq 'user' }
+                    )[0] |
+                    Add-SidInfo -DomainsBySid $DomainsBySid @LoggingParams
+                    $DirectoryEntry |
+                    Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
+                    break
+                }
+                default {
+                    Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
+                    if ($Credential) {
+                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
+                    } else {
+                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
+                    }
+                    break
+                }
+            }
+        }
+        if ($PropertiesToLoad) {
+            try {
+                $null = $DirectoryEntry.RefreshCache($PropertiesToLoad)
+            } catch {
+                $LogParams['Type'] = 'Warning' 
+                Write-LogMsg @LogParams -Text " # '$DirectoryPath' could not be retrieved. Error: $($_.Exception.Message.Trim().Replace('The following exception occurred while retrieving member "RefreshCache": ','').Replace('"',''))" 
+                return
+            }
+        }
+        $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
+    } else {
+        Write-LogMsg @LogParams -Text " # DirectoryEntryCache hit # for '$DirectoryPath'"
+        $DirectoryEntry = $CacheResult
     }
-    $KnownSIDs = @{
-        'S-1-15-2-1'                                                     = @{
-            'Description'     = 'All applications running in an app package context. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
-            'Name'            = 'ALL APPLICATION PACKAGES'
+    return $DirectoryEntry
+}
+function Get-KnownSid {
+    param ([string]$SID)
+    switch -regex ($SID) {
+        'S-1-15-2-' {
+            return @{
+                'Name'            = $SID
+                'Description'     = "App Container $SID"
+                'NTAccount'       = "APPLICATION PACKAGE AUTHORITY\$SID"
+                'SchemaClassName' = 'user'
+                'SID'             = $SID
+            }
+        }
+        'S-1-15-3-' {
+            return ConvertFrom-AppCapabilitySid -SID $IdentityReference
+        }
+        'S-1-5-5-(?<Session>[^-]-[^-])' {
+            return @{
+                'Name'            = 'Logon Session'
+                'Description'     = "Sign-in session $($Matches.Session)"
+                'NTAccount'       = 'BUILTIN\Logon Session'
+                'SchemaClassName' = 'user'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-500' {
+            return @{
+                'Name'            = 'Administrator'
+                'Description'     = "A built-in user account for the system administrator to administer the computer/domain. Every computer has a local Administrator account and every domain has a domain Administrator account. The Administrator account is the first account created during operating system installation. The account can't be deleted, disabled, or locked out, but it can be renamed. By default, the Administrator account is a member of the Administrators group, and it can't be removed from that group."
+                'NTAccount'       = 'BUILTIN\Administrator'
+                'SchemaClassName' = 'user'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-501' {
+            return @{
+                'Name'            = 'Guest'
+                'Description'     = "A user account for people who don't have individual accounts. Every computer has a local Guest account, and every domain has a domain Guest account. By default, Guest is a member of the Everyone and the Guests groups. The domain Guest account is also a member of the Domain Guests and Domain Users groups. Unlike Anonymous Logon, Guest is a real account, and it can be used to sign in interactively. The Guest account doesn't require a password, but it can have one."
+                'NTAccount'       = 'BUILTIN\Guest'
+                'SchemaClassName' = 'user'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-502' {
+            return @{
+                'Name'            = 'KRBTGT'
+                'Description'     = "Kerberos Ticket-Generating Ticket account: a user account that's used by the Key Distribution Center (KDC) service. The account exists only on domain controllers."
+                'NTAccount'       = 'BUILTIN\KRBTGT'
+                'SchemaClassName' = 'user'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-512' {
+            return @{
+                'Name'            = 'Domain Admins'
+                'Description'     = "A global group with members that are authorized to administer the domain. By default, the Domain Admins group is a member of the Administrators group on all computers that have joined the domain, including domain controllers. Domain Admins is the default owner of any object that's created in the domain's Active Directory by any member of the group. If members of the group create other objects, such as files, the default owner is the Administrators group."
+                'NTAccount'       = 'BUILTIN\Domain Admins'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-513' {
+            return @{
+                'Name'            = 'Domain Users'
+                'Description'     = "A global group that includes all users in a domain. When you create a new User object in Active Directory, the user is automatically added to this group."
+                'NTAccount'       = 'BUILTIN\Domain Users'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-514' {
+            return @{
+                'Name'            = 'Domain Guests'
+                'Description'     = "A global group that, by default, has only one member: the domain's built-in Guest account."
+                'NTAccount'       = 'BUILTIN\Domain Guests'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-515' {
+            return @{
+                'Name'            = 'Domain Computers'
+                'Description'     = "A global group that includes all computers that have joined the domain, excluding domain controllers."
+                'NTAccount'       = 'BUILTIN\Domain Computers'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-516' {
+            return @{
+                'Name'            = 'Domain Controllers'
+                'Description'     = "A global group that includes all domain controllers in the domain. New domain controllers are added to this group automatically."
+                'NTAccount'       = 'BUILTIN\Domain Controllers'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-517' {
+            return @{
+                'Name'            = 'Cert Publishers'
+                'Description'     = "A global group that includes all computers that host an enterprise certification authority. Cert Publishers are authorized to publish certificates for User objects in Active Directory."
+                'NTAccount'       = 'BUILTIN\Cert Publishers'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-root domain-518' {
+            return @{
+                'Name'            = 'Schema Admins'
+                'Description'     = "A group that exists only in the forest root domain. It's a universal group if the domain is in native mode, and it's a global group if the domain is in mixed mode. The Schema Admins group is authorized to make schema changes in Active Directory. By default, the only member of the group is the Administrator account for the forest root domain."
+                'NTAccount'       = 'BUILTIN\Schema Admins'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-root domain-519' {
+            return @{
+                'Name'            = 'Enterprise Admins'
+                'Description'     = "A group that exists only in the forest root domain. It's a universal group if the domain is in native mode, and it's a global group if the domain is in mixed mode. The Enterprise Admins group is authorized to make changes to the forest infrastructure, such as adding child domains, configuring sites, authorizing DHCP servers, and installing enterprise certification authorities. By default, the only member of Enterprise Admins is the Administrator account for the forest root domain. The group is a default member of every Domain Admins group in the forest."
+                'NTAccount'       = 'BUILTIN\Enterprise Admins'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-520' {
+            return @{
+                'Name'            = 'Group Policy Creator Owners'
+                'Description'     = "A global group that's authorized to create new Group Policy Objects in Active Directory. By default, the only member of the group is Administrator. Objects that are created by members of Group Policy Creator Owners are owned by the individual user who creates them. In this way, the Group Policy Creator Owners group is unlike other administrative groups (such as Administrators and Domain Admins). Objects that are created by members of these groups are owned by the group rather than by the individual."
+                'NTAccount'       = 'BUILTIN\Group Policy Creator Owners'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-521' {
+            return @{
+                'Name'            = 'Read-only Domain Controllers'
+                'Description'     = "A global group that includes all read-only domain controllers."
+                'NTAccount'       = 'BUILTIN\Read-only Domain Controllers'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-522' {
+            return @{
+                'Name'            = 'Clonable Controllers'
+                'Description'     = "A global group that includes all domain controllers in the domain that can be cloned."
+                'NTAccount'       = 'BUILTIN\Clonable Controllers'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-525' {
+            return @{
+                'Name'            = 'Protected Users'
+                'Description'     = "A global group that is afforded additional protections against authentication security threats."
+                'NTAccount'       = 'BUILTIN\Protected Users'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-root domain-526' {
+            return @{
+                'Name'            = 'Key Admins'
+                'Description'     = "This group is intended for use in scenarios where trusted external authorities are responsible for modifying this attribute. Only trusted administrators should be made a member of this group."
+                'NTAccount'       = 'BUILTIN\Key Admins'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-527' {
+            return @{
+                'Name'            = 'Enterprise Key Admins'
+                'Description'     = "This group is intended for use in scenarios where trusted external authorities are responsible for modifying this attribute. Only trusted enterprise administrators should be made a member of this group."
+                'NTAccount'       = 'BUILTIN\Enterprise Key Admins'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-553' {
+            return @{
+                'Name'            = 'RAS and IAS Servers'
+                'Description'     = "A local domain group. By default, this group has no members. Computers that are running the Routing and Remote Access service are added to the group automatically. Members have access to certain properties of User objects, such as Read Account Restrictions, Read Logon Information, and Read Remote Access Information."
+                'NTAccount'       = 'BUILTIN\RAS and IAS Servers'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-571' {
+            return @{
+                'Name'            = 'Allowed RODC Password Replication Group'
+                'Description'     = "Members in this group can have their passwords replicated to all read-only domain controllers in the domain."
+                'NTAccount'       = 'BUILTIN\Allowed RODC Password Replication Group'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        'S-1-5-(?<Domain>.*)-572' {
+            return @{
+                'Name'            = 'Denied RODC Password Replication Group'
+                'Description'     = "Members in this group can't have their passwords replicated to all read-only domain controllers in the domain."
+                'NTAccount'       = 'BUILTIN\Denied RODC Password Replication Group'
+                'SchemaClassName' = 'group'
+                'SID'             = $SID
+            }
+        }
+        default {
+            return @{
+                'Name'            = $SID
+                'Description'     = $SID
+                'NTAccount'       = $SID
+                'SchemaClassName' = 'unknown'
+                'SID'             = $SID
+            }
+        }
+    }
+}
+function Get-KnownSidHashTable {
+    return @{
+        'S-1-0-0'                                                        = @{
+            'Description'     = "A group with no members. This is often used when a SID value isn't known."
+            'Name'            = 'NULL SID'
+            'NTAccount'       = 'NULL SID AUTHORITY\NULL SID'
             'SchemaClassName' = 'group'
-        }
-        'S-1-15-2-2'                                                     = @{
-            'Description'     = 'SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
-            'Name'            = 'ALL RESTRICTED APPLICATION PACKAGES'
-            'SchemaClassName' = 'group'
-        }
-        'S-1-15-7'                                                       = @{
-            'Description'     = 'A user who has connected to the computer without supplying a user name and password. Not a member of Authenticated Users.'
-            'Name'            = 'ANONYMOUS LOGON'
-            'SchemaClassName' = 'user'
-        }
-        'S-1-5-11'                                                       = @{
-            'Description'     = 'A group that includes all users and computers with identities that have been authenticated.'
-            'Name'            = 'Authenticated Users'
-            'SchemaClassName' = 'group'
-        }
-        'S-1-3-0'                                                        = @{
-            'Description'     = 'A SID to be replaced by the SID of the user who creates a new object. This SID is used in inheritable ACEs.'
-            'Name'            = 'CREATOR OWNER'
-            'SchemaClassName' = 'user'
+            'SID'             = 'S-1-0-0'
         }
         'S-1-1-0'                                                        = @{
             'Description'     = "A group that includes all users; aka 'World'."
             'Name'            = 'Everyone'
+            'NTAccount'       = 'WORLD SID AUTHORITY\Everyone'
             'SchemaClassName' = 'group'
+            'SID'             = 'S-1-1-0'
+        }
+        'S-1-2-1'                                                        = @{
+            'Description'     = 'A group that includes users who are signed in to the physical console.'
+            'Name'            = 'CONSOLE LOGON'
+            'NTAccount'       = 'LOCAL SID AUTHORITY\CONSOLE LOGON'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-2-0'
+        }
+        'S-1-3-0'                                                        = @{
+            'Description'     = 'A security identifier to be replaced by the SID of the user who creates a new object. This SID is used in inheritable access control entries.'
+            'Name'            = 'CREATOR OWNER'
+            'NTAccount'       = 'CREATOR SID AUTHORITY\CREATOR OWNER'
+            'SchemaClassName' = 'user'
+            'SID'             = 'S-1-3-0'
+        }
+        'S-1-4'                                                          = @{
+            'Description'     = 'A SID that represents an identifier authority which is not unique.'
+            'Name'            = 'Non-unique Authority'
+            'NTAccount'       = 'Non-unique Authority'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-4'
+        }
+        'S-1-5'                                                          = @{
+            'Description'     = "The SECURITY_NT_AUTHORITY (S-1-5) predefined identifier authority produces SIDs that aren't universal and are meaningful only in installations of the Windows operating systems in the 'Applies to' list at the beginning of this article."
+            'Name'            = 'NT Authority'
+            'NTAccount'       = 'NT Authority'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-5'
+        }
+        'S-1-5-1'                                                        = @{
+            'Description'     = "A group that includes all users who are signed in to the system via dial-up connection."
+            'Name'            = 'Dialup'
+            'NTAccount'       = 'NT AUTHORITY\DIALUP'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-5-1'
+        }
+        'S-1-5-2'                                                        = @{
+            'Description'     = "A group that includes all users who are signed in via a network connection. Access tokens for interactive users don't contain the Network SID."
+            'Name'            = 'Network'
+            'NTAccount'       = 'NT AUTHORITY\NETWORK'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-2'
+        }
+        'S-1-5-3'                                                        = @{
+            'Description'     = "A group that includes all users who have signed in via batch queue facility, such as task scheduler jobs."
+            'Name'            = 'Batch'
+            'NTAccount'       = 'NT AUTHORITY\BATCH'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-3'
         }
         'S-1-5-4'                                                        = @{
-            'Description'     = 'Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively.'
+            'Description'     = "Users who log on for interactive operation. This is a group identifier added to the token of a process when it was logged on interactively. A group that includes all users who sign in interactively. A user can start an interactive sign-in session by opening a Remote Desktop Services connection from a remote computer, or by using a remote shell such as Telnet. In each case, the user's access token contains the Interactive SID. If the user signs in by using a Remote Desktop Services connection, the user's access token also contains the Remote Interactive Logon SID."
             'Name'            = 'INTERACTIVE'
+            'NTAccount'       = 'NT AUTHORITY\INTERACTIVE'
             'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-4'
         }
-        'S-1-5-19'                                                       = @{
-            'Description'     = 'A local service account'
-            'Name'            = 'LOCAL SERVICE'
-            'SchemaClassName' = 'user'
+        'S-1-5-6'                                                        = @{
+            'Description'     = "A group that includes all security principals that have signed in as a service."
+            'Name'            = 'Service'
+            'NTAccount'       = 'NT AUTHORITY\SERVICE'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-6'
         }
-        'S-1-5-20'                                                       = @{
-            'Description'     = 'A network service account'
-            'Name'            = 'NETWORK SERVICE'
+        'S-1-5-7'                                                        = @{
+            'Description'     = 'A user who has connected to the computer without supplying a user name and password. Not a member of Authenticated Users.'
+            'Name'            = 'ANONYMOUS LOGON'
+            'NTAccount'       = 'NT AUTHORITY\ANONYMOUS LOGON'
             'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-7'
+        }
+        'S-1-5-8'                                                        = @{
+            'Description'     = "Doesn't currently apply: this SID isn't used."
+            'Name'            = 'Proxy'
+            'NTAccount'       = 'NT AUTHORITY\PROXY'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-8'
+        }
+        'S-1-5-9'                                                        = @{
+            'Description'     = "A group that includes all domain controllers in a forest of domains."
+            'Name'            = 'Enterprise Domain Controllers'
+            'NTAccount'       = 'NT AUTHORITY\ENTERPRISE DOMAIN CONTROLLERS'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-9'
+        }
+        'S-1-5-10'                                                       = @{
+            'Description'     = "A placeholder in an ACE for a user, group, or computer object in Active Directory. When you grant permissions to Self, you grant them to the security principal that's represented by the object. During an access check, the operating system replaces the SID for Self with the SID for the security principal that's represented by the object."
+            'Name'            = 'Self'
+            'NTAccount'       = 'NT AUTHORITY\SELF'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-10'
+        }
+        'S-1-5-11'                                                       = @{
+            'Description'     = 'A group that includes all users and computers with identities that have been authenticated. Does not include Guest even if the Guest account has a password. This group includes authenticated security principals from any trusted domain, not only the current domain.'
+            'Name'            = 'Authenticated Users'
+            'NTAccount'       = 'NT AUTHORITY\Authenticated Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-11'
+        }
+        'S-1-5-12'                                                       = @{
+            'Description'     = "An identity that's used by a process that's running in a restricted security context. In Windows and Windows Server operating systems, a software restriction policy can assign one of three security levels to code: Unrestricted/Restricted/Disallowed. When code runs at the restricted security level, the Restricted SID is added to the user's access token."
+            'Name'            = 'Restricted Code'
+            'NTAccount'       = 'NT AUTHORITY\RESTRICTED'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-12'
+        }
+        'S-1-5-13'                                                       = @{
+            'Description'     = "A group that includes all users who sign in to a server with Remote Desktop Services enabled."
+            'Name'            = 'Terminal Server User'
+            'NTAccount'       = 'NT AUTHORITY\TERMINAL SERVER USER'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-13'
+        }
+        'S-1-5-14'                                                       = @{
+            'Description'     = "A group that includes all users who sign in to the computer by using a remote desktop connection. This group is a subset of the Interactive group. Access tokens that contain the Remote Interactive Logon SID also contain the Interactive SID."
+            'Name'            = 'Remote Interactive Logon'
+            'NTAccount'       = 'NT AUTHORITY\REMOTE INTERACTIVE LOGON'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-14'
+        }
+        'S-1-5-15'                                                       = @{
+            'Description'     = "A group that includes all users from the same organization. Included only with Active Directory accounts and added only by a domain controller."
+            'Name'            = 'This Organization'
+            'NTAccount'       = 'NT AUTHORITY\This Organization'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-15'
+        }
+        'S-1-5-17'                                                       = @{
+            'Description'     = "An account that's used by the default Internet Information Services (IIS) user."
+            'Name'            = 'IUSR'
+            'NTAccount'       = 'NT AUTHORITY\IUSR'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-17'
         }
         'S-1-5-18'                                                       = @{
-            'Description'     = 'By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume'
+            'Description'     = "An identity used locally by the operating system and by services that are configured to sign in as LocalSystem. System is a hidden member of Administrators. That is, any process running as System has the SID for the built-in Administrators group in its access token. When a process that's running locally as System accesses network resources, it does so by using the computer's domain identity. Its access token on the remote computer includes the SID for the local computer's domain account plus SIDs for security groups that the computer is a member of, such as Domain Computers and Authenticated Users. By default, the SYSTEM account is granted Full Control permissions to all files on an NTFS volume (LocalSystem)"
             'Name'            = 'SYSTEM'
+            'NTAccount'       = 'NT AUTHORITY\SYSTEM'
             'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-5-18'
         }
-        'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464' = @{
-            'Description'     = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
-            'Name'            = 'TrustedInstaller'
+        'S-1-5-19'                                                       = @{
+            'Description'     = "An identity used by services that are local to the computer, have no need for extensive local access, and don't need authenticated network access. Services that run as LocalService access local resources as ordinary users, and they access network resources as anonymous users. As a result, a service that runs as LocalService has significantly less authority than a service that runs as LocalSystem locally and on the network."
+            'Name'            = 'LOCAL SERVICE'
+            'NTAccount'       = 'NT AUTHORITY\LOCAL SERVICE'
             'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-19'
         }
-        'S-1-5-80-880578595-1860270145-482643319-2788375705-1540778122'  = @{
-            'Description'     = 'Windows Event Log service account'
-            'Name'            = 'EventLog'
+        'S-1-5-20'                                                       = @{
+            'Description'     = "An identity used by services that have no need for extensive local access but do need authenticated network access. Services running as NetworkService access local resources as ordinary users and access network resources by using the computer's identity. As a result, a service that runs as NetworkService has the same network access as a service that runs as LocalSystem, but it has significantly reduced local access."
+            'Name'            = 'NETWORK SERVICE'
+            'NTAccount'       = 'NT AUTHORITY\NETWORK SERVICE'
             'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-20'
+        }
+        'S-1-5-32-544'                                                   = @{
+            'Description'     = "A built-in local group used for administration of the computer/domain. Administrators have complete and unrestricted access to the computer/domain. After the initial installation of the operating system, the only member of the group is the Administrator account. When a computer joins a domain, the Domain Admins group is added to the Administrators group. When a server becomes a domain controller, the Enterprise Admins group also is added to the Administrators group. (DOMAIN_ALIAS_RID_ADMINS)"
+            'Name'            = 'Administrators'
+            'NTAccount'       = 'BUILTIN\Administrators'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-544'
+        }
+        'S-1-5-32-545'                                                   = @{
+            'Description'     = "A built-in local group that represents all users in the domain. Users are prevented from making accidental or intentional system-wide changes and can run most applications. After the initial installation of the operating system, the only member is the Authenticated Users group. (DOMAIN_ALIAS_RID_USERS)"
+            'Name'            = 'Users'
+            'NTAccount'       = 'BUILTIN\Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-545'
+        }
+        'S-1-5-32-546'                                                   = @{
+            'Description'     = "A built-in local group that represents guests of the domain. Guests have the same access as members of the Users group by default, except for the Guest account which is further restricted. By default, the only member is the Guest account. The Guests group allows occasional or one-time users to sign in with limited privileges to a computer's built-in Guest account. (DOMAIN_ALIAS_RID_GUESTS)"
+            'Name'            = 'Guests'
+            'NTAccount'       = 'BUILTIN\Guests'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-546'
+        }
+        'S-1-5-32-547'                                                   = @{
+            'Description'     = "A built-in local group used to represent a user or set of users who expect to treat a system as if it were their personal computer rather than as a workstation for multiple users. By default, the group has no members. Power users can create local users and groups; modify and delete accounts that they have created; and remove users from the Power Users, Users, and Guests groups. Power users also can install programs; create, manage, and delete local printers; and create and delete file shares. Power Users are included for backwards compatibility and possess limited administrative powers. (DOMAIN_ALIAS_RID_POWER_USERS)"
+            'Name'            = 'Power Users'
+            'NTAccount'       = 'BUILTIN\Power Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-547'
+        }
+        'S-1-5-32-548'                                                   = @{
+            'Description'     = "A built-in local group that exists only on domain controllers. This group permits control over nonadministrator accounts. By default, the group has no members. By default, Account Operators have permission to create, modify, and delete accounts for users, groups, and computers in all containers and organizational units of Active Directory except the Builtin container and the Domain Controllers OU. Account Operators don't have permission to modify the Administrators and Domain Admins groups, nor do they have permission to modify the accounts for members of those groups. (DOMAIN_ALIAS_RID_ACCOUNT_OPS)"
+            'Name'            = 'Account Operators'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_ACCOUNT_OPS'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-548'
+        }
+        'S-1-5-32-549'                                                   = @{
+            'Description'     = "A built-in local group that exists only on domain controllers. This group performs system administrative functions, not including security functions. It establishes network shares, controls printers, unlocks workstations, and performs other operations. By default, the group has no members. Server Operators can sign in to a server interactively; create and delete network shares; start and stop services; back up and restore files; format the hard disk of the computer; and shut down the computer. (DOMAIN_ALIAS_RID_SYSTEM_OPS)"
+            'Name'            = 'Server Operators'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_SYSTEM_OPS'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-549'
+        }
+        'S-1-5-32-550'                                                   = @{
+            'Description'     = "A built-in local group that exists only on domain controllers. This group controls printers and print queues. By default, the only member is the Domain Users group. Print Operators can manage printers and document queues. (DOMAIN_ALIAS_RID_PRINT_OPS)"
+            'Name'            = 'Print Operators'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_PRINT_OPS'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-550'
+        }
+        'S-1-5-32-551'                                                   = @{
+            'Description'     = "A built-in local group used for controlling assignment of file backup-and-restore privileges. Backup Operators can override security restrictions for the sole purpose of backing up or restoring files. By default, the group has no members. Backup Operators can back up and restore all files on a computer, regardless of the permissions that protect those files. Backup Operators also can sign in to the computer and shut it down. (DOMAIN_ALIAS_RID_BACKUP_OPS)"
+            'Name'            = 'Backup Operators'
+            'NTAccount'       = 'BUILTIN\Backup Operators'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-551'
+        }
+        'S-1-5-32-552'                                                   = @{
+            'Description'     = "A built-in local group responsible for copying security databases from the primary domain controller to the backup domain controllers by the File Replication service. By default, the group has no members. Don't add users to this group. These accounts are used only by the system. (DOMAIN_ALIAS_RID_REPLICATOR)"
+            'Name'            = 'Replicators'
+            'NTAccount'       = 'BUILTIN\Replicator'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-552'
+        }
+        'S-1-5-32-554'                                                   = @{
+            'Description'     = "An alias. A local group added by Windows 2000 server and used for backward compatibility. Allows read access on all users and groups in the domain. (DOMAIN_ALIAS_RID_PREW2KCOMPACCESS)"
+            'Name'            = 'Pre-Windows 2000 Compatible Access'
+            'NTAccount'       = 'BUILTIN\Pre-Windows 2000 Compatible Access'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-554'
+        }
+        'S-1-5-32-555'                                                   = @{
+            'Description'     = "An alias. A local group that represents all remote desktop users. Members are granted the right to logon remotely. (DOMAIN_ALIAS_RID_REMOTE_DESKTOP_USERS)"
+            'Name'            = 'Remote Desktop Users'
+            'NTAccount'       = 'BUILTIN\Remote Desktop Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-555'
+        }
+        'S-1-5-32-556'                                                   = @{
+            'Description'     = "An alias. A local group that represents the network configuration. Members can have some administrative privileges to manage configuration of networking features. (DOMAIN_ALIAS_RID_NETWORK_CONFIGURATION_OPS)"
+            'Name'            = 'Network Configuration Operators'
+            'NTAccount'       = 'BUILTIN\Network Configuration Operators'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-556'
+        }
+        'S-1-5-32-557'                                                   = @{
+            'Description'     = "An alias. A local group that represents any forest trust users. Members can create incoming, one-way trusts to this forest. (DOMAIN_ALIAS_RID_INCOMING_FOREST_TRUST_BUILDERS)"
+            'Name'            = 'Incoming Forest Trust Builders'
+            'NTAccount'       = 'BUILTIN\Incoming Forest Trust Builders'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-557'
+        }
+        'S-1-5-32-558'                                                   = @{
+            'Description'     = "An alias. A local group. Members can access performance counter data locally and remotely. (DOMAIN_ALIAS_RID_MONITORING_USERS)"
+            'Name'            = 'Performance Monitor Users'
+            'NTAccount'       = 'BUILTIN\Performance Monitor Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-558'
+        }
+        'S-1-5-32-559'                                                   = @{
+            'Description'     = "An alias. A local group responsible for logging users. Members may schedule logging of performance counters, enable trace providers, and collect event traces both locally and via remote access to this computer. (DOMAIN_ALIAS_RID_LOGGING_USERS)"
+            'Name'            = 'Performance Log Users'
+            'NTAccount'       = 'BUILTIN\Performance Log Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-559'
+        }
+        'S-1-5-32-560'                                                   = @{
+            'Description'     = "An alias. A local group that represents all authorized access. Members have access to the computed tokenGroupsGlobalAndUniversal attribute on User objects. (DOMAIN_ALIAS_RID_AUTHORIZATIONACCESS)"
+            'Name'            = 'Windows Authorization Access Group'
+            'NTAccount'       = 'BUILTIN\Windows Authorization Access Group'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-560'
+        }
+        'S-1-5-32-561'                                                   = @{
+            'Description'     = "An alias. A local group that exists only on systems running server operating systems that allow for terminal services and remote access. When Windows Server 2003 Service Pack 1 is installed, a new local group is created. (DOMAIN_ALIAS_RID_TS_LICENSE_SERVERS)"
+            'Name'            = 'Terminal Server License Servers'
+            'NTAccount'       = 'BUILTIN\Terminal Server License Servers'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-561'
+        }
+        'S-1-5-32-562'                                                   = @{
+            'Description'     = "An alias. A local group that represents users who can use Distributed Component Object Model (DCOM). Used by COM to provide computer-wide access controls that govern access to all call, activation, or launch requests on the computer.Members are allowed to launch, activate and use Distributed COM objects on this machine. (DOMAIN_ALIAS_RID_DCOM_USERS)"
+            'Name'            = 'Distributed COM Users'
+            'NTAccount'       = 'BUILTIN\Distributed COM Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-562'
+        }
+        'S-1-5-32-568'                                                   = @{
+            'Description'     = "An alias. A built-in local group used by Internet Information Services that represents Internet users. (DOMAIN_ALIAS_RID_IUSERS)"
+            'Name'            = 'IIS_IUSRS'
+            'NTAccount'       = 'BUILTIN\IIS_IUSRS'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-568'
+        }
+        'S-1-5-32-569'                                                   = @{
+            'Description'     = "A built-in local group that represents access to cryptography operators. Members are authorized to perform cryptographic operations. (DOMAIN_ALIAS_RID_CRYPTO_OPERATORS)"
+            'Name'            = 'Cryptographic Operators'
+            'NTAccount'       = 'BUILTIN\Cryptographic Operators'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-569'
+        }
+        'S-1-5-32-573'                                                   = @{
+            'Description'     = "A built-in local group that represents event log readers. Members can read event logs from a local computer. (DOMAIN_ALIAS_RID_EVENT_LOG_READERS_GROUP)"
+            'Name'            = 'Event Log Readers'
+            'SID'             = 'S-1-5-32-573'
+            'NTAccount'       = 'BUILTIN\Event Log Readers'
+            'SchemaClassName' = 'group'
+        }
+        'S-1-5-32-574'                                                   = @{
+            'Description'     = "A built-in local group. Members are allowed to connect to Certification Authorities in the enterprise using Distributed Component Object Model (DCOM). (DOMAIN_ALIAS_RID_CERTSVC_DCOM_ACCESS_GROUP)"
+            'Name'            = 'Certificate Service DCOM Access'
+            'NTAccount'       = 'BUILTIN\Certificate Service DCOM Access'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-574'
+        }
+        'S-1-5-32-575'                                                   = @{
+            'Description'     = "A built-in local group. Servers in this group enable users of RemoteApp programs and personal virtual desktops access to these resources. In internet-facing deployments, these servers are typically deployed in an edge network. This group needs to be populated on servers that are running RD Connection Broker. RD Gateway servers and RD Web Access servers used in the deployment need to be in this group. (DOMAIN_ALIAS_RID_RDS_REMOTE_ACCESS_SERVERS)"
+            'Name'            = 'RDS Remote Access Servers'
+            'NTAccount'       = 'BUILTIN\RDS Remote Access Servers'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-575'
+        }
+        'S-1-5-32-576'                                                   = @{
+            'Description'     = "A built-in local group. Servers in this group run virtual machines and host sessions where users RemoteApp programs and personal virtual desktops run. This group needs to be populated on servers running RD Connection Broker. RD Session Host servers and RD Virtualization Host servers used in the deployment need to be in this group. (DOMAIN_ALIAS_RID_RDS_ENDPOINT_SERVERS)"
+            'Name'            = 'RDS Endpoint Servers'
+            'NTAccount'       = 'BUILTIN\RDS Endpoint Servers'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-576'
+        }
+        'S-1-5-32-577'                                                   = @{
+            'Description'     = "A built-in local group. Servers in this group can perform routine administrative actions on servers running Remote Desktop Services. This group needs to be populated on all servers in a Remote Desktop Services deployment. The servers running the RDS Central Management service must be included in this group. (DOMAIN_ALIAS_RID_RDS_MANAGEMENT_SERVERS)"
+            'Name'            = 'RDS Management Servers'
+            'NTAccount'       = 'BUILTIN\RDS Management Servers'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-577'
+        }
+        'S-1-5-32-578'                                                   = @{
+            'Description'     = "A built-in local group. Members have complete and unrestricted access to all features of Hyper-V. (DOMAIN_ALIAS_RID_HYPER_V_ADMINS)"
+            'Name'            = 'Hyper-V Administrators'
+            'NTAccount'       = 'BUILTIN\Hyper-V Administrators'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-578'
+        }
+        'S-1-5-32-579'                                                   = @{
+            'Description'     = "A built-in local group. Members can remotely query authorization attributes and permissions for resources on this computer. (DOMAIN_ALIAS_RID_ACCESS_CONTROL_ASSISTANCE_OPS)"
+            'Name'            = 'Access Control Assistance Operators'
+            'NTAccount'       = 'BUILTIN\Access Control Assistance Operators'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-579'
+        }
+        'S-1-5-32-580'                                                   = @{
+            'Description'     = "A built-in local group. Members can access Windows Management Instrumentation (WMI) resources over management protocols (such as WS-Management via the Windows Remote Management service). This applies only to WMI namespaces that grant access to the user. (DOMAIN_ALIAS_RID_REMOTE_MANAGEMENT_USERS)"
+            'Name'            = 'Remote Management Users'
+            'NTAccount'       = 'BUILTIN\Remote Management Users'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-580'
+        }
+        'S-1-5-64-10'                                                    = @{
+            'Description'     = "A SID that's used when the NTLM authentication package authenticates the client."
+            'Name'            = 'NTLM Authentication'
+            'NTAccount'       = 'NT AUTHORITY\NTLM Authentication'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-64-10'
+        }
+        'S-1-5-64-14'                                                    = @{
+            'Description'     = "A SID that's used when the SChannel authentication package authenticates the client."
+            'Name'            = 'SChannel Authentication'
+            'NTAccount'       = 'NT AUTHORITY\SChannel Authentication'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-64-14'
+        }
+        'S-1-5-64-21'                                                    = @{
+            'Description'     = "A SID that's used when the Digest authentication package authenticates the client."
+            'Name'            = 'Digest Authentication'
+            'NTAccount'       = 'NT AUTHORITY\Digest Authentication'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-64-21'
+        }
+        'S-1-5-80'                                                       = @{
+            'Description'     = "A SID that's used as an NT Service account prefix."
+            'Name'            = 'NT Service'
+            'NTAccount'       = 'NT AUTHORITY\NT Service'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-5-80'
+        }
+        'S-1-5-80-0'                                                     = @{
+            'Description'     = "A group that includes all service processes that are configured on the system. Membership is controlled by the operating system. This SID was introduced in Windows Server 2008 R2."
+            'Name'            = 'All Services'
+            'NTAccount'       = 'NT SERVICE\ALL SERVICES'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-80-0'
+        }
+        'S-1-5-83-0'                                                     = @{
+            'Description'     = "A built-in group. The group is created when the Hyper-V role is installed. Membership in the group is maintained by the Hyper-V Management Service (VMMS). This group requires the Create Symbolic Links right (SeCreateSymbolicLinkPrivilege) and the Log on as a Service right (SeServiceLogonRight)."
+            'Name'            = 'Virtual Machines'
+            'NTAccount'       = 'NT VIRTUAL MACHINE\Virtual Machines'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-83-0'
+        }
+        'S-1-5-113'                                                      = @{
+            'Description'     = "You can use this SID when you're restricting network sign-in to local accounts instead of 'administrator' or equivalent. This SID can be effective in blocking network sign-in for local users and groups by account type regardless of what they're named."
+            'Name'            = 'Local account'
+            'NTAccount'       = 'NT AUTHORITY\Local account'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-113'
+        }
+        'S-1-5-114'                                                      = @{
+            'Description'     = "You can use this SID when you're restricting network sign-in to local accounts instead of 'administrator' or equivalent. This SID can be effective in blocking network sign-in for local users and groups by account type regardless of what they're named."
+            'Name'            = 'Local account and member of Administrators group'
+            'NTAccount'       = 'NT AUTHORITY\Local account and member of Administrators group'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-114'
+        }
+        'S-1-15-2-1'                                                     = @{
+            'Description'     = 'All applications running in an app package context have this app container SID. SECURITY_BUILTIN_PACKAGE_ANY_PACKAGE'
+            'Name'            = 'ALL APPLICATION PACKAGES'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-2-1'
+        }
+        'S-1-15-2-2'                                                     = @{
+            'Description'     = 'Some applications running in an app package context may have this app container SID. SECURITY_BUILTIN_PACKAGE_ANY_RESTRICTED_PACKAGE'
+            'Name'            = 'ALL RESTRICTED APPLICATION PACKAGES'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-2-2'
+        }
+        'S-1-15-3-1'                                                     = @{
+            'Description'     = 'internetClient containerized app capability SID'
+            'Name'            = 'Your Internet connection'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your Internet connection'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-1'
+        }
+        'S-1-15-3-2'                                                     = @{
+            'Description'     = 'internetClientServer containerized app capability SID'
+            'Name'            = 'Your Internet connection, including incoming connections from the Internet'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your Internet connection, including incoming connections from the Internet'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-2'
+        }
+        'S-1-15-3-3'                                                     = @{
+            'Description'     = 'privateNetworkClientServer containerized app capability SID'
+            'Name'            = 'Your home or work networks'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your home or work networks'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-3'
+        }
+        'S-1-15-3-4'                                                     = @{
+            'Description'     = 'picturesLibrary containerized app capability SID'
+            'Name'            = 'Your pictures library'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your pictures library'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-4'
+        }
+        'S-1-15-3-5'                                                     = @{
+            'Description'     = 'videosLibrary containerized app capability SID'
+            'Name'            = 'Your videos library'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your videos library'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-5'
+        }
+        'S-1-15-3-6'                                                     = @{
+            'Description'     = 'musicLibrary containerized app capability SID'
+            'Name'            = 'Your music library'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your music library'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-6'
+        }
+        'S-1-15-3-7'                                                     = @{
+            'Description'     = 'documentsLibrary containerized app capability SID'
+            'Name'            = 'Your documents library'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your documents library'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-7'
+        }
+        'S-1-15-3-8'                                                     = @{
+            'Description'     = 'enterpriseAuthentication containerized app capability SID'
+            'Name'            = 'Your Windows credentials'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your Windows credentials'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-8'
+        }
+        'S-1-15-3-9'                                                     = @{
+            'Description'     = 'sharedUserCertificates containerized app capability SID'
+            'Name'            = 'Software and hardware certificates or a smart card'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Software and hardware certificates or a smart card'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-9'
+        }
+        'S-1-15-3-10'                                                    = @{
+            'Description'     = 'removableStorage containerized app capability SID'
+            'Name'            = 'Removable storage'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Removable storage'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-10'
+        }
+        'S-1-15-3-11'                                                    = @{
+            'Description'     = 'appointments containerized app capability SID'
+            'Name'            = 'Your Appointments'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your Appointments'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-11'
+        }
+        'S-1-15-3-12'                                                    = @{
+            'Description'     = 'contacts containerized app capability SID'
+            'Name'            = 'Your Contacts'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\Your Contacts'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-12'
+        }
+        'S-1-15-3-4096'                                                  = @{
+            'Description'     = 'internetExplorer containerized app capability SID'
+            'Name'            = 'internetExplorer'
+            'NTAccount'       = 'APPLICATION PACKAGE AUTHORITY\internetExplorer'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-15-3-4096'
         }
         'S-1-5-80-242729624-280608522-2219052887-3187409060-2225943459'  = @{
             'Description'     = 'Windows Cryptographic service account'
             'Name'            = 'CryptSvc'
+            'NTAccount'       = 'NT SERVICE\CryptSvc'
             'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-80-242729624-280608522-2219052887-3187409060-2225943459'
         }
         'S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420' = @{
             'Description'     = 'Windows Diagnostics service account'
             'Name'            = 'WdiServiceHost'
+            'NTAccount'       = 'NT SERVICE\WdiServiceHost'
             'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420'
+        }
+        'S-1-5-80-880578595-1860270145-482643319-2788375705-1540778122'  = @{
+            'Description'     = 'Windows Event Log service account'
+            'Name'            = 'EventLog'
+            'NTAccount'       = 'NT SERVICE\EventLog'
+            'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-80-880578595-1860270145-482643319-2788375705-1540778122'
+        }
+        'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464' = @{
+            'Description'     = 'Most of the operating system files are owned by the TrustedInstaller security identifier (SID)'
+            'Name'            = 'TrustedInstaller'
+            'NTAccount'       = 'NT SERVICE\TrustedInstaller'
+            'SchemaClassName' = 'user'
+            'SID'             = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+        }
+        'S-1-5-32-553'                                                   = @{
+            'Name'            = 'DOMAIN_ALIAS_RID_RAS_SERVERS'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_RAS_SERVERS'
+            'Description'     = 'A local group that represents RAS and IAS servers. This group permits access to various attributes of user objects. (DOMAIN_ALIAS_RID_RAS_SERVERS)'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-553'
+        }
+        'S-1-5-32-571'                                                   = @{
+            'Name'            = 'DOMAIN_ALIAS_RID_CACHEABLE_PRINCIPALS_GROUP'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_CACHEABLE_PRINCIPALS_GROUP'
+            'Description'     = 'A local group that represents principals that can be cached. (DOMAIN_ALIAS_RID_CACHEABLE_PRINCIPALS_GROUP)'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-571'
+        }
+        'S-1-5-32-572'                                                   = @{
+            'Name'            = 'DOMAIN_ALIAS_RID_NON_CACHEABLE_PRINCIPALS_GROUP'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_NON_CACHEABLE_PRINCIPALS_GROUP'
+            'Description'     = 'A local group that represents principals that cannot be cached. (DOMAIN_ALIAS_RID_NON_CACHEABLE_PRINCIPALS_GROUP)'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-572'
+        }
+        'S-1-5-32-581'                                                   = @{
+            'Name'            = 'System Managed Accounts Group'
+            'NTAccount'       = 'BUILTIN\System Managed Accounts Group'
+            'Description'     = 'Members are managed by the system. A local group that represents the default account. (DOMAIN_ALIAS_RID_DEFAULT_ACCOUNT)'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-581'
+        }
+        'S-1-5-32-582'                                                   = @{
+            'Name'            = 'DOMAIN_ALIAS_RID_STORAGE_REPLICA_ADMINS'
+            'NTAccount'       = 'BUILTIN\DOMAIN_ALIAS_RID_STORAGE_REPLICA_ADMINS'
+            'Description'     = 'A local group that represents storage replica admins. (DOMAIN_ALIAS_RID_STORAGE_REPLICA_ADMINS)'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-582'
+        }
+        'S-1-5-32-583'                                                   = @{
+            'Name'            = 'DOMAIN_ALIAS_RID_DEVICE_OWNERS'
+            'NTAccount'       = 'BUILTIN\Device Owners'
+            'Description'     = 'A local group that represents can make settings expected for Device Owners. (DOMAIN_ALIAS_RID_DEVICE_OWNERS)'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-5-32-583'
+        }
+        'S-1-2-0'                                                        = @{
+            'Name'            = 'LOCAL'
+            'Description'     = 'Users who sign in to terminals that are locally (physically) connected to the system.'
+            'NTAccount'       = 'LOCAL SID AUTHORITY\LOCAL'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-2-0'
+        }
+        'S-1-3-1'                                                        = @{
+            'Name'            = 'CREATOR GROUP'
+            'Description'     = 'A security identifier to be replaced by the primary-group SID of the user who created a new object. Use this SID in inheritable ACEs.'
+            'NTAccount'       = 'CREATOR SID AUTHORITY\CREATOR GROUP'
+            'SchemaClassName' = 'group'
+            'SID'             = 'S-1-3-1'
+        }
+        'S-1-3-2'                                                        = @{
+            'Name'            = 'CREATOR OWNER SERVER'
+            'Description'     = "A placeholder in an inheritable ACE. When the ACE is inherited, the system replaces this SID with the SID for the object's owner server and stores information about who created a given object or file."
+            'NTAccount'       = 'CREATOR SID AUTHORITY\CREATOR OWNER SERVER'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-3-2'
+        }
+        'S-1-3-3'                                                        = @{
+            'Name'            = 'CREATOR GROUP SERVER'
+            'Description'     = "A placeholder in an inheritable ACE. When the ACE is inherited, the system replaces this SID with the SID for the object's group server and stores information about the groups that are allowed to work with the object."
+            'NTAccount'       = 'CREATOR SID AUTHORITY\CREATOR GROUP SERVER'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-3-3'
+        }
+        'S-1-3-4'                                                        = @{
+            'Name'            = 'OWNER RIGHTS'
+            'Description'     = 'A group that represents the current owner of the object. When an ACE that carries this SID is applied to an object, the system ignores the implicit READ_CONTROL and WRITE_DAC permissions for the object owner.'
+            'NTAccount'       = 'CREATOR SID AUTHORITY\OWNER RIGHTS'
+            'SchemaClassName' = 'user'
+            'SID'             = 'S-1-3-4'
+        }
+        'S-1-5-32'                                                       = @{
+            'Name'            = 'BUILTIN'
+            'Description'     = 'NT AUTHORITY\BUILTIN'
+            'NTAccount'       = 'NT AUTHORITY\BUILTIN'
+            'SchemaClassName' = 'computer'
+            'SID'             = 'S-1-5-32'
+        }
+        'S-1-5-80-1594061079-2000966165-462148798-751814865-2644087104'  = @{
+            'Name'            = 'LxpSvc'
+            'Description'     = 'Used by the Language Experience Service to provide support for deploying and configuring localized Windows resources.'
+            'NTAccount'       = 'NT SERVICE\LxpSvc'
+            'SchemaClassName' = 'service'
+            'SID'             = 'S-1-5-80-1594061079-2000966165-462148798-751814865-2644087104'
+        }
+        'S-1-5-80-4230913304-2206818457-801678004-120036174-1892434133'  = @{
+            'Name'            = 'TapiSrv'
+            'NTAccount'       = 'NT SERVICE\TapiSrv'
+            'Description'     = 'Used by the TAPI server to provide the central repository of telephony on data on a computer.'
+            'SchemaClassName' = 'service'
+            'SID'             = 'S-1-5-80-4230913304-2206818457-801678004-120036174-1892434133'
         }
     }
-    $KnownNames = @{}
-    ForEach ($KnownSID in $KnownSIDs.Keys) {
-        $KnownNames[$KnownSIDs[$KnownSID]] = $Known
-    }
-    $LastSlashIndex = $DirectoryPath.LastIndexOf('/')
-    $StartIndex = $LastSlashIndex + 1
-    $AccountName = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
-    $ParentDirectoryPath = $DirectoryPath.Substring(0, $LastSlashIndex)
-    $FirstSlashIndex = $ParentDirectoryPath.IndexOf('/')
-    $ParentPath = $ParentDirectoryPath.Substring($FirstSlashIndex + 2, $ParentDirectoryPath.Length - $FirstSlashIndex - 2)
-    if ($ParentPath.Contains('/')) {
-        $FirstSlashIndex = $ParentPath.IndexOf('/')
-        $Server = $ParentPath.Substring(0, $FirstSlashIndex)
-    } else {
-        $Server = $ParentPath
-    }
-    $CimServer = $CimCache[$Server]
-    if ($CimServer) {
-        Write-LogMsg @LogParams -Text "  server cache hit for '$Server'"
-        $ID = "$Server\$AccountName"
-        $CimCacheResult = $CimServer['Win32_AccountByCaption'][$ID]
-        if ($CimCacheResult) {
-            Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache hit for '$ID' on '$Server'"
-            $FakeDirectoryEntry = @{
-                'Description'   = $CimCacheResult.Description
-                'SID'           = $CimCacheResult.SID
-                'DirectoryPath' = $DirectoryPath
-            }
-            $SIDCacheResult = $KnownSIDs[$CimCacheResult.SID]
-            if ($SIDCacheResult) {
-                $FakeDirectoryEntry['SchemaClassName'] = $SIDCacheResult['SchemaClassName']
-            } else {
-                Write-LogMsg @LogParams -Text " # Known SIDs cache miss for '$($CimCacheResult.SID)'"
-                $NameCacheResult = $KnownNames[$AccountName]
-                if ($NameCacheResult) {
-                    $FakeDirectoryEntry['Description'] = $NameCacheResult['Description']
-                    $FakeDirectoryEntry['SchemaClassName'] = $NameCacheResult['SchemaClassName']
-                } else {
-                    Write-LogMsg @LogParams -Text " # Known Account Names cache miss for '$AccountName'"
-                }
-            }
-            if ($FakeDirectoryEntry['Description'] -eq $ID) {
-                if ($SIDCacheResult) {
-                    $FakeDirectoryEntry['Description'] = $SIDCacheResult['Description']
-                }
-            }
-            if ($CimCacheResult.SidType) {
-                $FakeDirectoryEntry['SchemaClassName'] = $SidTypes[$CimCacheResult.SidType]
-            }
-            $DirectoryEntry = New-FakeDirectoryEntry @FakeDirectoryEntry
-        } else {
-            Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ID' on '$Server'"
-        }
-    } else {
-        Write-LogMsg @LogParams -Text "  server cache miss for '$Server'"
-    }
-    if ($null -eq $DirectoryEntry) {
-        switch -regex ($DirectoryPath) {
-            '^$' {
-                Write-LogMsg @LogParams -Text "'$ThisHostname' does not seem to be domain-joined since the SearchRoot Path is empty. Defaulting to WinNT provider for localhost instead."
-                $CimParams = @{
-                    CimCache          = $CimCache
-                    ComputerName      = $ThisFqdn
-                    DebugOutputStream = $DebugOutputStream
-                    ThisFqdn          = $ThisFqdn
-                }
-                $Workgroup = (Get-CachedCimInstance -ClassName 'Win32_ComputerSystem' -KeyProperty Name @CimParams @LoggingParams).Workgroup
-                $DirectoryPath = "WinNT://$Workgroup/$ThisHostname"
-                Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
-                if ($Credential) {
-                    $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
-                } else {
-                    $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
-                }
-                $SampleUser = @($DirectoryEntry.PSBase.Children |
-                    Where-Object -FilterScript { $_.schemaclassname -eq 'user' })[0] |
-                Add-SidInfo -DomainsBySid $DomainsBySid @LoggingParams
-                $DirectoryEntry |
-                Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
-                break
-            }
-            default {
-                Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
-                if ($Credential) {
-                    $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
-                } else {
-                    $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
-                }
-                break
-            }
-        }
-    }
-    if ($null -eq $DirectoryEntryCache[$DirectoryPath]) {
-        $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
-    } else {
-        $DirectoryEntry = $DirectoryEntryCache[$DirectoryPath]
-    }
-    if ($PropertiesToLoad) {
-        try {
-            $null = $DirectoryEntry.RefreshCache($PropertiesToLoad)
-        } catch {
-            $LogParams['Type'] = 'Warning' 
-            Write-LogMsg @LogParams -Text "'$DirectoryPath' could not be retrieved. Error: $($_.Exception.Message.Trim() -replace '\s"',' "')"
-            return
-        }
-    }
-    return $DirectoryEntry
 }
 function Get-ParentDomainDnsName {
     param (
@@ -2293,6 +3312,18 @@ function Get-WinNTGroupMember {
             LogBuffer    = $LogBuffer
             WhoAmI       = $WhoAmI
         }
+        $AuthoritiesToReplaceWithParentName = @{
+            'APPLICATION PACKAGE AUTHORITY' = $null
+            'BUILTIN'                       = $null
+            'CREATOR SID AUTHORITY'         = $null
+            'LOCAL SID AUTHORITY'           = $null
+            'Non-unique Authority'          = $null
+            'NT AUTHORITY'                  = $null
+            'NT SERVICE'                    = $null
+            'NT VIRTUAL MACHINE'            = $null
+            'NULL SID AUTHORITY'            = $null
+            'WORLD SID AUTHORITY'           = $null
+        }
         $PropertiesToLoad += 'Department',
         'description',
         'distinguishedName',
@@ -2310,75 +3341,88 @@ function Get-WinNTGroupMember {
         Sort-Object -Unique
     }
     process {
-ForEach ($ThisDirEntry in $DirectoryEntry) {
-    $SourceDomain = $ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf
-    if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -eq 'group') {
-        $DirectoryMembers = & { $ThisDirEntry.Invoke('Members') } 2>$null
-        Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members # For $($ThisDirEntry.Path)"
-        $MembersToGet = @{
-            'WinNTMembers' = @()
-        }
-        $MemberParams = @{
-            DirectoryEntryCache = $DirectoryEntryCache
-            PropertiesToLoad    = $PropertiesToLoad
-            DomainsByNetbios    = $DomainsByNetbios
-            LogBuffer           = $LogBuffer
-            WhoAmI              = $WhoAmI
-            CimCache            = $CimCache
-            ThisFqdn            = $ThisFqdn
-        }
-        ForEach ($DirectoryMember in $DirectoryMembers) {
-            $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
-            $MemberDomainDn = $null
-            if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)') {
-                Write-LogMsg @LogParams -Text " # '$DirectoryPath' has a domain of '$($Matches.Domain)' and an account name of '$($Matches.Acct)'"
-                $MemberName = $Matches.Acct
-                $MemberDomainNetbios = $Matches.Domain
-                $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
-                if ($DomainCacheResult) {
-                    Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$MemberDomainNetBios'"
-                    if ( "WinNT:\\$MemberDomainNetbios" -ne $SourceDomain ) {
-                        $MemberDomainDn = $DomainCacheResult.DistinguishedName
-                    }
-                } else {
-                    Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',')"
+        ForEach ($ThisDirEntry in $DirectoryEntry) {
+            $SourceDomain = $ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf
+            if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -in @('group', 'SidTypeWellKnownGroup', 'SidTypeAlias')) {
+                $DirectoryMembers = & { $ThisDirEntry.Invoke('Members') } 2>$null
+                Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members # For $($ThisDirEntry.Path)"
+                $MembersToGet = @{
+                    'WinNTMembers' = @()
                 }
-                if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
-                    Write-LogMsg @LogParams -Text " # '$DirectoryPath' is named '$($Matches.Acct)' and is on ADSI server '$($Matches.Middle)' joined to the domain '$($Matches.Domain)'"
-                    if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
-                        $MemberDomainDn = $null
+                $MemberParams = @{
+                    DirectoryEntryCache = $DirectoryEntryCache
+                    PropertiesToLoad    = $PropertiesToLoad
+                    DomainsByNetbios    = $DomainsByNetbios
+                    LogBuffer           = $LogBuffer
+                    WhoAmI              = $WhoAmI
+                    CimCache            = $CimCache
+                    ThisFqdn            = $ThisFqdn
+                }
+                ForEach ($DirectoryMember in $DirectoryMembers) {
+                    $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
+                    $MemberDomainDn = $null
+                    $workgroupregex = 'WinNT:\/\/(WORKGROUP\/)?(?<Domain>[^\/]*)\/(?<Acct>.*$)'
+                    if ($DirectoryPath -match $workgroupregex) {
+                        Write-LogMsg @LogParams -Text " # Domain of '$($Matches.Domain)' and an account name of '$($Matches.Acct)' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                        $MemberName = $Matches.Acct
+                        $MemberDomainNetbios = $Matches.Domain
+                        if ($AuthoritiesToReplaceWithParentName.ContainsKey($MemberDomainNetbios)) {
+                            if ($DirectoryEntry.Parent.GetType().Name -eq 'String') {
+                                $LastIndexOf = $DirectoryEntry.Parent.LastIndexOf('/')
+                                $ResolvedMemberDomainNetbios = $DirectoryEntry.Parent.Substring($LastIndexOf + 1, $DirectoryEntry.Parent.Length - $LastIndexOf - 1)
+                            } elseif ($DirectoryEntry.Parent.GetType().Name -eq 'DirectoryEntry') {
+                                $ResolvedMemberDomainNetbios = $DirectoryEntry.Parent.Name
+                            }
+                            $DirectoryPath = $DirectoryPath.Replace($MemberDomainNetbios, $ResolvedMemberDomainNetbios)
+                            $ResolvedMemberDomainNetbios = $MemberDomainNetbios
+                        }
+                        $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
+                        if ($DomainCacheResult) {
+                            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$MemberDomainNetBios' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                            if ( "WinNT:\\$MemberDomainNetbios" -ne $SourceDomain ) {
+                                $MemberDomainDn = $DomainCacheResult.DistinguishedName
+                            }
+                        } else {
+                            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',') # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                        }
+                        if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
+                            Write-LogMsg @LogParams -Text " # Name '$($Matches.Acct)' is on ADSI server '$($Matches.Middle)' joined to the domain '$($Matches.Domain)' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                            if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
+                                $MemberDomainDn = $null
+                            }
+                        } else {
+                            Write-LogMsg @LogParams -Text " # No RegEx match for 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                        }
+                    } else {
+                        Write-LogMsg @LogParams -Text " # No RegEx match for '$workgroupregex' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
                     }
+                    if ($MemberDomainDn) {
+                        Write-LogMsg @LogParams -Text " # '$MemberName' is a domain security principal # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                        $MembersToGet["LDAP://$MemberDomainDn"] += "(samaccountname=$MemberName)"
+                    } else {
+                        Write-LogMsg @LogParams -Text " # Is a local security principal # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                        $MembersToGet['WinNTMembers'] += $DirectoryPath
+                    }
+                }
+                ForEach ($ThisMember in $MembersToGet['WinNTMembers']) {
+                    $MemberParams['DirectoryPath'] = $ThisMember
+                    Write-LogMsg @LogParams -Text "Get-DirectoryEntry -DirectoryPath '$ThisMember' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                    $MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
+                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+                }
+                $MembersToGet.Remove('WinNTMembers')
+                $MembersToGet.Keys |
+                ForEach-Object {
+                    $MemberParams['DirectoryPath'] = $_
+                    $MemberParams['Filter'] = "(|$($MembersToGet[$_]))"
+                    $MemberDirectoryEntries = Search-Directory @MemberParams
+                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntries -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
                 }
             } else {
-                Write-LogMsg @LogParams -Text " # '$DirectoryPath' does not match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Acct>.*$)'"
-            }
-            if ($MemberDomainDn) {
-                Write-LogMsg @LogParams -Text " # '$MemberName' is a domain security principal"
-                $MembersToGet["LDAP://$MemberDomainDn"] += "(samaccountname=$MemberName)"
-            } else {
-                Write-LogMsg @LogParams -Text " # '$DirectoryPath' is a local security principal"
-                $MembersToGet['WinNTMembers'] += $DirectoryPath
+                Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' is not a group # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
             }
         }
-        ForEach ($ThisMember in $MembersToGet['WinNTMembers']) {
-            $MemberParams['DirectoryPath'] = $ThisMember
-            Write-LogMsg @LogParams -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath'"
-            $MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
-            Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
-        }
-        $MembersToGet.Remove('WinNTMembers')
-        $MembersToGet.Keys |
-        ForEach-Object {
-            $MemberParams['DirectoryPath'] = $_
-            $MemberParams['Filter'] = "(|$($MembersToGet[$_]))"
-            $MemberDirectoryEntries = Search-Directory @MemberParams
-            Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntries -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
-        }
-    } else {
-        Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' is not a group"
     }
-}
-}
 }
 function Invoke-ComObject {
     param (
@@ -2403,11 +3447,34 @@ function New-FakeDirectoryEntry {
         [string]$DirectoryPath,
         [string]$SID,
         [string]$Description,
-        [string]$SchemaClassName
+        [string]$SchemaClassName,
+        [hashtable]$NameAllowList = @{
+            'ALL APPLICATION PACKAGES'            = $null
+            'ALL RESTRICTED APPLICATION PACKAGES' = $null
+            'Authenticated Users'                 = $null
+            'BATCH'                               = $null
+            'CREATOR OWNER'                       = $null
+            'Everyone'                            = $null
+            'INTERACTIVE'                         = $null
+            'internetExplorer'                    = $null
+            'LOCAL SERVICE'                       = $null
+            'NETWORK SERVICE'                     = $null
+            'RESTRICTED'                          = $null
+            'RDS Endpoint Servers'                = $null
+            'RDS Management Servers'              = $null
+            'RDS Remote Access Servers'           = $null
+            'SERVICE'                             = $null
+            'SYSTEM'                              = $null
+        },
+        [string]$Name,
+        [string]$NTAccount
     )
     $LastSlashIndex = $DirectoryPath.LastIndexOf('/')
     $StartIndex = $LastSlashIndex + 1
     $Name = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
+    if (-not $NameAllowList.ContainsKey($Name)) {
+        return $null
+    }
     $Parent = $DirectoryPath.Substring(0, $LastSlashIndex)
     $SchemaEntry = [System.DirectoryServices.DirectoryEntry]
     $objectSid = ConvertTo-SidByteArray -SidString $SID
@@ -2456,16 +3523,6 @@ function Resolve-IdentityReference {
         Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
-    $LoggingParams = @{
-        ThisHostname = $ThisHostname
-        LogBuffer    = $LogBuffer
-        WhoAmI       = $WhoAmI
-    }
-    $GetDirectoryEntryParams = @{
-        DirectoryEntryCache = $DirectoryEntryCache
-        DomainsByNetbios    = $DomainsByNetbios
-        DomainsBySid        = $DomainsBySid
-    }
     $ServerNetBIOS = $AdsiServer.Netbios
     $CacheResult = $CimCache[$ServerNetBIOS]['Win32_AccountBySID'][$IdentityReference]
     if ($CacheResult) {
@@ -2473,11 +3530,94 @@ function Resolve-IdentityReference {
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
             SIDString                = $CacheResult.SID
-            IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" 
+            IdentityReferenceNetBios = "$ServerNetBIOS\$($CacheResult.Name)"
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
         Write-LogMsg @LogParams -Text " # Win32_AccountBySID CIM instance cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+    }
+    $KnownSIDs = Get-KnownSidHashTable
+    $CacheResult = $KnownSIDs[$IdentityReference]
+    if ($CacheResult) {
+        Write-LogMsg @LogParams -Text " # Known SID cache hit for '$IdentityReference' on '$ServerNetBIOS'"
+        $Name = $CacheResult['Name']
+        $Caption = "$ServerNetBIOS\$Name"
+        $Win32Acct = [PSCustomObject]@{
+            SID     = $IdentityReference
+            Caption = $Caption
+            Domain  = $ServerNetBIOS
+            Name    = $Name
+        }
+        Write-LogMsg @LogParams -Text " # Add '$Caption' to the 'Win32_AccountByCaption' cache for '$ServerNetBIOS'"
+        $CimCache[$ServerNetBIOS]['Win32_AccountByCaption'][$Caption] = $Win32Acct
+        Write-LogMsg @LogParams -Text " # Add '$IdentityReference' to the 'Win32_AccountBySID' cache for '$ServerNetBIOS'"
+        $CimCache[$ServerNetBIOS]['Win32_AccountBySID'][$IdentityReference] = $Win32Acct
+        return [PSCustomObject]@{
+            IdentityReference        = $IdentityReference
+            SIDString                = $IdentityReference
+            IdentityReferenceNetBios = $Caption
+            IdentityReferenceDns     = "$($AdsiServer.Dns)\$Name"
+        }
+    } else {
+        Write-LogMsg @LogParams -Text " # Known SID cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+    }
+    $KnownNTAccounts = @{}
+    ForEach ($KnownNTAccount in $KnownNTAccounts.Keys) {
+        $Known = $KnownNTAccounts[$KnownNTAccount]
+        $KnownNTAccounts[$Known['NTAccount']] = $Known
+    }
+    $CacheResult = $KnownNTAccounts[$IdentityReference]
+    if ($CacheResult) {
+        Write-LogMsg @LogParams -Text " # Known NTAccount caption hit for '$IdentityReference' on '$ServerNetBIOS'"
+        $Name = $CacheResult['Name']
+        $Caption = "$ServerNetBIOS\$Name"
+        $Win32Acct = [PSCustomObject]@{
+            SID     = $CacheResult['SID']
+            Caption = $Caption
+            Domain  = $ServerNetBIOS
+            Name    = $Name
+        }
+        Write-LogMsg @LogParams -Text " # Add '$Caption' to the 'Win32_AccountByCaption' cache for '$ServerNetBIOS'"
+        $CimCache[$ServerNetBIOS]['Win32_AccountByCaption'][$Caption] = $Win32Acct
+        Write-LogMsg @LogParams -Text " # Add '$IdentityReference' to the 'Win32_AccountBySID' cache for '$ServerNetBIOS'"
+        $CimCache[$ServerNetBIOS]['Win32_AccountBySID'][$IdentityReference] = $Win32Acct
+        return [PSCustomObject]@{
+            IdentityReference        = $IdentityReference
+            SIDString                = $CacheResult['SID']
+            IdentityReferenceNetBios = $Caption
+            IdentityReferenceDns     = "$($AdsiServer.Dns)\$Name"
+        }
+    } else {
+        Write-LogMsg @LogParams -Text " # Known NTAccount caption cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+    }
+    $CacheResult = Get-KnownSid -SID $IdentityReference
+    if ($CacheResult['NTAccount'] -ne $CacheResult['SID']) {
+        Write-LogMsg @LogParams -Text " # Capability SID pattern hit for '$IdentityReference' on '$ServerNetBIOS'"
+        $Name = $CacheResult['Name']
+        $Caption = "$ServerNetBIOS\$Name"
+        $Win32Acct = [PSCustomObject]@{
+            SID     = $CacheResult['SID']
+            Caption = $Caption
+            Domain  = $ServerNetBIOS
+            Name    = $Name
+        }
+        Write-LogMsg @LogParams -Text " # Add '$Caption' to the 'Win32_AccountByCaption' cache for '$ServerNetBIOS'"
+        $CimCache[$ServerNetBIOS]['Win32_AccountByCaption'][$Caption] = $Win32Acct
+        Write-LogMsg @LogParams -Text " # Add '$IdentityReference' to the 'Win32_AccountBySID' cache for '$ServerNetBIOS'"
+        $CimCache[$ServerNetBIOS]['Win32_AccountBySID'][$IdentityReference] = $Win32Acct
+        return [PSCustomObject]@{
+            IdentityReference        = $IdentityReference
+            SIDString                = $CacheResult['SID']
+            IdentityReferenceNetBios = $Caption
+            IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult['Name'])"
+        }
+    } else {
+        Write-LogMsg @LogParams -Text " # Capability SID pattern miss for '$IdentityReference' on '$ServerNetBIOS'"
+    }
+    $LoggingParams = @{
+        ThisHostname = $ThisHostname
+        LogBuffer    = $LogBuffer
+        WhoAmI       = $WhoAmI
     }
     $split = $IdentityReference.Split('\')
     $DomainNetBIOS = $ServerNetBIOS
@@ -2505,7 +3645,7 @@ function Resolve-IdentityReference {
             return [PSCustomObject]@{
                 IdentityReference        = $IdentityReference
                 SIDString                = $CacheResult.SID
-                IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" 
+                IdentityReferenceNetBios = "$ServerNetBIOS\$($CacheResult.Name)"
                 IdentityReferenceDns     = "$DomainDns\$($CacheResult.Name)"
             }
         } else {
@@ -2518,19 +3658,30 @@ function Resolve-IdentityReference {
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
             SIDString                = $CacheResult.SID
-            IdentityReferenceNetBios = $CacheResult.Caption.Replace("$ThisHostname\", "$ThisHostname\") 
+            IdentityReferenceNetBios = "$ServerNetBIOS\$($CacheResult.Name)"
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
         Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS'"
     }
+    $GetDirectoryEntryParams = @{
+        DirectoryEntryCache = $DirectoryEntryCache
+        DomainsByNetbios    = $DomainsByNetbios
+        DomainsBySid        = $DomainsBySid
+    }
     switch -Wildcard ($IdentityReference) {
         "S-1-*" {
+            $DomainSid = $IdentityReference.Substring(0, $IdentityReference.LastIndexOf("-"))
             Write-LogMsg @LogParams -Text "[System.Security.Principal.SecurityIdentifier]::new('$IdentityReference').Translate([System.Security.Principal.NTAccount])"
             $SecurityIdentifier = [System.Security.Principal.SecurityIdentifier]::new($IdentityReference)
-            $NTAccount = & { $SecurityIdentifier.Translate([System.Security.Principal.NTAccount]).Value } 2>$null
+            try {
+                $NTAccount = & { $SecurityIdentifier.Translate([System.Security.Principal.NTAccount]).Value } 2>$null
+            } catch {
+                $LogParams['Type'] = 'Warning' 
+                Write-LogMsg @LogParams -Text " # '$IdentityReference' unexpectedly could not be translated from SID to NTAccount using the [SecurityIdentifier]::Translate method: $($_.Exception.Message)"
+                $LogParams['Type'] = $DebugOutputStream
+            }
             Write-LogMsg @LogParams -Text " # Translated NTAccount name for '$IdentityReference' is '$NTAccount'"
-            $DomainSid = $IdentityReference.Substring(0, $IdentityReference.LastIndexOf("-"))
             $DomainCacheResult = $DomainsBySID[$DomainSid]
             if ($DomainCacheResult) {
                 Write-LogMsg @LogParams -Text " # Domain SID cache hit for '$DomainSid'"
@@ -2558,7 +3709,7 @@ function Resolve-IdentityReference {
                 } else {
                     $DomainNetBIOS = $DomainFromSplit
                 }
-                $DomainCacheResult = $DomainsByNetbios[$split[0]]
+                $DomainCacheResult = $DomainsByNetbios[$DomainFromSplit]
             }
             if ($DomainCacheResult) {
                 $DomainNetBIOS = $DomainCacheResult.Netbios
@@ -2588,7 +3739,7 @@ function Resolve-IdentityReference {
                 $Resolved = [PSCustomObject]@{
                     IdentityReference        = $IdentityReference
                     SIDString                = $IdentityReference
-                    IdentityReferenceNetBios = $CacheResult.Caption -replace "^$ThisHostname\\", "$ThisHostname\" 
+                    IdentityReferenceNetBios = "$DomainNetBIOS\$IdentityReference"
                     IdentityReferenceDns     = "$DomainDns\$IdentityReference"
                 }
             }
@@ -2609,7 +3760,7 @@ function Resolve-IdentityReference {
                 $ScResultProps[$Prop] = $Value
             }
             $SIDString = $ScResultProps['SERVICE SID']
-            $Caption = $IdentityReference.Replace('NT SERVICE', $ServerNetBIOS)
+            $Caption = "$ServerNetBIOS\$Name"
             $DomainCacheResult = $DomainsByNetbios[$ServerNetBIOS]
             if ($DomainCacheResult) {
                 $DomainDns = $DomainCacheResult.Dns
@@ -2635,24 +3786,13 @@ function Resolve-IdentityReference {
             }
         }
         "APPLICATION PACKAGE AUTHORITY\*" {
-            $KnownSIDs = @{ 
-                'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'                                                   = 'S-1-15-2-1'
-                'APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES'                                        = 'S-1-15-2-2'
-                'APPLICATION PACKAGE AUTHORITY\Your Internet connection'                                                   = 'S-1-15-3-1'
-                'APPLICATION PACKAGE AUTHORITY\Your Internet connection, including incoming connections from the Internet' = 'S-1-15-3-2'
-                'APPLICATION PACKAGE AUTHORITY\Your home or work networks'                                                 = 'S-1-15-3-3'
-                'APPLICATION PACKAGE AUTHORITY\Your pictures library'                                                      = 'S-1-15-3-4'
-                'APPLICATION PACKAGE AUTHORITY\Your videos library'                                                        = 'S-1-15-3-5'
-                'APPLICATION PACKAGE AUTHORITY\Your music library'                                                         = 'S-1-15-3-6'
-                'APPLICATION PACKAGE AUTHORITY\Your documents library'                                                     = 'S-1-15-3-7'
-                'APPLICATION PACKAGE AUTHORITY\Your Windows credentials'                                                   = 'S-1-15-3-8'
-                'APPLICATION PACKAGE AUTHORITY\Software and hardware certificates or a smart card'                         = 'S-1-15-3-9'
-                'APPLICATION PACKAGE AUTHORITY\Removable storage'                                                          = 'S-1-15-3-10'
-                'APPLICATION PACKAGE AUTHORITY\Your Appointments'                                                          = 'S-1-15-3-11'
-                'APPLICATION PACKAGE AUTHORITY\Your Contacts'                                                              = 'S-1-15-3-12'
+            $Known = $KnownNTAccounts[$IdentityReference]
+            if ($Known) {
+                $SIDString = $Known['SID']
+            } else {
+                $SIDString = $IdentityReference
             }
-            $SIDString = $KnownSIDs[$IdentityReference]
-            $Caption = $IdentityReference.Replace('APPLICATION PACKAGE AUTHORITY', $ServerNetBIOS)
+            $Caption = "$ServerNetBIOS\$Name"
             $DomainCacheResult = $DomainsByNetbios[$ServerNetBIOS]
             if ($DomainCacheResult) {
                 $DomainDns = $DomainCacheResult.Dns
@@ -2681,7 +3821,7 @@ function Resolve-IdentityReference {
             $DirectoryPath = "$($AdsiServer.AdsiProvider)`://$ServerNetBIOS/$Name"
             $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath @GetDirectoryEntryParams @LoggingParams
             $SIDString = (Add-SidInfo -InputObject $DirectoryEntry -DomainsBySid $DomainsBySid @LoggingParams).SidString
-            $Caption = $IdentityReference.Replace('BUILTIN', $ServerNetBIOS)
+            $Caption = "$ServerNetBIOS\$Name"
             $DomainDns = $AdsiServer.Dns
             $Win32Acct = [PSCustomObject]@{
                 SID     = $SIDString
@@ -2714,12 +3854,24 @@ function Resolve-IdentityReference {
         $DomainDns = $DomainNetBIOSCacheResult.Dns
         Write-LogMsg @LogParams -Text "[System.Security.Principal.NTAccount]::new('$ServerNetBIOS', '$Name').Translate([System.Security.Principal.SecurityIdentifier])"
         $NTAccount = [System.Security.Principal.NTAccount]::new($ServerNetBIOS, $Name)
-        $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+        try {
+            $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+        } catch {
+            $LogParams['Type'] = 'Warning' 
+            Write-LogMsg @LogParams -Text " # '$ServerNetBIOS\$Name' could not be translated from NTAccount to SID: $($_.Exception.Message)"
+            $LogParams['Type'] = $DebugOutputStream
+        }
         if (-not $SIDString) {
             Write-LogMsg @LogParams -Text "[System.Security.Principal.NTAccount]::new('$DomainNetBIOS', '$Name')"
             $NTAccount = [System.Security.Principal.NTAccount]::new($DomainNetBIOS, $Name)
             Write-LogMsg @LogParams -Text "[System.Security.Principal.NTAccount]::new('$DomainNetBIOS', '$Name').Translate([System.Security.Principal.SecurityIdentifier])"
-            $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+            try {
+                $SIDString = & { $NTAccount.Translate([System.Security.Principal.SecurityIdentifier]) } 2>$null
+            } catch {
+                $LogParams['Type'] = 'Warning' 
+                Write-LogMsg @LogParams -Text " # '$NTAccount' could not be translated from NTAccount to SID: $($_.Exception.Message)"
+                $LogParams['Type'] = $DebugOutputStream
+            }
         } else {
             $DomainNetBIOS = $ServerNetBIOS
         }
@@ -5299,7 +6451,8 @@ function Initialize-Cache {
         [String]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
         [String]$WhoAmI = (whoami.EXE),
         [Hashtable]$LogBuffer = ([Hashtable]::Synchronized(@{})),
-        [int]$ProgressParentId
+        [int]$ProgressParentId,
+        [hashtable]$WellKnownSIDBySID = (Get-KnownSidHashTable)
     )
     $Progress = @{
         Activity = 'Initialize-Cache'
@@ -5318,6 +6471,11 @@ function Initialize-Cache {
         Type         = $DebugOutputStream
         WhoAmI       = $WhoAmI
     }
+    $WellKnownSIDByName = @{}
+    ForEach ($KnownSID in $WellKnownSIDBySID.Keys) {
+        $Known = $WellKnownSIDBySID[$KnownSID]
+        $WellKnownSIDByName[$Known['Name']] = $Known
+    }
     $GetAdsiServer = @{
         DirectoryEntryCache = $DirectoryEntryCache
         DomainsByFqdn       = $DomainsByFqdn
@@ -5328,6 +6486,8 @@ function Initialize-Cache {
         WhoAmI              = $WhoAmI
         LogBuffer           = $LogBuffer
         CimCache            = $CimCache
+        WellKnownSIDBySID   = $WellKnownSIDBySID
+        WellKnownSIDByName  = $WellKnownSIDByName
     }
     if ($ThreadCount -eq 1) {
         $i = 0
@@ -5345,7 +6505,7 @@ function Initialize-Cache {
             InputParameter   = 'Fqdn'
             TodaysHostname   = $ThisHostname
             WhoAmI           = $WhoAmI
-            LogBuffer      = $LogBuffer
+            LogBuffer        = $LogBuffer
             Timeout          = 600
             Threads          = $ThreadCount
             ProgressParentId = $ProgressParentId
@@ -6687,37 +7847,37 @@ function Write-LogMsg {
     $Location = $PSCallStack[1].Location
     $Command = $PSCallStack[1].Command
     ForEach ($Splat in $Expand) {
-        ForEach ($Key in $Splat.Keys) {
-            $Value = $ExpandKeyMap[$Key]
-            if (-not $Value) {
-                $Value = $Splat[$Key]
-                if ($Value) {
-                    switch ($Value.GetType().FullName) {
+        ForEach ($ParamName in $Splat.Keys) {
+            $ParamValue = $ExpandKeyMap[$ParamName] 
+            if (-not $ParamValue) {
+                $ParamValue = $Splat[$ParamName]
+                if ($ParamValue) {
+                    switch ($ParamValue.GetType().FullName) {
                         'System.Collections.Hashtable' {
-                            $Value = "`$$Key"
+                            $ParamValue = "`$$ParamName"
                             break
                         }
                         'System.Collections.Hashtable+SyncHashtable' {
-                            $Value = "`$$Key"
+                            $ParamValue = "`$$ParamName"
                             break
                         }
                         'System.Int32' {
-                            $Value = "($Value)"
+                            $ParamValue = "($ParamValue)" 
                             break
                         }
                         'System.UInt16' {
-                            $Value = "($Value)"
+                            $ParamValue = "($ParamValue)" 
                             break
                         }
                         default {
-                            $Value = "'$Value'"
+                            $ParamValue = "'$ParamValue'"
                         }
                     }
                 } else {
-                    continue 
+                    continue
                 }
             }
-            $Text = "$Text -$Key $Value"
+            $Text = "$Text -$ParamName $ParamValue"
         }
     }
     if ($AddPrefix) {
