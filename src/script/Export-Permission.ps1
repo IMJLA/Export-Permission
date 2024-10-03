@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.369
+.VERSION 0.0.370
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update adsi module to properly handle capability sids
+updates to adsi module to handle windows built-in sids
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update adsi module to properly handle capability sids
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -630,7 +631,7 @@ begin {
     Write-LogMsg @Log -Text "`$WhoAmI = Get-CurrentWhoAmI -ThisHostName '$ThisHostname' -Buffer `$LogBuffer"
 
     # Get the FQDN of the computer running the script
-    Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-DnsFqdn -ComputerName '$ThisHostName'"
+    Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-DnsFqdn -ComputerName '$ThisHostName' -Expand $LogThis"
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LogThis
 
     # Create a splat of caching-related parameters to pass to various functions for script readability
