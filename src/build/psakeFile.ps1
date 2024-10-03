@@ -146,7 +146,7 @@ FormatTaskName {
     Write-Host "$NewLine`Executing task $TaskName" -ForegroundColor Cyan
 }
 
-task Default -depends FindLinter, FindBuildModule, FindPlatyPS, DetectOperatingSystem, SourceControl
+task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, DetectOperatingSystem, SourceControl
 
 task FindLinter -precondition { $LintEnabled } {
 
@@ -162,7 +162,7 @@ task FindBuildModule -precondition { $script:FindLinter } {
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
-task FindPlatyPS {
+task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
     $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)

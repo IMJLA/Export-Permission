@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.371] - 2024-10-02
+### Changed
+- rename psake task to be more descriptive
+
 ## [0.0.370] - 2024-10-02
 ### Changed
 - updates to adsi module to handle windows built-in sids
