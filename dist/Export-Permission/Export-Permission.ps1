@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.371
+.VERSION 0.0.372
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-rename psake task to be more descriptive
+remove debug breakpoints
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ rename psake task to be more descriptive
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

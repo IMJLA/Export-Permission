@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.371
+.VERSION 0.0.372
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-rename psake task to be more descriptive
+remove debug breakpoints
 
 .PRIVATEDATA
 

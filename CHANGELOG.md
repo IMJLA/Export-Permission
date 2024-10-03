@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.372] - 2024-10-02
+### Removed
+- remove debug breakpoints
+
 ## [0.0.371] - 2024-10-02
 ### Changed
 - rename psake task to be more descriptive
