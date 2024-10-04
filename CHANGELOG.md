@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.374] - 2024-10-03
+### Removed
+- delete extra blank lines
+
 ## [0.0.373] - 2024-10-03
 ### Changed
 - improved error handling
