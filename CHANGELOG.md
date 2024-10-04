@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.375] - 2024-10-03
+### Changed
+- update psntfs module
+
 ## [0.0.374] - 2024-10-03
 ### Removed
 - delete extra blank lines

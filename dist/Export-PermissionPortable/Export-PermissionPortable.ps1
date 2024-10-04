@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.374
+.VERSION 0.0.375
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-delete extra blank lines
+update psntfs module
 
 .PRIVATEDATA
 
@@ -1052,6 +1052,8 @@ function Resolve-IdRefCached {
             Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$Name' on '$ServerNetBIOS'"
         }
     }
+    if (-not $CimCache[$ServerNetBIOS]) { pause }
+    if (-not $CimCache[$ServerNetBIOS]['Win32_AccountByCaption']) { pause }
     $CacheResult = $CimCache[$ServerNetBIOS]['Win32_AccountByCaption']["$ServerNetBIOS\$IdentityReference"]
     if ($CacheResult) {
         return [PSCustomObject]@{
@@ -1309,7 +1311,7 @@ function Add-DomainFqdnToLdapPath {
     begin {
         $LoggingParams = @{
             ThisHostname = $ThisHostname
-            LogBuffer  = $LogBuffer
+            LogBuffer    = $LogBuffer
             WhoAmI       = $WhoAmI
         }
         $PathRegEx = '(?<Path>LDAP:\/\/[^\/]*)'
@@ -1797,7 +1799,7 @@ function ConvertFrom-SidString {
         ThisFqdn            = $ThisFqdn
         ThisHostname        = $ThisHostname
         CimCache            = $CimCache
-        LogBuffer         = $LogBuffer
+        LogBuffer           = $LogBuffer
         WhoAmI              = $WhoAmI
         DebugOutputStream   = $DebugOutputStream
     }
@@ -1924,7 +1926,7 @@ function ConvertTo-DomainNetBIOS {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer = $LogBuffer
+        Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     $DomainCacheResult = $DomainsByFqdn[$DomainFQDN]
@@ -2075,7 +2077,7 @@ function ConvertTo-Fqdn {
         $LogParams = @{
             ThisHostname = $ThisHostname
             Type         = $DebugOutputStream
-            Buffer = $LogBuffer
+            Buffer       = $LogBuffer
             WhoAmI       = $WhoAmI
         }
         $LoggingParams = @{
@@ -2718,7 +2720,7 @@ function Get-CurrentDomain {
         CimCache          = $CimCache
         ComputerName      = $ComputerName
         DebugOutputStream = $DebugOutputStream
-        LogBuffer       = $LogBuffer
+        LogBuffer         = $LogBuffer
         ThisFqdn          = $ThisFqdn
         ThisHostname      = $ThisHostname
         WhoAmI            = $WhoAmI
@@ -3835,7 +3837,7 @@ function Get-ParentDomainDnsName {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer = $LogBuffer
+        Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     if (-not $CimSession) {
@@ -8632,8 +8634,7 @@ function Get-DirectorySecurity {
         [Switch]$IncludeInherited,
         [System.Security.AccessControl.AccessControlSections]$Sections = (
             [System.Security.AccessControl.AccessControlSections]::Access -bor
-            [System.Security.AccessControl.AccessControlSections]::Owner -bor
-            [System.Security.AccessControl.AccessControlSections]::Group),
+            [System.Security.AccessControl.AccessControlSections]::Owner),
         [bool]$IncludeExplicitRules = $true,
         [System.Type]$AccountType = [System.Security.Principal.SecurityIdentifier],
         [string]$DebugOutputStream = 'Debug',

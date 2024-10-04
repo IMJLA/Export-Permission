@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.374
+.VERSION 0.0.375
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-delete extra blank lines
+update psntfs module
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ delete extra blank lines
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#
