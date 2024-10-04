@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.372
+.VERSION 0.0.373
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove debug breakpoints
+improved error handling
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ remove debug breakpoints
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -537,6 +538,9 @@ param (
 
 begin {
 
+    # To avoid generating inaccurate reports, halt the script upon encountering any errors.
+    $ErrorActionPreference = 'Stop'
+
     # Workaround for https://github.com/PowerShell/PowerShell/issues/20657
     if ($NoProgress) {
         $ProgressPreference = 'Ignore'
@@ -696,8 +700,9 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
-        Output     = $AclByPath
-        TargetPath = $Items
+        ErrorAction = 'Stop'
+        Output      = $AclByPath
+        TargetPath  = $Items
     }
     Write-LogMsg @Log -Text 'Get-AccessControlList' -Expand @{ Output = '$AclByPath'; TargetPath = '$Items' }, $LogThis, $Threads
     Get-AccessControlList @CommandParameters @LogThis @Threads

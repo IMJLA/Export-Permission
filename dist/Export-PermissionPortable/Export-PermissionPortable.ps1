@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.372
+.VERSION 0.0.373
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove debug breakpoints
+improved error handling
 
 .PRIVATEDATA
 
@@ -105,6 +105,7 @@ param (
     [switch]$NoProgress
 )
 begin {
+    $ErrorActionPreference = 'Stop'
     if ($NoProgress) {
         $ProgressPreference = 'Ignore'
     }
@@ -4992,13 +4993,44 @@ function Expand-ItemPermissionAccountAccessReference {
         [Hashtable]$PrincipalByResolvedID,
         [Hashtable]$AceByGUID
     )
+    if ($Reference) {
+        if ($Reference -is [System.Collections.IEnumerable]) {
+            $FirstRef = $Reference[0]
+        } else {
+            $FirstRef = $Reference
+        }
+        if ($FirstRef) {
+            if ($FirstRef.AceGUIDs -is [System.Collections.IEnumerable]) {
+                $FirstACEGuid = $FirstRef.AceGUIDs[0]
+            } else {
+                $FirstACEGuid = $FirstRef.AceGUIDs
+            }
+        }
+        if ($FirstACEGuid) {
+            $ACEList = $AceByGUID[$FirstACEGuid]
+        }
+        if ($ACEList -is [System.Collections.IEnumerable]) {
+            $FirstACE = $ACEList[0]
+        } else {
+            $FirstACE = $ACEList
+        }
+        $ACEProps = $FirstACE.PSObject.Properties.GetEnumerator().Name
+    }
     ForEach ($PermissionRef in $Reference) {
+        $Account = $PrincipalByResolvedID[$PermissionRef.Account]
         [PSCustomObject]@{
-            Account     = $PrincipalByResolvedID[$PermissionRef.Account]
+            Account     = $Account
             AccountName = $PermissionRef.Account
             Access      = ForEach ($GuidList in $PermissionRef.AceGUIDs) {
                 ForEach ($Guid in $GuidList) {
-                    $AceByGUID[$Guid]
+                    $ACE = $AceByGUID[$Guid]
+                    $OutputProperties = @{
+                        Account = $Account
+                    }
+                    ForEach ($Prop in $ACEProps) {
+                        $OutputProperties[$Prop] = $ACE.$Prop
+                    }
+                    [pscustomobject]$OutputProperties
                 }
             }
             PSTypeName  = 'Permission.ItemPermissionAccountAccess'
@@ -5640,7 +5672,7 @@ function Resolve-Ace {
     $Cache1 = @{ DirectoryEntryCache = $DirectoryEntryCache ; DomainsByFqdn = $DomainsByFqdn }
     $Cache2 = @{ DomainsByNetBIOS = $DomainsByNetbios ; DomainsBySid = $DomainsBySid ; CimCache = $CimCache }
     $DomainDNS = Resolve-IdentityReferenceDomainDNS -IdentityReference $ACE.IdentityReference -ItemPath $ItemPath -ThisFqdn $ThisFqdn @Cache2 @Log
-    $AdsiServer = Get-AdsiServer -Fqdn $DomainDNS -ThisFqdn $ThisFqdn @GetAdsiServerParams @Cache1 @Cache2 @LogSplat
+    $AdsiServer = Get-AdsiServer -Fqdn $DomainDNS @GetAdsiServerParams @Cache1 @Cache2 @LogSplat
     $ResolvedIdentityReference = Resolve-IdentityReference -IdentityReference $ACE.IdentityReference -AdsiServer $AdsiServer -ThisFqdn $ThisFqdn @Cache1 @Cache2 @LogSplat
     $ObjectProperties = @{
         Access                    = "$($ACE.AccessControlType) $($ACE.FileSystemRights) $($InheritanceFlagResolved[$ACE.InheritanceFlags])"
@@ -6473,11 +6505,12 @@ function Format-TimeSpan {
     $StringBuilder.ToString()
 }
 function Get-AccessControlList {
+    [CmdletBinding()]
     param (
         [Hashtable]$TargetPath,
         [uint16]$ThreadCount = ((Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum),
         [String]$DebugOutputStream = 'Debug',
-        [String]$TodaysHostname = (HOSTNAME.EXE),
+        [String]$ThisHostname = (HOSTNAME.EXE),
         [String]$WhoAmI = (whoami.EXE),
         [hashtable]$LogBuffer = ([Hashtable]::Synchronized(@{})),
         [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
@@ -6486,7 +6519,7 @@ function Get-AccessControlList {
         [hashtable]$WarningCache = [Hashtable]::Synchronized(@{})
     )
     $LogParams = @{
-        ThisHostname = $TodaysHostname
+        ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
         Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
@@ -6514,7 +6547,7 @@ function Get-AccessControlList {
     Write-Progress @Progress -Status '0% (step 1 of 2) Get access control lists for parent and child items' -CurrentOperation 'Get access control lists for parent and child items' -PercentComplete 0
     $GetDirectorySecurity = @{
         LogBuffer         = $LogBuffer
-        ThisHostname      = $TodaysHostname
+        ThisHostname      = $ThisHostname
         DebugOutputStream = $DebugOutputStream
         WhoAmI            = $WhoAmI
         OwnerCache        = $OwnerCache
@@ -6560,7 +6593,7 @@ function Get-AccessControlList {
                 InputObject       = $Children
                 InputParameter    = 'LiteralPath'
                 DebugOutputStream = $DebugOutputStream
-                TodaysHostname    = $TodaysHostname
+                ThisHostname      = $ThisHostname
                 WhoAmI            = $WhoAmI
                 LogBuffer         = $LogBuffer
                 Threads           = $ThreadCount
@@ -6620,7 +6653,7 @@ function Get-AccessControlList {
                 InputObject       = $Children
                 InputParameter    = 'Item'
                 DebugOutputStream = $DebugOutputStream
-                TodaysHostname    = $TodaysHostname
+                ThisHostname      = $ThisHostname
                 WhoAmI            = $WhoAmI
                 LogBuffer         = $LogBuffer
                 Threads           = $ThreadCount
@@ -6631,6 +6664,10 @@ function Get-AccessControlList {
         }
     }
     Write-Progress @Progress -Completed
+    if ($Output.Keys.Count -eq 0) {
+        $LogParams['Type'] = 'Error' 
+        Write-LogMsg @LogParams -Text " # 0 access control lists could be retrieved.  Exiting script."
+    }
 }
 function Get-CachedCimInstance {
     param (
@@ -6689,8 +6726,8 @@ function Get-CachedCimInstance {
             $CimInstance = Get-CimInstance -Query $Query @GetCimInstanceParams
         }
         if ($CimInstance) {
-            $InstanceCache = [Hashtable]::Synchronized(@{})
             ForEach ($Prop in $CacheByProperty) {
+                $InstanceCache = [Hashtable]::Synchronized(@{})
                 if ($PSBoundParameters.ContainsKey('ClassName')) {
                     $InstanceCacheKey = "$ClassName`By$Prop"
                 } else {
@@ -9755,8 +9792,9 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $CommandParameters = @{
-        Output     = $AclByPath
-        TargetPath = $Items
+        ErrorAction = 'Stop'
+        Output      = $AclByPath
+        TargetPath  = $Items
     }
     Write-LogMsg @Log -Text 'Get-AccessControlList' -Expand @{ Output = '$AclByPath'; TargetPath = '$Items' }, $LogThis, $Threads
     Get-AccessControlList @CommandParameters @LogThis @Threads

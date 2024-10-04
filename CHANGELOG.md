@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.373] - 2024-10-03
+### Changed
+- improved error handling
+
 ## [0.0.372] - 2024-10-02
 ### Removed
 - remove debug breakpoints
