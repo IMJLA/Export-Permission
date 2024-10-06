@@ -147,7 +147,7 @@ FormatTaskName {
     Write-Host "$NewLine`Executing task $TaskName" -ForegroundColor Cyan
 }
 
-task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, DetectOperatingSystem, SourceControl
+task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, DetectOperatingSystem, Publish
 
 task FindLinter -precondition { $LintEnabled } {
 
@@ -460,7 +460,7 @@ task SourceControl -depends UnitTests {
 
 } -description 'git add, commit, and push'
 
-task Publish {
+task Publish -depends SourceControl {
 
     Assert -conditionToCheck ($PublishPSRepositoryApiKey -or $PublishPSRepositoryCredential) -failureMessage "API key or credential not defined to authenticate with [$PublishPSRepository)] with."
 
