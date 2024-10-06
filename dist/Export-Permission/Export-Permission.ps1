@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.382
+.VERSION 0.0.383
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-try redirecting tests output file
+try redirecting tests output file up one folder
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ try redirecting tests output file
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
