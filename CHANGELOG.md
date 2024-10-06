@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.388] - 2024-10-06
+### Changed
+- troubleshoot pester config
+
 ## [0.0.387] - 2024-10-06
 ### Changed
 - results in desired location

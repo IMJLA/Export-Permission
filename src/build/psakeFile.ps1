@@ -411,7 +411,6 @@ $pesterPreReqs = {
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
     Write-Host "`tTestsDir is $TestsDir"
-    Write-Host "`tTestsDir is $([System.IO.DirectoryInfo]::new([IO.Path]::Combine($TestsDir)).FullName))"
     Write-Host "`tTestsResultFile is $($TestsResultFile.FullName)"
     Write-Host "`tTestsResultFile is $([System.IO.DirectoryInfo]::new([IO.Path]::Combine($TestsResultFile)).FullName))"
     Write-Host "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
@@ -433,12 +432,15 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
         }
         TestResult   = @{
             Enabled      = $true
-            OutputPath   = $TestsResultFile
+            OutputPath   = $TestsResultFile.FullName
             OutputFormat = $TestOutputFormat
         }
     }
 
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
+    # Workaround bug in New-PesterConfiguration which causes this to not properly be set.
+    #$PesterConfiguration.TestResult.OutputPath = $PesterConfigParams['TestResult']['OutputPath']
+    pause
     Invoke-Pester -Configuration $PesterConfiguration
 
 } -description 'Perform unit tests using Pester.'
