@@ -35,8 +35,7 @@ properties {
     # Pester (Unit Testing)
 
     # Unit tests found here will be performed using Pester.
-    #[System.IO.DirectoryInfo]$TestsDir = [IO.Path]::Combine('..', '..', 'tests')
-    [System.IO.DirectoryInfo]$TestsDir = 'tests'
+    [System.IO.DirectoryInfo]$TestsDir = [IO.Path]::Combine('..', '..', 'tests')
 
     # Unit test results will be saved to this file by Pester.
     [System.IO.DirectoryInfo]$TestsResultFile = [IO.Path]::Combine('..', '..', 'out', 'testResults.xml')
@@ -427,7 +426,8 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
             Path                  = $TestCodeCoverageFiles
         }
         Output       = @{
-            Verbosity = 'Diagnostic'
+            #Verbosity = 'Diagnostic'
+            Verbosity = 'Normal'
         }
         TestResult   = @{
             Enabled      = $true
