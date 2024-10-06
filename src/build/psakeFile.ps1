@@ -38,7 +38,8 @@ properties {
     [System.IO.DirectoryInfo]$TestsDir = [IO.Path]::Combine('..', '..', 'tests')
 
     # Unit test results will be saved to this file by Pester.
-    [System.IO.DirectoryInfo]$TestsResultFile = [IO.Path]::Combine('..', '..', 'out', 'testResults.xml')
+    #[System.IO.DirectoryInfo]$TestsResultFile = [IO.Path]::Combine('..', '..', 'out', 'testResults.xml')
+    [System.IO.DirectoryInfo]$TestsResultFile = 'testResults.xml'
 
     # Whether or not to perform unit tests using Pester.
     [Boolean]$TestEnabled = $true
@@ -437,9 +438,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
     }
 
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
-    pause
     Invoke-Pester -Configuration $PesterConfiguration
-    pause
 
 } -description 'Perform unit tests using Pester.'
 
