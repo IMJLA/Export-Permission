@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.386] - 2024-10-06
+### Changed
+- default results location
+
 ## [0.0.385] - 2024-10-06
 ### Changed
 - test results still outputting to wrong place
