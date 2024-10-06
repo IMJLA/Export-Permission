@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.384
+.VERSION 0.0.385
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix incorrect variable type
+test results still outputting to wrong place
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix incorrect variable type
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

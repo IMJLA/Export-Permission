@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.385] - 2024-10-06
+### Changed
+- test results still outputting to wrong place
+
 ## [0.0.384] - 2024-10-06
 ### Fixed
 - bugfix incorrect variable type
