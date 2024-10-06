@@ -38,9 +38,7 @@ properties {
     [System.IO.DirectoryInfo]$TestsDir = [IO.Path]::Combine('..', '..', 'tests')
 
     # Unit test results will be saved to this file by Pester.
-    #[System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('..', 'testResults.xml')
-    #[System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('testResults.xml') #Export-Permission\testResults.xml
-    [System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('tests', 'out', 'testResults.xml')
+    [string]$TestsResultFile = [IO.Path]::Combine('..', '..', 'tests', 'out', 'testResults.xml')
 
     # Whether or not to perform unit tests using Pester.
     [Boolean]$TestEnabled = $true
@@ -411,8 +409,7 @@ $pesterPreReqs = {
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
     Write-Host "`tTestsDir is $TestsDir"
-    Write-Host "`tTestsResultFile is $($TestsResultFile.FullName)"
-    Write-Host "`tTestsResultFile is $([System.IO.DirectoryInfo]::new([IO.Path]::Combine($TestsResultFile)).FullName))"
+    Write-Host "`tTestsResultFile is $TestsResultFile"
     Write-Host "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
 
     $PesterConfigParams = @{
@@ -432,14 +429,12 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
         }
         TestResult   = @{
             Enabled      = $true
-            OutputPath   = $TestsResultFile.FullName
+            OutputPath   = $TestsResultFile
             OutputFormat = $TestOutputFormat
         }
     }
 
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
-    # Workaround bug in New-PesterConfiguration which causes this to not properly be set.
-    #$PesterConfiguration.TestResult.OutputPath = $PesterConfigParams['TestResult']['OutputPath']
     pause
     Invoke-Pester -Configuration $PesterConfiguration
 
