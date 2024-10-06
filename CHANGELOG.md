@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.377] - 2024-10-06
+### Changed
+- lets see where test results appear
+
 ## [0.0.376] - 2024-10-06
 ### Changed
 - troubleshoot psake test output location

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.376
+.VERSION 0.0.377
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-troubleshoot psake test output location
+lets see where test results appear
 
 .PRIVATEDATA
 
