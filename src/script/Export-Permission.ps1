@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.377
+.VERSION 0.0.378
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-lets see where test results appear
+update debug output in psakefile
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ lets see where test results appear
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

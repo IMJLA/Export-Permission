@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.378] - 2024-10-06
+### Changed
+- update debug output in psakefile
+
 ## [0.0.377] - 2024-10-06
 ### Changed
 - lets see where test results appear
