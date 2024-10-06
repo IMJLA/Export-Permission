@@ -408,6 +408,8 @@ $pesterPreReqs = {
 
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
+    Write-Host "TestsDir is $TestsDir"
+    Write-Host "TestsResultFile is $TestsResultFile"
     Write-Host "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
 
     $PesterConfigParams = @{

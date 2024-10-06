@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.375
+.VERSION 0.0.376
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psntfs module
+troubleshoot psake test output location
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update psntfs module
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -207,15 +208,15 @@ update psntfs module
 
     The target path is the root of an AD domain
 
-    Generate reports on the NTFS permissions for ? Invalid/fail param validation?
+    Generate reports on the NTFS permissions for the root of an AD domain.  TODO: param validation? or otherwise handle error.
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
 
     This is an edge case that is not currently supported
 
-    The target path is the root of a server
+    The target path is the root of a SMB server
 
-    Generate reports on the NTFS permissions for ? Invalid/fail param validation?
+    Generate reports on the NTFS permissions for the root of a SMB server.  TODO: param validation? or otherwise handle error.
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
 

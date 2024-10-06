@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.375
+help version: 0.0.376
 locale: en-US
 script name: 
 online version:
@@ -219,8 +219,9 @@ This is an edge case that is not currently supported
 
 The target path is the root of an AD domain
 
-Generate reports on the NTFS permissions for ?
-Invalid/fail param validation?
+Generate reports on the NTFS permissions for the root of an AD domain. 
+TODO: param validation?
+or otherwise handle error.
 
 ### EXAMPLE 16
 ```
@@ -229,10 +230,11 @@ Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
 
 This is an edge case that is not currently supported
 
-The target path is the root of a server
+The target path is the root of a SMB server
 
-Generate reports on the NTFS permissions for ?
-Invalid/fail param validation?
+Generate reports on the NTFS permissions for the root of a SMB server. 
+TODO: param validation?
+or otherwise handle error.
 
 ### EXAMPLE 17
 ```

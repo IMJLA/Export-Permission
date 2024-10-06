@@ -796,7 +796,7 @@
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
           <maml:para>The target path is the root of an AD domain</maml:para>
-          <maml:para>Generate reports on the NTFS permissions for ? Invalid/fail param validation?</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the root of an AD domain.  TODO: param validation? or otherwise handle error.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
@@ -804,8 +804,8 @@
         <dev:code>Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
-          <maml:para>The target path is the root of a server</maml:para>
-          <maml:para>Generate reports on the NTFS permissions for ? Invalid/fail param validation?</maml:para>
+          <maml:para>The target path is the root of a SMB server</maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the root of a SMB server.  TODO: param validation? or otherwise handle error.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>

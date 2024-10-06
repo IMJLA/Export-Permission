@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.375
+.VERSION 0.0.376
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psntfs module
+troubleshoot psake test output location
 
 .PRIVATEDATA
 
@@ -792,11 +792,172 @@ function Find-CachedWellKnownSID {
                     Write-LogMsg @LogParams -Text " # '$Cache' cache miss for '$IdentityReference' on '$DomainNetBIOS'"
                 }
             } else {
-                Write-LogMsg @LogParams -Text " # Cache miss for '$Cache' on '$DomainNetBIOS'"
+                Write-LogMsg @LogParams -Text " # No '$Cache' cache found for '$DomainNetBIOS'"
             }
         }
     } else {
         Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$DomainNetBIOS'"
+    }
+}
+function Find-WinNTGroupMember {
+    param (
+        $DirectoryEntry,
+        $ComObject,
+        [hashtable]$Out,
+        [string]$LogSuffix,
+        [hashtable]$Log,
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+        [string]$SourceDomain
+    )
+    ForEach ($DirectoryMember in $ComObject) {
+        $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
+        $MemberLogSuffix = "# For '$DirectoryPath'"
+        $MemberDomainDn = $null
+        $DirectorySplit = Split-DirectoryPath -DirectoryPath $DirectoryPath
+        $MemberName = $DirectorySplit['Account']
+        Resolve-SidAuthority -DirectorySplit $DirectorySplit -DirectoryEntry $DirectoryEntry
+        $ResolvedDirectoryPath = $DirectorySplit['ResolvedDirectoryPath']
+        $MemberDomainNetbios = $DirectorySplit['ResolvedDomain']
+        if ($DirectorySplit['ParentDomain'] -eq 'WORKGROUP') {
+            Write-LogMsg @Log -Text " # '$MemberDomainNetbios' is a workgroup computer $MemberLogSuffix $LogSuffix"
+            $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
+            if ($DomainCacheResult) {
+                Write-LogMsg @Log -Text " # Domain NetBIOS cache hit for '$MemberDomainNetBios' $MemberLogSuffix $LogSuffix"
+                if ( $MemberDomainNetbios -ne $SourceDomain ) {
+                    Write-LogMsg @Log -Text " # $MemberDomainNetbios -ne $SourceDomain but why does my logic think this means LDAP group member rather than WinNT? $MemberLogSuffix $LogSuffix"
+                    $MemberDomainDn = $DomainCacheResult.DistinguishedName
+                } else {
+                    Write-LogMsg @Log -Text " # $MemberDomainNetbios -eq $SourceDomain but why does my logic think this means WinNT group member rather than LDAP? $MemberLogSuffix $LogSuffix"
+                }
+            } else {
+                Write-LogMsg @Log -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',') $MemberLogSuffix $LogSuffix"
+            }
+            if ($DirectorySplit['Domain'] -eq $SourceDomain) {
+                Write-LogMsg @Log -Text " # Member's parsed domain $($DirectorySplit['Domain']) equals the group's parsed domain '$SourceDomain' but why does my logic think this means WinNT group member rather than LDAP? $MemberLogSuffix $LogSuffix"
+                $MemberDomainDn = $null
+            } else {
+                Write-LogMsg @Log -Text " # Member's parsed domain $($DirectorySplit['Domain']) does not equal the group's parsed domain '$SourceDomain' but why does my logic think this means LDAP or unconfirmed WinNT group member? $MemberLogSuffix $LogSuffix"
+            }
+        } else {
+            Write-LogMsg @Log -Text " # '$MemberDomainNetbios' may or may not be a workgroup computer (inconclusive) $MemberLogSuffix $LogSuffix"
+        }
+        if ($MemberDomainDn) {
+            Write-LogMsg @Log -Text " # '$MemberName' is a domain security principal $MemberLogSuffix $LogSuffix"
+            $Out["LDAP://$MemberDomainDn"] += "(samaccountname=$MemberName)"
+        } else {
+            Write-LogMsg @Log -Text " # Is a local security principal $MemberLogSuffix $LogSuffix"
+            $Out['WinNTMembers'] += $ResolvedDirectoryPath
+        }
+    }
+}
+function Get-CachedDirectoryEntry {
+    param (
+        [string]$DirectoryPath = (([System.DirectoryServices.DirectorySearcher]::new()).SearchRoot.Path),
+        [hashtable]$CimServer = ([hashtable]::Synchronized(@{})),
+        [hashtable]$Log,
+        [string]$Server,
+        [string]$AccountName,
+        [hashtable]$DomainsByFqdn = ([hashtable]::Synchronized(@{})),
+        [hashtable]$DomainsByNetbios = ([hashtable]::Synchronized(@{})),
+        [hashtable]$DomainsBySid = ([hashtable]::Synchronized(@{})),
+        [hashtable]$SidTypeMap = (Get-SidTypeMap)
+    )
+    if ($CimServer) {
+        Write-LogMsg @Log -Text "  server cache hit for '$Server' # for '$DirectoryPath'"
+        $ID = "$Server\$AccountName"
+        $CimCacheResult = $CimServer['Win32_AccountByCaption'][$ID]
+        if ($CimCacheResult) {
+            Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache hit for '$ID' on '$Server' # for '$DirectoryPath'"
+            $FakeDirectoryEntry = @{
+                InputObject   = $CimCacheResult
+                DirectoryPath = $DirectoryPath
+            }
+            if ($CimCacheResult.SIDType) {
+                $FakeDirectoryEntry['SchemaClassName'] = $SidTypeMap[[int]$CimCacheResult.SIDType]
+            }
+            New-FakeDirectoryEntry @FakeDirectoryEntry
+        } else {
+            Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache miss for '$ID' on '$Server' # for '$DirectoryPath'"
+            $CimCacheResult = $CimServer['Win32_ServiceBySID'][$ID]
+            if ($CimCacheResult) {
+                Write-LogMsg @Log -Text " # Win32_ServiceBySID CIM instance cache hit for '$ID' on '$Server' # for '$DirectoryPath'"
+                $FakeDirectoryEntry = @{
+                    InputObject   = $CimCacheResult
+                    DirectoryPath = $DirectoryPath
+                }
+                if ($CimCacheResult.SIDType) {
+                    $FakeDirectoryEntry['SchemaClassName'] = $SidTypeMap[[int]$CimCacheResult.SIDType]
+                }
+                New-FakeDirectoryEntry @FakeDirectoryEntry
+            } else {
+                Write-LogMsg @Log -Text " # Win32_ServiceBySID CIM instance cache miss for '$ID' on '$Server' # for '$DirectoryPath'"
+                $DomainCacheResult = $DomainsByFqdn[$Server]
+                if ($DomainCacheResult) {
+                    $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
+                    if ($SIDCacheResult) {
+                        Write-LogMsg @Log -Text " # Well-known SID by SID cache hit for '$ID' on host with FQDN '$Server' # for '$DirectoryPath'"
+                        New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
+                    } else {
+                        Write-LogMsg @Log -Text " # Well-known SID by SID cache miss for '$ID' on host with FQDN '$Server' # for '$DirectoryPath'"
+                        $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
+                        if ($NameCacheResult) {
+                            Write-LogMsg @Log -Text " # Well-known SID by name cache hit for '$AccountName' on host with FQDN '$Server' # for '$DirectoryPath'"
+                            New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
+                        } else {
+                            Write-LogMsg @Log -Text " # Well-known SID by name cache miss for '$AccountName' on host with FQDN '$Server' # for '$DirectoryPath'"
+                        }
+                    }
+                } else {
+                    $DomainCacheResult = $DomainsByNetbios[$Server]
+                    if ($DomainCacheResult) {
+                        $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
+                        if ($SIDCacheResult) {
+                            Write-LogMsg @Log -Text " # Well-known SID by SID cache hit for '$ID' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                            New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
+                        } else {
+                            Write-LogMsg @Log -Text " # Well-known SID by SID cache miss for '$ID' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                            $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
+                            if ($NameCacheResult) {
+                                Write-LogMsg @Log -Text " # Well-known SID by name cache hit for '$AccountName' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                                New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
+                            } else {
+                                Write-LogMsg @Log -Text " # Well-known SID by name cache miss for '$AccountName' on host with NetBIOS '$Server' # for '$DirectoryPath'"
+                            }
+                        }
+                    } else {
+                        $DomainCacheResult = $DomainsBySid[$Server]
+                        if ($DomainCacheResult) {
+                            $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
+                            if ($SIDCacheResult) {
+                                New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
+                            } else {
+                                Write-LogMsg @Log -Text " # Well-known SID by SID cache miss for '$ID' on host with SID '$Server' # for '$DirectoryPath'"
+                                $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
+                                if ($NameCacheResult) {
+                                    Write-LogMsg @Log -Text " # Well-known SID by name cache hit for '$AccountName' on host with SID '$Server' # for '$DirectoryPath'"
+                                    New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
+                                } else {
+                                    Write-LogMsg @Log -Text " # Well-known SID by name cache miss for '$AccountName' on host with SID '$Server' # for '$DirectoryPath'"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        Write-LogMsg @Log -Text "  server cache miss for '$Server' # for '$DirectoryPath'"
+    }
+}
+function Get-DirectoryEntryParentName {
+    param (
+        $DirectoryEntry
+    )
+    if ($DirectoryEntry.Parent.Name) {
+        return $DirectoryEntry.Parent.Name
+    } else {
+        $LastIndexOf = $DirectoryEntry.Parent.LastIndexOf('/')
+        return $DirectoryEntry.Parent.Substring($LastIndexOf + 1, $DirectoryEntry.Parent.Length - $LastIndexOf - 1)
     }
 }
 function Get-SidTypeMap {
@@ -811,6 +972,14 @@ function Get-SidTypeMap {
         8 = 'SidTypeUnknown'
         9 = 'computer' 
     }
+}
+function Invoke-IADsGroupMembersMethod {
+    [OutputType([System.DirectoryServices.DirectoryEntry])]
+    param (
+        [Parameter(ValueFromPipeline)]
+        $DirectoryEntry
+    )
+    & { $DirectoryEntry.Invoke('Members') } 2>$null
 }
 function Invoke-ScShowSid {
     param (
@@ -956,29 +1125,30 @@ function Resolve-IdRefCached {
     }
     ForEach ($Cache in 'WellKnownSidBySid', 'WellKnownSIDByName') {
         if ($AdsiServer.$Cache) {
-            $WellKnownSidCacheResult = $AdsiServer.$Cache[$IdentityReference]
-            if ($WellKnownSidCacheResult) {
+            $CacheResult = $AdsiServer.$Cache[$IdentityReference]
+            if ($CacheResult) {
+                Write-LogMsg @Log -Text " # '$Cache' cache hit on '$ServerNetBIOS': $($CacheResult.Name) for '$IdentityReference'"
                 return [PSCustomObject]@{
                     IdentityReference        = $IdentityReference
-                    SIDString                = $WellKnownSidCacheResult.SID
-                    IdentityReferenceNetBios = "$ServerNetBIOS\$($WellKnownSidCacheResult.Name)"
-                    IdentityReferenceDns     = "$($AdsiServer.Dns)\$($WellKnownSidCacheResult.Name)"
+                    SIDString                = $CacheResult.SID
+                    IdentityReferenceNetBios = "$ServerNetBIOS\$($CacheResult.Name)"
+                    IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
                 }
             } else {
-                Write-LogMsg @Log -Text " # '$Cache' cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+                Write-LogMsg @Log -Text " # '$Cache' cache miss on '$ServerNetBIOS' for '$IdentityReference'"
             }
         }
     }
-    $CachedCimInstance = Find-CachedCimInstance -ComputerName $ServerNetBIOS -Key $IdentityReference -CimCache $CimCache -Log $Log -CacheToSearch 'Win32_ServiceBySid', 'Win32_AccountBySid', 'Win32_AccountByCaption'
-    if ($CachedCimInstance) {
+    $CacheResult = Find-CachedCimInstance -ComputerName $ServerNetBIOS -Key $IdentityReference -CimCache $CimCache -Log $Log -CacheToSearch 'Win32_ServiceBySid', 'Win32_AccountBySid', 'Win32_AccountByCaption'
+    if ($CacheResult) {
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
-            SIDString                = $CachedCimInstance.SID
-            IdentityReferenceNetBios = "$ServerNetBIOS\$($CachedCimInstance.Name)"
-            IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CachedCimInstance.Name)"
+            SIDString                = $CacheResult.SID
+            IdentityReferenceNetBios = "$ServerNetBIOS\$($CacheResult.Name)"
+            IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
-        Write-LogMsg @Log -Text "  instance cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @Log -Text "  instance cache miss on '$ServerNetBIOS' for '$IdentityReference'"
     }
     $CacheResult = $WellKnownSidBySid[$IdentityReference]
     if ($CacheResult) {
@@ -991,7 +1161,7 @@ function Resolve-IdRefCached {
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$Name"
         }
     } else {
-        Write-LogMsg @Log -Text " # Known SID cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @Log -Text " # Known SID cache miss on '$ServerNetBIOS' for '$IdentityReference'"
     }
     $CacheResult = $WellKnownSidByCaption[$IdentityReference]
     if ($CacheResult) {
@@ -1004,12 +1174,12 @@ function Resolve-IdRefCached {
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$Name"
         }
     } else {
-        Write-LogMsg @Log -Text " # Known NTAccount caption cache miss for '$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @Log -Text " # Known NTAccount caption cache miss on '$ServerNetBIOS': $Name for '$IdentityReference'"
     }
     $CacheResult = Get-KnownSid -SID $IdentityReference
     if ($CacheResult['NTAccount'] -ne $CacheResult['SID']) {
-        Write-LogMsg @Log -Text " # Capability SID pattern hit for '$IdentityReference' on '$ServerNetBIOS'"
         $Name = $CacheResult['Name']
+        Write-LogMsg @Log -Text " # Capability SID pattern hit on '$ServerNetBIOS' for '$IdentityReference'"
         $Caption = "$ServerNetBIOS\$Name"
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
@@ -1018,7 +1188,7 @@ function Resolve-IdRefCached {
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult['Name'])"
         }
     } else {
-        Write-LogMsg @Log -Text " # Capability SID pattern miss for '$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @Log -Text " # Capability SID pattern miss on '$ServerNetBIOS' for '$IdentityReference'"
     }
     $LoggingParams = @{
         ThisHostname = $ThisHostname
@@ -1036,7 +1206,7 @@ function Resolve-IdRefCached {
                 if ($DomainCacheResult) {
                     $DomainDns = $DomainCacheResult.Dns
                 } else {
-                    Write-LogMsg @Log -Text " # Domain NetBIOS cache miss for '$($CacheResult.Domain)'"
+                    Write-LogMsg @Log -Text " # Domain NetBIOS cache miss for '$($CacheResult.Domain)' for '$IdentityReference'"
                 }
             }
             if (-not $DomainDns) {
@@ -1049,11 +1219,9 @@ function Resolve-IdRefCached {
                 IdentityReferenceDns     = "$DomainDns\$($CacheResult.Name)"
             }
         } else {
-            Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$Name' on '$ServerNetBIOS'"
+            Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$Name' on '$ServerNetBIOS' for '$IdentityReference'"
         }
     }
-    if (-not $CimCache[$ServerNetBIOS]) { pause }
-    if (-not $CimCache[$ServerNetBIOS]['Win32_AccountByCaption']) { pause }
     $CacheResult = $CimCache[$ServerNetBIOS]['Win32_AccountByCaption']["$ServerNetBIOS\$IdentityReference"]
     if ($CacheResult) {
         return [PSCustomObject]@{
@@ -1063,7 +1231,7 @@ function Resolve-IdRefCached {
             IdentityReferenceDns     = "$($AdsiServer.Dns)\$($CacheResult.Name)"
         }
     } else {
-        Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS'"
+        Write-LogMsg @Log -Text " # Win32_AccountByCaption CIM instance cache miss for '$ServerNetBIOS\$IdentityReference' on '$ServerNetBIOS' for '$IdentityReference'"
     }
 }
 function Resolve-IdRefGetDirEntry {
@@ -1272,27 +1440,54 @@ function Resolve-IdRefSvc {
         IdentityReferenceDns     = "$DomainDns\$Name"
     }
 }
+function Resolve-SidAuthority {
+    param (
+        [hashtable]$DirectorySplit,
+        $DirectoryEntry,
+        [hashtable]$AuthoritiesToReplaceWithParentName = @{
+            'APPLICATION PACKAGE AUTHORITY' = $null
+            'BUILTIN'                       = $null
+            'CREATOR SID AUTHORITY'         = $null
+            'LOCAL SID AUTHORITY'           = $null
+            'Non-unique Authority'          = $null
+            'NT AUTHORITY'                  = $null
+            'NT SERVICE'                    = $null
+            'NT VIRTUAL MACHINE'            = $null
+            'NULL SID AUTHORITY'            = $null
+            'WORLD SID AUTHORITY'           = $null
+        }
+    )
+    $Domain = $DirectorySplit['Domain']
+    if ($AuthoritiesToReplaceWithParentName.ContainsKey($Domain)) {
+        $ParentName = Get-DirectoryEntryParentName -DirectoryEntry $DirectoryEntry
+        $DirectorySplit['ResolvedDomain'] = $ParentName
+        $DirectorySplit['ResolvedDirectoryPath'] = $DirectorySplit['DirectoryPath'].Replace($Domain, $ParentName)
+    } else {
+        $DirectorySplit['ResolvedDomain'] = $Domain
+        $DirectorySplit['ResolvedDirectoryPath'] = $DirectorySplit['DirectoryPath']
+    }
+}
 function Split-DirectoryPath {
-    param ([string]$DirectoryPath)
-    $LastSlashIndex = $DirectoryPath.LastIndexOf('/')
-    $StartIndex = $LastSlashIndex + 1
-    $AccountName = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
-    $ParentDirectoryPath = $DirectoryPath.Substring(0, $LastSlashIndex)
-    $FirstSlashIndex = $ParentDirectoryPath.IndexOf('/')
-    $ParentPath = $ParentDirectoryPath.Substring($FirstSlashIndex + 2, $ParentDirectoryPath.Length - $FirstSlashIndex - 2)
-    $FirstSlashIndex = $ParentPath.IndexOf('/')
-    if ($FirstSlashIndex -ne (-1)) {
-        $Server = $ParentPath.Substring(0, $FirstSlashIndex)
-        if ($Server.Equals('WORKGROUP')) {
-            $FirstSlashIndex = $ParentPath.IndexOf('/')
-            $Server = $ParentPath.Substring($FirstSlashIndex + 1, $ParentPath.Length - $FirstSlashIndex - 1)
+    param (
+        [string]$DirectoryPath
+    )
+    $Split = $DirectoryPath.Split('/')
+    if ($Split.Count -gt 4) {
+        $ParentDomain = $Split[2]
+        if ($Split.Count -gt 5) {
+            $Middle = $Split[3..($Split.Count - 3)]
+        } else {
+            $Middle = $null
         }
     } else {
-        $Server = $ParentPath
+        $ParentDomain = $null
     }
     return @{
-        'AccountName' = $AccountName
-        'Server'      = $Server
+        DirectoryPath = $DirectoryPath 
+        Account       = $Split[ ( $Split.Count - 1 ) ]
+        Domain        = $Split[ ( $Split.Count - 2 ) ]
+        ParentDomain  = $ParentDomain 
+        Middle        = $Middle 
     }
 }
 function Add-DomainFqdnToLdapPath {
@@ -1311,7 +1506,7 @@ function Add-DomainFqdnToLdapPath {
     begin {
         $LoggingParams = @{
             ThisHostname = $ThisHostname
-            LogBuffer    = $LogBuffer
+            LogBuffer  = $LogBuffer
             WhoAmI       = $WhoAmI
         }
         $PathRegEx = '(?<Path>LDAP:\/\/[^\/]*)'
@@ -1411,7 +1606,7 @@ function ConvertFrom-DirectoryEntry {
     )
     ForEach ($ThisDirectoryEntry in $DirectoryEntry) {
         $OutputObject = @{}
-        ForEach ($Prop in ($ThisDirectoryEntry | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+        ForEach ($Prop in $ThisDirectoryEntry.PSObject.Properties.GetEnumerator().Name) {
             $null = ConvertTo-SimpleProperty -InputObject $ThisDirectoryEntry -Property $Prop -PropertyDictionary $OutputObject
         }
         [PSCustomObject]$OutputObject
@@ -1662,7 +1857,7 @@ function ConvertFrom-IdentityReferenceResolved {
             ResolvedAccountName = $IdentityReference
         }
         if ($null -ne $DirectoryEntry) {
-            ForEach ($Prop in ($DirectoryEntry | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+            ForEach ($Prop in $DirectoryEntry.PSObject.Properties.GetEnumerator().Name) {
                 $null = ConvertTo-SimpleProperty -InputObject $DirectoryEntry -Property $Prop -PropertyDictionary $PropertiesToAdd
             }
             if ($DirectoryEntry.Name) {
@@ -1706,7 +1901,7 @@ function ConvertFrom-IdentityReferenceResolved {
                                 }
                             }
                         }
-                        $InputProperties = (Get-Member -InputObject $ThisMember -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+                        $InputProperties = $ThisMember.PSObject.Properties.GetEnumerator().Name
                         ForEach ($ThisProperty in $InputProperties) {
                             $null = ConvertTo-SimpleProperty -InputObject $ThisMember -Property $ThisProperty -PropertyDictionary $OutputProperties
                         }
@@ -1762,16 +1957,11 @@ function ConvertFrom-SearchResult {
     )
     process {
         ForEach ($ThisSearchResult in $SearchResult) {
-            #
-            #
-            #
-            #
-            #
             $OutputObject = @{}
             ForEach ($ThisProperty in $ThisSearchResult.Properties.Keys) {
                 $null = ConvertTo-SimpleProperty -InputObject $ThisSearchResult.Properties -Property $ThisProperty -PropertyDictionary $ThisObject
             }
-            ForEach ($ThisProperty in ($ThisSearchResult | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+            ForEach ($ThisProperty in $ThisSearchResult.PSObject.Properties.GetEnumerator().Name) {
                 $null = ConvertTo-SimpleProperty -InputObject $ThisSearchResult -Property $ThisProperty -PropertyDictionary $OutputObject
             }
             [PSCustomObject]$OutputObject
@@ -1799,7 +1989,7 @@ function ConvertFrom-SidString {
         ThisFqdn            = $ThisFqdn
         ThisHostname        = $ThisHostname
         CimCache            = $CimCache
-        LogBuffer           = $LogBuffer
+        LogBuffer         = $LogBuffer
         WhoAmI              = $WhoAmI
         DebugOutputStream   = $DebugOutputStream
     }
@@ -1926,7 +2116,7 @@ function ConvertTo-DomainNetBIOS {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer       = $LogBuffer
+        Buffer = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     $DomainCacheResult = $DomainsByFqdn[$DomainFQDN]
@@ -2077,7 +2267,7 @@ function ConvertTo-Fqdn {
         $LogParams = @{
             ThisHostname = $ThisHostname
             Type         = $DebugOutputStream
-            Buffer       = $LogBuffer
+            Buffer = $LogBuffer
             WhoAmI       = $WhoAmI
         }
         $LoggingParams = @{
@@ -2745,7 +2935,12 @@ function Get-CurrentDomain {
         $OutputProperties = @{
             SIDString = & { [System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0) } 2>$null
         }
-        $InputProperties = (Get-Member -InputObject $CurrentDomain[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+        if ($CurrentDomain -is [System.Collections.IEnumerable]) {
+            $FirstDomain = $CurrentDomain[0]
+        } else {
+            $FirstDomain = $CurrentDomain
+        }
+        $InputProperties = $FirstDomain.PSObject.Properties.GetEnumerator().Name
         ForEach ($ThisProperty in $InputProperties) {
             $OutputProperties[$ThisProperty] = $ThisPrincipal.$ThisProperty
         }
@@ -2769,157 +2964,92 @@ function Get-DirectoryEntry {
         [string]$WhoAmI = (whoami.EXE),
         [hashtable]$LogBuffer = ([hashtable]::Synchronized(@{})),
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug'
+        [string]$DebugOutputStream = 'Debug',
+        [hashtable]$SidTypeMap = (Get-SidTypeMap)
     )
+    $Log = @{
+        ThisHostname = $ThisHostname
+        Type         = $DebugOutputStream
+        Buffer       = $LogBuffer
+        WhoAmI       = $WhoAmI
+    }
     $CacheResult = $DirectoryEntryCache[$DirectoryPath]
-    if ($null -eq $CacheResult) {
-        $LogParams = @{
-            ThisHostname = $ThisHostname
-            Type         = $DebugOutputStream
-            Buffer       = $LogBuffer
-            WhoAmI       = $WhoAmI
-        }
-        Write-LogMsg @LogParams -Text " # DirectoryEntryCache miss # for '$DirectoryPath'"
-        $LoggingParams = @{
-            ThisHostname = $ThisHostname
-            LogBuffer    = $LogBuffer
-            WhoAmI       = $WhoAmI
-        }
-        $SidTypes = Get-SidTypeMap
-        $SplitDirectoryPath = Split-DirectoryPath -DirectoryPath $DirectoryPath
-        $AccountName = $SplitDirectoryPath['AccountName']
-        $Server = $SplitDirectoryPath['Server']
-        $CimServer = $CimCache[$Server]
-        if ($CimServer) {
-            $ID = "$Server\$AccountName"
-            $CimCacheResult = $CimServer['Win32_AccountByCaption'][$ID]
-            if ($CimCacheResult) {
-                $FakeDirectoryEntry = @{
-                    InputObject   = $CimCacheResult
-                    DirectoryPath = $DirectoryPath
-                }
-                if ($CimCacheResult.SIDType) {
-                    $FakeDirectoryEntry['SchemaClassName'] = $SidTypes[[int]$CimCacheResult.SIDType]
-                }
-                $DirectoryEntry = New-FakeDirectoryEntry @FakeDirectoryEntry
-            } else {
-                Write-LogMsg @LogParams -Text " # Win32_AccountByCaption CIM instance cache miss for '$ID' on '$Server' # for '$DirectoryPath'"
-                $CimCacheResult = $CimServer['Win32_ServiceBySID'][$ID]
-                if ($CimCacheResult) {
-                    $FakeDirectoryEntry = @{
-                        InputObject   = $CimCacheResult
-                        DirectoryPath = $DirectoryPath
-                    }
-                    if ($CimCacheResult.SIDType) {
-                        $FakeDirectoryEntry['SchemaClassName'] = $SidTypes[[int]$CimCacheResult.SIDType]
-                    }
-                    $DirectoryEntry = New-FakeDirectoryEntry @FakeDirectoryEntry
-                } else {
-                    Write-LogMsg @LogParams -Text " # Win32_ServiceBySID CIM instance cache miss for '$ID' on '$Server' # for '$DirectoryPath'"
-                    $DomainCacheResult = $DomainsByFqdn[$Server]
-                    if ($DomainCacheResult) {
-                        $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
-                        if ($SIDCacheResult) {
-                            $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
-                        } else {
-                            Write-LogMsg @LogParams -Text " # Well-known SID by SID cache miss for '$ID' on host with FQDN '$Server' # for '$DirectoryPath'"
-                            $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
-                            if ($NameCacheResult) {
-                                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
-                            } else {
-                                Write-LogMsg @LogParams -Text " # Well-known SID by name cache miss for '$AccountName' on host with FQDN '$Server' # for '$DirectoryPath'"
-                            }
-                        }
-                    } else {
-                        $DomainCacheResult = $DomainsByNetbios[$Server]
-                        if ($DomainCacheResult) {
-                            $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
-                            if ($SIDCacheResult) {
-                                $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
-                            } else {
-                                Write-LogMsg @LogParams -Text " # Well-known SID by SID cache miss for '$ID' on host with NetBIOS '$Server' # for '$DirectoryPath'"
-                                $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
-                                if ($NameCacheResult) {
-                                    $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
-                                } else {
-                                    Write-LogMsg @LogParams -Text " # Well-known SID by name cache miss for '$AccountName' on host with NetBIOS '$Server' # for '$DirectoryPath'"
-                                }
-                            }
-                        } else {
-                            $DomainCacheResult = $DomainsBySid[$Server]
-                            if ($DomainCacheResult) {
-                                $SIDCacheResult = $DomainCacheResult.WellKnownSIDBySID[$ID]
-                                if ($SIDCacheResult) {
-                                    W#rite-LogMsg @LogParams -Text " # Well-known SID by SID cache hit for '$ID' on host with SID '$Server' # for '$DirectoryPath'"
-                                    $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @SIDCacheResult
-                                } else {
-                                    Write-LogMsg @LogParams -Text " # Well-known SID by SID cache miss for '$ID' on host with SID '$Server' # for '$DirectoryPath'"
-                                    $NameCacheResult = $DomainCacheResult.WellKnownSIDByName[$AccountName]
-                                    if ($NameCacheResult) {
-                                        $DirectoryEntry = New-FakeDirectoryEntry -DirectoryPath $DirectoryPath @NameCacheResult
-                                    } else {
-                                        Write-LogMsg @LogParams -Text " # Well-known SID by name cache miss for '$AccountName' on host with SID '$Server' # for '$DirectoryPath'"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            Write-LogMsg @LogParams -Text "  server cache miss for '$Server' # for '$DirectoryPath'"
-        }
-        if ($null -eq $DirectoryEntry) {
-            switch -regex ($DirectoryPath) {
-                '^$' {
-                    Write-LogMsg @LogParams -Text " # The SearchRoot Path is empty, indicating '$ThisHostname' is not domain-joined. Defaulting to WinNT provider for localhost instead. # for '$DirectoryPath'"
-                    $CimParams = @{
-                        CimCache          = $CimCache
-                        ComputerName      = $ThisFqdn
-                        DebugOutputStream = $DebugOutputStream
-                        ThisFqdn          = $ThisFqdn
-                    }
-                    $Workgroup = (Get-CachedCimInstance -ClassName 'Win32_ComputerSystem' -KeyProperty Name @CimParams @LoggingParams).Workgroup
-                    $DirectoryPath = "WinNT://$Workgroup/$ThisHostname"
-                    Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
-                    if ($Credential) {
-                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
-                    } else {
-                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
-                    }
-                    $SampleUser = @(
-                        $DirectoryEntry.PSBase.Children |
-                        Where-Object -FilterScript { $_.schemaclassname -eq 'user' }
-                    )[0] |
-                    Add-SidInfo -DomainsBySid $DomainsBySid @LoggingParams
-                    $DirectoryEntry |
-                    Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
-                    break
-                }
-                default {
-                    Write-LogMsg @LogParams -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
-                    if ($Credential) {
-                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath, $($Credential.UserName), $($Credential.GetNetworkCredential().password))
-                    } else {
-                        $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
-                    }
-                    break
-                }
-            }
-        }
-        if ($PropertiesToLoad) {
-            try {
-                $null = $DirectoryEntry.RefreshCache($PropertiesToLoad)
-            } catch {
-                $LogParams['Type'] = 'Warning' 
-                Write-LogMsg @LogParams -Text " # '$DirectoryPath' could not be retrieved. Error: $($_.Exception.Message.Trim().Replace('The following exception occurred while retrieving member "RefreshCache": ','').Replace('"',''))" 
-                return
-            }
-        }
-        $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
-    } else {
+    if ($CacheResult) {
+        Write-LogMsg @Log -Text " # DirectoryEntryCache hit # for '$DirectoryPath'"
         return $CacheResult
     }
+    Write-LogMsg @Log -Text " # DirectoryEntryCache miss # for '$DirectoryPath'"
+    $LoggingParams = @{
+        ThisHostname = $ThisHostname
+        LogBuffer    = $LogBuffer
+        WhoAmI       = $WhoAmI
+    }
+    $SplitDirectoryPath = Split-DirectoryPath -DirectoryPath $DirectoryPath
+    $Server = $SplitDirectoryPath['Domain']
+    $CacheSearch = @{
+        AccountName      = $SplitDirectoryPath['Account']
+        CimServer        = $CimCache[$Server]
+        DirectoryPath    = $DirectoryPath
+        Log              = $Log
+        Server           = $Server
+        DomainsByFqdn    = $DomainsByFqdn
+        DomainsByNetbios = $DomainsByNetbios
+        DomainsBySid     = $DomainsBySid
+        SidTypeMap       = $SidTypeMap
+    }
+    $DirectoryEntry = Get-CachedDirectoryEntry @CacheSearch
+    if ($null -eq $DirectoryEntry) {
+        if ([string]::IsNullOrEmpty($DirectoryPath)) {
+            Write-LogMsg @Log -Text " # The SearchRoot Path is empty, indicating '$ThisHostname' is not domain-joined. Defaulting to WinNT provider for localhost instead. # for '$DirectoryPath'"
+            $CimParams = @{
+                CimCache          = $CimCache
+                ComputerName      = $ThisFqdn
+                DebugOutputStream = $DebugOutputStream
+                ThisFqdn          = $ThisFqdn
+            }
+            $Workgroup = (Get-CachedCimInstance -ClassName 'Win32_ComputerSystem' -KeyProperty Name @CimParams @LoggingParams).Workgroup
+            $DirectoryPath = "WinNT://$Workgroup/$ThisHostname"
+            Write-LogMsg @Log -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
+            if ($Credential) {
+                $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new(
+                    $DirectoryPath,
+                    $($Credential.UserName),
+                    $($Credential.GetNetworkCredential().password)
+                )
+            } else {
+                $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
+            }
+            $SampleUser = @(
+                $DirectoryEntry.PSBase.Children |
+                Where-Object -FilterScript { $_.schemaclassname -eq 'user' }
+            )[0] |
+            Add-SidInfo -DomainsBySid $DomainsBySid @LoggingParams
+            $DirectoryEntry |
+            Add-Member -MemberType NoteProperty -Name 'Domain' -Value $SampleUser.Domain -Force
+        } else {
+            Write-LogMsg @Log -Text "[System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')"
+            if ($Credential) {
+                $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new(
+                    $DirectoryPath,
+                    $($Credential.UserName),
+                    $($Credential.GetNetworkCredential().password)
+                )
+            } else {
+                $DirectoryEntry = [System.DirectoryServices.DirectoryEntry]::new($DirectoryPath)
+            }
+        }
+    }
+    if ($PropertiesToLoad) {
+        try {
+            $null = $DirectoryEntry.RefreshCache($PropertiesToLoad)
+        } catch {
+            $Log['Type'] = 'Warning' 
+            $UpdatedMsg = $_.Exception.Message.Trim().Replace('The following exception occurred while retrieving member "RefreshCache": ', '').Replace('"', '')
+            Write-LogMsg @Log -Text " # '$DirectoryPath' could not be retrieved. Error: $UpdatedMsg"
+            return
+        }
+    }
+    $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
     return $DirectoryEntry
 }
 function Get-KnownCaptionHashTable {
@@ -3819,6 +3949,13 @@ function Get-KnownSidHashTable {
             'SchemaClassName' = 'service'
             'SID'             = 'S-1-5-80-4230913304-2206818457-801678004-120036174-1892434133'
         }
+        'S-1-5-84-0-0-0-0-0'                                             = @{
+            'Description'     = "A security identifier that identifies UMDF drivers."
+            'Name'            = 'SDDL_USER_MODE_DRIVERS'
+            'NTAccount'       = "NT SERVICE\SDDL_USER_MODE_DRIVERS"
+            'SchemaClassName' = 'service'
+            'SID'             = $SID
+        }
     }
 }
 function Get-ParentDomainDnsName {
@@ -3837,7 +3974,7 @@ function Get-ParentDomainDnsName {
     $LogParams = @{
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer       = $LogBuffer
+        Buffer = $LogBuffer
         WhoAmI       = $WhoAmI
     }
     if (-not $CimSession) {
@@ -3903,125 +4040,75 @@ function Get-WinNTGroupMember {
         [string]$DebugOutputStream = 'Debug'
     )
     begin {
-        $LogParams = @{
+        $Log = @{
             ThisHostname = $ThisHostname
             Type         = $DebugOutputStream
             Buffer       = $LogBuffer
             WhoAmI       = $WhoAmI
         }
-        $LoggingParams = @{
+        $LogThis = @{
             ThisHostname = $ThisHostname
             LogBuffer    = $LogBuffer
             WhoAmI       = $WhoAmI
         }
-        $AuthoritiesToReplaceWithParentName = @{
-            'APPLICATION PACKAGE AUTHORITY' = $null
-            'BUILTIN'                       = $null
-            'CREATOR SID AUTHORITY'         = $null
-            'LOCAL SID AUTHORITY'           = $null
-            'Non-unique Authority'          = $null
-            'NT AUTHORITY'                  = $null
-            'NT SERVICE'                    = $null
-            'NT VIRTUAL MACHINE'            = $null
-            'NULL SID AUTHORITY'            = $null
-            'WORLD SID AUTHORITY'           = $null
-        }
-        $PropertiesToLoad += 'Department',
-        'description',
-        'distinguishedName',
-        'grouptype',
-        'managedby',
-        'member',
-        'name',
-        'objectClass',
-        'objectSid',
-        'operatingSystem',
-        'primaryGroupToken',
-        'samAccountName',
-        'Title'
+        $PropertiesToLoad = $PropertiesToLoad + @(
+            'Department',
+            'description',
+            'distinguishedName',
+            'grouptype',
+            'managedby',
+            'member',
+            'name',
+            'objectClass',
+            'objectSid',
+            'operatingSystem',
+            'primaryGroupToken',
+            'samAccountName',
+            'Title'
+        )
         $PropertiesToLoad = $PropertiesToLoad |
         Sort-Object -Unique
+        $MemberParams = @{
+            DirectoryEntryCache = $DirectoryEntryCache
+            DomainsByNetbios    = $DomainsByNetbios
+            CimCache            = $CimCache
+            ThisFqdn            = $ThisFqdn
+        }
+        $GetSearch = @{ PropertiesToLoad = $PropertiesToLoad }
+        $ExpandParams = @{
+            DomainsByFqdn = $DomainsByFqdn
+            DomainsBySid  = $DomainsBySid
+        }
     }
     process {
         ForEach ($ThisDirEntry in $DirectoryEntry) {
-            $SourceDomain = $ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf
-            if ($null -ne $ThisDirEntry.Properties['groupType'] -or $ThisDirEntry.schemaclassname -in @('group', 'SidTypeWellKnownGroup', 'SidTypeAlias')) {
-                $DirectoryMembers = & { $ThisDirEntry.Invoke('Members') } 2>$null
-                Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' has $(($DirectoryMembers | Measure-Object).Count) members # For $($ThisDirEntry.Path)"
+            $LogSuffix = "# For '$($ThisDirEntry.Path)'"
+            $ThisSplitPath = Split-DirectoryPath -DirectoryPath $ThisDirEntry.Path
+            $SourceDomain = $ThisSplitPath['Domain']
+            if (
+                $null -ne $ThisDirEntry.Properties['groupType'] -or
+                $ThisDirEntry.schemaclassname -in @('group', 'SidTypeWellKnownGroup', 'SidTypeAlias')
+            ) {
+                $DirectoryMembers = Invoke-IADsGroupMembersMethod -DirectoryEntry $ThisDirEntry
+                Write-LogMsg @Log -Text " # $(@($DirectoryMembers).Count) members found $LogSuffix"
                 $MembersToGet = @{
                     'WinNTMembers' = @()
                 }
-                $MemberParams = @{
-                    DirectoryEntryCache = $DirectoryEntryCache
-                    PropertiesToLoad    = $PropertiesToLoad
-                    DomainsByNetbios    = $DomainsByNetbios
-                    LogBuffer           = $LogBuffer
-                    WhoAmI              = $WhoAmI
-                    CimCache            = $CimCache
-                    ThisFqdn            = $ThisFqdn
-                }
-                ForEach ($DirectoryMember in $DirectoryMembers) {
-                    $DirectoryPath = Invoke-ComObject -ComObject $DirectoryMember -Property 'ADsPath'
-                    $MemberDomainDn = $null
-                    $workgroupregex = 'WinNT:\/\/(WORKGROUP\/)?(?<Domain>[^\/]*)\/(?<Acct>.*$)'
-                    if ($DirectoryPath -match $workgroupregex) {
-                        Write-LogMsg @LogParams -Text " # Local computer of '$($Matches.Domain)' and an account name of '$($Matches.Acct)' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                        $MemberName = $Matches.Acct
-                        $MemberDomainNetbios = $Matches.Domain
-                        if ($AuthoritiesToReplaceWithParentName.ContainsKey($MemberDomainNetbios)) {
-                            if ($DirectoryEntry.Parent.GetType().Name -eq 'String') {
-                                $LastIndexOf = $DirectoryEntry.Parent.LastIndexOf('/')
-                                $ResolvedMemberDomainNetbios = $DirectoryEntry.Parent.Substring($LastIndexOf + 1, $DirectoryEntry.Parent.Length - $LastIndexOf - 1)
-                            } elseif ($DirectoryEntry.Parent.GetType().Name -eq 'DirectoryEntry') {
-                                $ResolvedMemberDomainNetbios = $DirectoryEntry.Parent.Name
-                            }
-                            $DirectoryPath = $DirectoryPath.Replace($MemberDomainNetbios, $ResolvedMemberDomainNetbios)
-                            $ResolvedMemberDomainNetbios = $MemberDomainNetbios
-                        }
-                        $DomainCacheResult = $DomainsByNetbios[$MemberDomainNetbios]
-                        if ($DomainCacheResult) {
-                            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache hit for '$MemberDomainNetBios' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                            if ( "WinNT:\\$MemberDomainNetbios" -ne $SourceDomain ) {
-                                $MemberDomainDn = $DomainCacheResult.DistinguishedName
-                            }
-                        } else {
-                            Write-LogMsg @LogParams -Text " # Domain NetBIOS cache miss for '$MemberDomainNetBios'. Available keys: $($DomainsByNetBios.Keys -join ',') # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                        }
-                        if ($DirectoryPath -match 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)') {
-                            Write-LogMsg @LogParams -Text " # Name '$($Matches.Acct)' is on ADSI server '$($Matches.Middle)' joined to the domain '$($Matches.Domain)' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                            if ($Matches.Middle -eq ($ThisDirEntry.Path | Split-Path -Parent | Split-Path -Leaf)) {
-                                $MemberDomainDn = $null
-                            }
-                        } else {
-                            Write-LogMsg @LogParams -Text " # No RegEx match for 'WinNT:\/\/(?<Domain>[^\/]*)\/(?<Middle>[^\/]*)\/(?<Acct>.*$)' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                        }
-                    } else {
-                        Write-LogMsg @LogParams -Text " # No RegEx match for '$workgroupregex' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                    }
-                    if ($MemberDomainDn) {
-                        Write-LogMsg @LogParams -Text " # '$MemberName' is a domain security principal # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                        $MembersToGet["LDAP://$MemberDomainDn"] += "(samaccountname=$MemberName)"
-                    } else {
-                        Write-LogMsg @LogParams -Text " # Is a local security principal # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                        $MembersToGet['WinNTMembers'] += $DirectoryPath
-                    }
-                }
+                Find-WinNTGroupMember -ComObject $DirectoryMembers -Out $MembersToGet -LogSuffix $LogSuffix -DirectoryEntry $DirectoryEntry -SourceDomain $SourceDomain -Log $Log -DomainsByNetbios $DomainsByNetbios
                 ForEach ($ThisMember in $MembersToGet['WinNTMembers']) {
-                    $MemberParams['DirectoryPath'] = $ThisMember
-                    Write-LogMsg @LogParams -Text "Get-DirectoryEntry -DirectoryPath '$ThisMember' # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
-                    $MemberDirectoryEntry = Get-DirectoryEntry @MemberParams
-                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntry -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+                    Write-LogMsg @Log -Text "Get-DirectoryEntry -DirectoryPath '$ThisMember' $LogSuffix"
+                    $MemberDirectoryEntry = Get-DirectoryEntry -DirectoryPath $ThisMember @GetSearch @MemberParams @LogThis
+                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntry @MemberParams @ExpandParams @LogThis
                 }
                 $MembersToGet.Remove('WinNTMembers')
-                $MembersToGet.Keys |
-                ForEach-Object {
-                    $MemberParams['DirectoryPath'] = $_
-                    $MemberParams['Filter'] = "(|$($MembersToGet[$_]))"
-                    $MemberDirectoryEntries = Search-Directory @MemberParams
-                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntries -CimCache $CimCache -DirectoryEntryCache $DirectoryEntryCache -DomainsByFqdn $DomainsByFqdn -DomainsByNetbios $DomainsByNetbios -DomainsBySid $DomainsBySid -ThisFqdn $ThisFqdn @LoggingParams
+                ForEach ($MemberPath in $MembersToGet.Keys) {
+                    $ThisMemberToGet = $MembersToGet[$MemberPath]
+                    Write-LogMsg @Log -Text "Search-Directory -DirectoryPath '$MemberPath' -Filter '(|$ThisMemberToGet)' $LogSuffix"
+                    $MemberDirectoryEntries = Search-Directory -DirectoryPath $MemberPath -Filter "(|$ThisMemberToGet)" @GetSearch @MemberParams @LogThis
+                    Expand-WinNTGroupMember -DirectoryEntry $MemberDirectoryEntries @MemberParams @ExpandParams @LogThis
                 }
             } else {
-                Write-LogMsg @LogParams -Text " # '$($ThisDirEntry.Path)' is not a group # For '$DirectoryPath' # For $($ThisDirEntry.Path)"
+                Write-LogMsg @Log -Text " # Is not a group $LogSuffix"
             }
         }
     }
@@ -4113,10 +4200,15 @@ function New-FakeDirectoryEntry {
     $StartIndex = $LastSlashIndex + 1
     $Name = $DirectoryPath.Substring($StartIndex, $DirectoryPath.Length - $StartIndex)
     if (
-        $NameBlockList.ContainsKey($Name) -or
-        -not $NameAllowList.ContainsKey($Name) -or
         $InputObject.SidType -eq 4 -or
         $InputObject.SidType -eq 5
+    ) {
+        if (-not $NameAllowList.ContainsKey($Name)) {
+            return
+        }
+    }
+    if (
+        $NameBlockList.ContainsKey($Name)
     ) {
         return $null
     }
@@ -4127,7 +4219,7 @@ function New-FakeDirectoryEntry {
         Description     = $Description
         SchemaClassName = $SchemaClassName
     }
-    ForEach ($Prop in ($InputObject | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+    ForEach ($Prop in $InputObject.PSObject.Properties.GetEnumerator().Name) {
         $Properties[$Prop] = $InputObject.$Prop
     }
     $SID = $Properties['SID']
@@ -4176,8 +4268,12 @@ function Resolve-IdentityReference {
         WhoAmI       = $WhoAmI
     }
     $ServerNetBIOS = $AdsiServer.Netbios
-    $split = $IdentityReference.Split('\')
-    $Name = $split[1]
+    $LastSlashIndex = $IdentityReference.LastIndexOf('\')
+    if ($LastSlashIndex -eq -1) {
+        $Name = $IdentityReference
+    } else {
+        $Name = $IdentityReference.Substring( $LastSlashIndex + 1 , $LastSlashIndex.Length - 1 )
+    }
     $splat1 = @{ WellKnownSidBySid = $WellKnownSidBySid ; WellKnownSidByCaption = $WellKnownSidByCaption }
     $splat3 = @{ AdsiServer = $AdsiServer; ServerNetBIOS = $ServerNetBIOS }
     $splat5 = @{ DirectoryEntryCache = $DirectoryEntryCache; DomainsByNetbios = $DomainsByNetbios; ThisFqdn = $ThisFqdn }
@@ -4187,7 +4283,10 @@ function Resolve-IdentityReference {
     $GetDirectoryEntryParams = @{ DirectoryEntryCache = $DirectoryEntryCache; DomainsByNetbios = $DomainsByNetbios; DomainsBySid = $DomainsBySid }
     $splat10 = @{ GetDirectoryEntryParams = $GetDirectoryEntryParams }
     $CacheResult = Resolve-IdRefCached @splat1 -DomainsByFqdn $DomainsByFqdn -Name $Name -DomainsBySid $DomainsBySid @splat3 @splat5 @splat6 @splat8 @LogParams
-    if ($CacheResult) { return $CacheResult } else {
+    if ($CacheResult) {
+        Write-LogMsg @Log -Text " # Cache hit for '$IdentityReference'"
+        return $CacheResult
+    } else {
         Write-LogMsg @Log -Text " # Cache miss for '$IdentityReference'"
     }
     switch -Wildcard ($IdentityReference) {
@@ -4196,11 +4295,11 @@ function Resolve-IdentityReference {
             return $Resolved
         }
         "NT SERVICE\*" {
-            $Resolved = Resolve-IdRefSvc -DomainsByFqdn $DomainsByFqdn -Name $Name -DomainsBySid $DomainsBySid @splat3 @splat5 @splat6 @splat8 @LogParams
+            $Resolved = Resolve-IdRefSvc -Name $Name -DomainsByFqdn $DomainsByFqdn -DomainsBySid $DomainsBySid @splat3 @splat5 @splat6 @splat8 @LogParams
             return $Resolved
         }
         "APPLICATION PACKAGE AUTHORITY\*" {
-            $Resolved = Resolve-IdRefAppPkg -DomainsByFqdn $DomainsByFqdn -Name $Name -DomainsBySid $DomainsBySid @splat1 @splat3 @splat5 @splat8
+            $Resolved = Resolve-IdRefAppPkg -Name $Name -DomainsByFqdn $DomainsByFqdn -DomainsBySid $DomainsBySid @splat1 @splat3 @splat5 @splat8
             return $Resolved
         }
         "BUILTIN\*" {
@@ -4211,8 +4310,9 @@ function Resolve-IdentityReference {
     if ($ServerNetBIOS) {
         $CacheResult = $DomainsByNetbios[$ServerNetBIOS]
         if ($CacheResult) {
+            Write-LogMsg @Log -Text " # Domain NetBIOS cache hit for '$ServerNetBIOS' for '$IdentityReference'"
         } else {
-            Write-LogMsg @Log -Text " # Domain NetBIOS cache miss for '$($ServerNetBIOS)'."
+            Write-LogMsg @Log -Text " # Domain NetBIOS cache miss for '$ServerNetBIOS' for '$IdentityReference'"
             $CacheResult = Get-AdsiServer -Netbios $ServerNetBIOS -CimCache $CimCache -DomainsByFqdn $DomainsByFqdn -DomainsBySid $DomainsBySid @splat5 @LogParams
             $DomainsByNetbios[$ServerNetBIOS] = $CacheResult
         }
@@ -4255,7 +4355,7 @@ function Resolve-ServiceNameToSID {
                 Name = $Svc.Name
                 SID  = $SID
             }
-            ForEach ($Prop in ($Svc | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+            ForEach ($Prop in $Svc.PSObject.Properties.GetEnumerator().Name) {
                 $OutputObject[$Prop] = $Svc.$Prop
             }
             [PSCustomObject]$OutputObject
@@ -5142,7 +5242,12 @@ function Get-ColumnJson {
         }
     )
     if (-not $PSBoundParameters.ContainsKey('PropNames')) {
-        $PropNames = (@($InputObject)[0] | Get-Member -MemberType noteproperty).Name
+        if ($InputObject -is [System.Collections.IEnumerable]) {
+            $FirstInputObject = $InputObject[0]
+        } else {
+            $FirstInputObject = $InputObject
+        }
+        $PropNames = $FirstInputObject.PSObject.Properties.GetEnumerator().Name
     }
     $Columns = ForEach ($Prop in $PropNames) {
         $Props = $ColumnDefinition[$Prop]
@@ -5594,10 +5699,10 @@ function Merge-AceAndPrincipal {
         AdsiPath    = $Principal.Path
         AccountName = $Principal.ResolvedAccountName
     }
-    ForEach ($Prop in ($ACE | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+    ForEach ($Prop in $ACE.PSObject.Properties.GetEnumerator().Name) {
         $OutputProperties[$Prop] = $ACE.$Prop
     }
-    ForEach ($Prop in ($Principal | Get-Member -View All -MemberType Property, NoteProperty).Name) {
+    ForEach ($Prop in $Principal.PSObject.Properties.GetEnumerator().Name) {
         $OutputProperties[$Prop] = $Principal.$Prop
     }
     return [pscustomobject]$OutputProperties
@@ -5655,24 +5760,20 @@ function Resolve-Ace {
         [Hashtable]$CimCache = @{},
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
         [String]$DebugOutputStream = 'Debug',
-        [string[]]$ACEPropertyName = (Get-Member -InputObject $ACE -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name,
+        [string[]]$ACEPropertyName = $ACE.PSObject.Properties.GetEnumerator().Name,
         [String]$Source,
         [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
     )
     $Log = @{
+        Buffer       = $LogBuffer
         ThisHostname = $ThisHostname
         Type         = $DebugOutputStream
-        Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
-    $GetAdsiServerParams = @{
-        ThisFqdn           = $ThisFqdn
-        WellKnownSIDBySID  = $WellKnownSIDBySID
-        WellKnownSIDByName = $WellKnownSIDByName
-    }
-    $LogSplat = @{ ThisHostname = $ThisHostname ; LogBuffer = $LogBuffer ; WhoAmI = $WhoAmI }
     $Cache1 = @{ DirectoryEntryCache = $DirectoryEntryCache ; DomainsByFqdn = $DomainsByFqdn }
     $Cache2 = @{ DomainsByNetBIOS = $DomainsByNetbios ; DomainsBySid = $DomainsBySid ; CimCache = $CimCache }
+    $GetAdsiServerParams = @{ ThisFqdn = $ThisFqdn ; WellKnownSIDBySID = $WellKnownSIDBySID ; WellKnownSIDByName = $WellKnownSIDByName }
+    $LogSplat = @{ ThisHostname = $ThisHostname ; LogBuffer = $LogBuffer ; WhoAmI = $WhoAmI }
     $DomainDNS = Resolve-IdentityReferenceDomainDNS -IdentityReference $ACE.IdentityReference -ItemPath $ItemPath -ThisFqdn $ThisFqdn @Cache2 @Log
     $AdsiServer = Get-AdsiServer -Fqdn $DomainDNS @GetAdsiServerParams @Cache1 @Cache2 @LogSplat
     $ResolvedIdentityReference = Resolve-IdentityReference -IdentityReference $ACE.IdentityReference -AdsiServer $AdsiServer -ThisFqdn $ThisFqdn @Cache1 @Cache2 @LogSplat
@@ -5715,15 +5816,9 @@ function Resolve-Acl {
         [Hashtable]$CimCache = ([Hashtable]::Synchronized(@{})),
         [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
         [String]$DebugOutputStream = 'Debug',
-        [string[]]$ACEPropertyName = (Get-Member -InputObject $ItemPath -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name,
+        [string[]]$ACEPropertyName = $ItemPath.PSObject.Properties.GetEnumerator().Name,
         [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
     )
-    $Log = @{
-        ThisHostname = $ThisHostname
-        Type         = $DebugOutputStream
-        Buffer       = $LogBuffer
-        WhoAmI       = $WhoAmI
-    }
     $ResolveAceSplat = @{
         ACEsByGUID = $ACEsByGUID ; AceGUIDsByResolvedID = $AceGUIDsByResolvedID ; AceGUIDsByPath = $AceGUIDsByPath ;
         DirectoryEntryCache = $DirectoryEntryCache ; DomainsByNetbios = $DomainsByNetbios ; DomainsBySid = $DomainsBySid ;
@@ -6552,7 +6647,6 @@ function Get-AccessControlList {
         ThisHostname      = $ThisHostname
         DebugOutputStream = $DebugOutputStream
         WhoAmI            = $WhoAmI
-        OwnerCache        = $OwnerCache
         ACLsByPath        = $Output
         WarningCache      = $WarningCache
     }
@@ -7421,7 +7515,7 @@ function Resolve-AccessControlList {
         Type         = $DebugOutputStream
         WhoAmI       = $WhoAmI
     }
-    $ACEPropertyName = (Get-Member -InputObject $ACLsByPath.Values.Access[0] -MemberType Property, CodeProperty, ScriptProperty, NoteProperty).Name
+    $ACEPropertyName = $ACLsByPath.Values.Access[0].PSObject.Properties.GetEnumerator().Name
     $ResolveAclParams = @{
         DirectoryEntryCache     = $DirectoryEntryCache
         DomainsBySID            = $DomainsBySID
@@ -8640,7 +8734,6 @@ function Get-DirectorySecurity {
         [string]$DebugOutputStream = 'Debug',
         [string]$ThisHostname = (HOSTNAME.EXE),
         [string]$WhoAmI = (whoami.EXE),
-        [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]$OwnerCache = [System.Collections.Concurrent.ConcurrentDictionary[String, PSCustomObject]]::new(),
         [hashtable]$LogBuffer = @{},
         [hashtable]$ACLsByPath = @{},
         [hashtable]$WarningCache = @{}
