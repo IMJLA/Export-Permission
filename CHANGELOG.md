@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.382] - 2024-10-06
+### Changed
+- try redirecting tests output file
+
 ## [0.0.381] - 2024-10-06
 ### Changed
 - try redirecting tests output file
