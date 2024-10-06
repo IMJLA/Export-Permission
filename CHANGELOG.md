@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.380] - 2024-10-06
+### Changed
+- reduce pester verbosity
+
 ## [0.0.379] - 2024-10-06
 ### Fixed
 - fix testsdir
