@@ -39,7 +39,8 @@ properties {
 
     # Unit test results will be saved to this file by Pester.
     #[System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('..', 'testResults.xml')
-    [System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('testResults.xml')
+    #[System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('testResults.xml') #Export-Permission\testResults.xml
+    [System.IO.FileInfo]$TestsResultFile = [IO.Path]::Combine('tests', 'out', 'testResults.xml')
 
     # Whether or not to perform unit tests using Pester.
     [Boolean]$TestEnabled = $true

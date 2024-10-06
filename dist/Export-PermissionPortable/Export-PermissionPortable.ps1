@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.386
+.VERSION 0.0.387
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-default results location
+results in desired location
 
 .PRIVATEDATA
 
