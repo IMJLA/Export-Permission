@@ -408,10 +408,6 @@ $pesterPreReqs = {
 
 task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
-    Write-Host "`tTestsDir is $TestsDir"
-    Write-Host "`tTestsResultFile is $TestsResultFile"
-    Write-Host "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
-
     $PesterConfigParams = @{
         Run          = @{
             Path = "$TestsDir"
@@ -434,8 +430,10 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
         }
     }
 
+    Write-Host "`tNew-PesterConfiguration -Hashtable `$PesterConfigParams"
     $PesterConfiguration = New-PesterConfiguration -Hashtable $PesterConfigParams
-    pause
+
+    Write-Host "`tInvoke-Pester -Configuration `$PesterConfiguration$NewLine"
     Invoke-Pester -Configuration $PesterConfiguration
 
 } -description 'Perform unit tests using Pester.'

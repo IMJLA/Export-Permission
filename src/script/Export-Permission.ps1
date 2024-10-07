@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.390
+.VERSION 0.0.391
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update test result output file
+remove build debug pause
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update test result output file
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
