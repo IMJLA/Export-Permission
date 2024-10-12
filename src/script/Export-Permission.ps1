@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.399
+.VERSION 0.0.400
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-eliminate unnecessary external file
+add inline comments in psakefile
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ eliminate unnecessary external file
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

@@ -478,9 +478,12 @@ task Publish -depends SourceControl {
     $CurrentBranch = git branch --show-current
     if ($Publish -eq $true -and $CurrentBranch -eq 'main') {
 
+        # Publish the normal version of the script with modular dependencies.
         $RelativePath = [System.IO.Path]::GetRelativePath("$((Get-Location).Path)\", $script:ReleasedScript.FullName)
         Write-Host "`tPublish-Script -Path '$RelativePath' -Repository $PublishPSRepository"
         Publish-Script @publishParams
+
+        # Publish the portable, self-contained version of the script.
         $publishParams['Path'] = $script:PortableScriptFilePath
         Write-Host "`tPublish-Script -Path '$($script:PortableScriptFilePath)' -Repository $PublishPSRepository"
         Publish-Script @publishParams
