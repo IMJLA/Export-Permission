@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.396] - 2024-10-12
+### Fixed
+- bugfix psakefile
+
 ## [0.0.395] - 2024-10-12
 ### Changed
 - update psakefile output to use relative paths

@@ -481,7 +481,7 @@ task Publish -depends SourceControl {
         $ScriptToRun = [IO.Path]::Combine('.', 'Get-RelativeUri.ps1')
         #Removed from log output to avoid revealing local file paths
         #Write-Host "`t. $ScriptToRun -Start '$((Get-Location).Path)' -Target '$($script:ReleasedScript.FullName)'"
-        $RelativePath = . $ScriptToRun -Start (Get-Location).Path -Target $script:ReleasedScript.FullName
+        $RelativePath = . $ScriptToRun -Start "$((Get-Location).Path)\" -Target $script:ReleasedScript.FullName
         Write-Host "`tPublish-Script -Path '$RelativePath' -Repository $PublishPSRepository"
         Publish-Script @publishParams
         $publishParams['Path'] = $script:PortableScriptFilePath

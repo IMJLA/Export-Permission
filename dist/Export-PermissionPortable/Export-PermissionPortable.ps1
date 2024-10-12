@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.395
+.VERSION 0.0.396
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psakefile output to use relative paths
+bugfix psakefile
 
 .PRIVATEDATA
 
