@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.399] - 2024-10-12
+### Changed
+- eliminate unnecessary external file
+
 ## [0.0.398] - 2024-10-12
 ### Fixed
 - bugfix get-relativeuri

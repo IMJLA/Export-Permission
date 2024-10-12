@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.398
+.VERSION 0.0.399
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix get-relativeuri
+eliminate unnecessary external file
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix get-relativeuri
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
