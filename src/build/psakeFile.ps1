@@ -478,9 +478,11 @@ task Publish -depends SourceControl {
     $CurrentBranch = git branch --show-current
     if ($Publish -eq $true -and $CurrentBranch -eq 'main') {
 
+        Write-Host "`tCurrent Directory is '$((Get-Location).Location)'"
         Write-Host "`tPublish-Script -Path '$($script:ReleasedScript.FullName)' -Repository $PublishPSRepository"
         Publish-Script @publishParams
         $publishParams['Path'] = $script:PortableScriptFilePath
+        Write-Host "`tPublish-Script -Path '$($script:PortableScriptFilePath)' -Repository $PublishPSRepository"
         Publish-Script @publishParams
 
     }

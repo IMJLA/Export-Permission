@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.392
+.VERSION 0.0.393
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix was not searching servicebyname cache
+troubleshoot psakefile
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix was not searching servicebyname cache
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
