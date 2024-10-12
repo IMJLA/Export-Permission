@@ -478,8 +478,11 @@ task Publish -depends SourceControl {
     $CurrentBranch = git branch --show-current
     if ($Publish -eq $true -and $CurrentBranch -eq 'main') {
 
-        Write-Host "`tCurrent Directory is '$((Get-Location).Path)'"
-        Write-Host "`tPublish-Script -Path '$($script:ReleasedScript.FullName)' -Repository $PublishPSRepository"
+        $ScriptToRun = [IO.Path]::Combine('.', 'Get-RelativeUri.ps1')
+        #Removed from log output to avoid revealing local file paths
+        #Write-Host "`t. $ScriptToRun -Start '$((Get-Location).Path)' -Target '$($script:ReleasedScript.FullName)'"
+        $RelativePath = . $ScriptToRun -Start (Get-Location).Path -Target $script:ReleasedScript.FullName
+        Write-Host "`tPublish-Script -Path '$RelativePath' -Repository $PublishPSRepository"
         Publish-Script @publishParams
         $publishParams['Path'] = $script:PortableScriptFilePath
         Write-Host "`tPublish-Script -Path '$($script:PortableScriptFilePath)' -Repository $PublishPSRepository"

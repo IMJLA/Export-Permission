@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.394
+.VERSION 0.0.395
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-troubleshoot psakefile
+update psakefile output to use relative paths
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ troubleshoot psakefile
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
