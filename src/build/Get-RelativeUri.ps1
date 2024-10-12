@@ -1,7 +1,7 @@
 
 param (
-    [uri]$Start,
-    [uri]$Target
+    [string]$Start,
+    [string]$Target
 )
 
-$Start.MakeRelativeUri($Target).ToString()
+[System.IO.Path]::GetRelativePath($Start, $Start)

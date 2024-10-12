@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.397] - 2024-10-12
+### Changed
+- psakefile use paths instead of uris
+
 ## [0.0.396] - 2024-10-12
 ### Fixed
 - bugfix psakefile
