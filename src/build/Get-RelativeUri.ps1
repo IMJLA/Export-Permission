@@ -4,4 +4,4 @@ param (
     [string]$Target
 )
 
-[System.IO.Path]::GetRelativePath($Start, $Start)
+[System.IO.Path]::GetRelativePath($Start, $Target)

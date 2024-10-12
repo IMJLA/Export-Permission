@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.397
+.VERSION 0.0.398
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-psakefile use paths instead of uris
+bugfix get-relativeuri
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ psakefile use paths instead of uris
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
