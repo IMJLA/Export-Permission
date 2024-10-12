@@ -1,7 +1,9 @@
 properties {
 
+    # Whether or not this build is a new Major version
     [boolean]$IncrementMajorVersion = $false
 
+    # Whether or not this build is a new Minor version
     [boolean]$IncrementMinorVersion = $false
 
     # Folder containing the script .ps1 file

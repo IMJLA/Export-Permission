@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.392] - 2024-10-12
+### Fixed
+- bugfix was not searching servicebyname cache
+
 ## [0.0.391] - 2024-10-06
 ### Removed
 - remove build debug pause
