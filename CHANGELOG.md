@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.401] - 2024-10-13
+### Fixed
+- bugfix log output
+
 ## [0.0.400] - 2024-10-12
 ### Added
 - add inline comments in psakefile

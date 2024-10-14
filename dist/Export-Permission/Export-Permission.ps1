@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.400
+.VERSION 0.0.401
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add inline comments in psakefile
+bugfix log output
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ add inline comments in psakefile
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -564,7 +565,7 @@ begin {
     Write-LogMsg @Log -Text "`$WhoAmI = Get-CurrentWhoAmI -ThisHostName '$ThisHostname' -Buffer `$LogBuffer"
 
     # Get the FQDN of the computer running the script
-    Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-DnsFqdn -ComputerName '$ThisHostName' -Expand $LogThis"
+    Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-DnsFqdn -ComputerName '$ThisHostName'" -Expand $LogThis
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LogThis
 
     # Create a splat of caching-related parameters to pass to various functions for script readability
