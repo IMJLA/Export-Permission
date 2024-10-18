@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.401
+.VERSION 0.0.402
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix log output
+update adsi module
 
 .PRIVATEDATA
 
@@ -39,33 +39,6 @@ bugfix log output
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <#
@@ -632,7 +605,7 @@ end {
         Output      = $AclByPath
         TargetPath  = $Items
     }
-    Write-LogMsg @Log -Text 'Get-AccessControlList' -Expand @{ Output = '$AclByPath'; TargetPath = '$Items' }, $LogThis, $Threads
+    Write-LogMsg @Log -Text 'Get-AccessControlList' -Expand $CommandParameters, $LogThis, $Threads -ExpandKeyMap @{ Output = '$AclByPath'; TargetPath = '$Items' }
     Get-AccessControlList @CommandParameters @LogThis @Threads
 
     $ProgressUpdate = @{
@@ -868,8 +841,6 @@ end {
     Export-LogCsv @CommandParameters @LogThis
 
     Stop-Transcript  *>$null
-
-    # Complete the progress bar
     Write-Progress @Progress -Completed
 
 }
