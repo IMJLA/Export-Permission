@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.402
+.VERSION 0.0.403
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update adsi module
+implement new-permissioncache
 
 .PRIVATEDATA
 
@@ -490,7 +490,10 @@ begin {
     #----------------[ Declarations ]----------------
 
     $LogFile = "$OutputDir\Export-Permission.log"
-    $DirectoryEntryCache = [hashtable]::Synchronized(@{}) # Initialize a cache of ADSI directory entry keyed by their Path to minimize ADSI queries.
+    $KeyType = [type]'String'
+    $ValueType = [type]'System.Collections.Generic.List[Object]'
+    $DirectoryEntryCache = New-PermissionCache -Key $KeyType -Value $ValueType
+    #$DirectoryEntryCache = [hashtable]::Synchronized(@{}) # Initialize a cache of ADSI directory entry keyed by their Path to minimize ADSI queries.
     $DomainsBySID = [hashtable]::Synchronized(@{}) # Initialize a cache of directory domains keyed by domain SID to minimize CIM and ADSI queries.
     $DomainsByNetbios = [hashtable]::Synchronized(@{}) # Initialize a cache of directory domains keyed by domain NetBIOS to minimize CIM and ADSI queries.
     $DomainsByFqdn = [hashtable]::Synchronized(@{}) # Initialize a cache of directory domains keyed by domain DNS FQDN to minimize CIM and ADSI queries.
@@ -534,6 +537,8 @@ begin {
 
     # These events already happened but we will log them now that we have the correct capitalization of the user
     Write-LogMsg @Log -Text '$LogBuffer = [hashtable]::Synchronized(@{})'
+    Write-LogMsg @Log -Text '$CimCache = [hashtable]::Synchronized(@{})'
+    Write-LogMsg @Log -Text '$Parents = [hashtable]::Synchronized(@{})'
     Write-LogMsg @Log -Text '$ThisHostname = HOSTNAME.EXE'
     Write-LogMsg @Log -Text "`$WhoAmI = Get-CurrentWhoAmI -ThisHostName '$ThisHostname' -Buffer `$LogBuffer"
 
@@ -574,7 +579,7 @@ process {
         Output     = $Parents
         TargetPath = $TargetPath
     }
-    Write-LogMsg @Log -Text 'Resolve-PermissionTarget' -Expand $CommandParameters, $LogThis -ExpandKeyMap @{ Output = '$Parents' }
+    Write-LogMsg @Log -Text 'Resolve-PermissionTarget' -Expand $CommandParameters, $LogThis -ExpandKeyMap @{ Output = '$Parents' } -Suffix " # for $($TargetPath.Count) Target Paths"
     Resolve-PermissionTarget @CommandParameters @LogThis
 
 }
@@ -591,7 +596,7 @@ end {
         RecurseDepth = $RecurseDepth
         TargetPath   = $Parents
     }
-    Write-LogMsg @Log -Text '$Items = Expand-PermissionTarget' -Expand $CommandParameters, $LogThis, $Threads -ExpandKeyMap @{ TargetPath = '$Parents' }
+    Write-LogMsg @Log -Text '$Items = Expand-PermissionTarget' -Expand $CommandParameters, $LogThis, $Threads -ExpandKeyMap @{ TargetPath = '$Parents' } -Suffix " # for $($Parents.Keys.Count) Parent Paths"
     $Items = Expand-PermissionTarget @CommandParameters @LogThis @Threads
 
     $ProgressUpdate = @{
@@ -605,7 +610,7 @@ end {
         Output      = $AclByPath
         TargetPath  = $Items
     }
-    Write-LogMsg @Log -Text 'Get-AccessControlList' -Expand $CommandParameters, $LogThis, $Threads -ExpandKeyMap @{ Output = '$AclByPath'; TargetPath = '$Items' }
+    Write-LogMsg @Log -Text 'Get-AccessControlList' -Expand $CommandParameters, $LogThis, $Threads -ExpandKeyMap @{ Output = '$AclByPath'; TargetPath = '$Items' } -Suffix " # for $($Items.Keys.Count) Total Paths"
     Get-AccessControlList @CommandParameters @LogThis @Threads
 
     $ProgressUpdate = @{
@@ -619,7 +624,7 @@ end {
         TargetPath = $Items
         ThisFqdn   = $ThisFqdn
     }
-    Write-LogMsg @Log -Text '$ServerFqdns = Find-ServerFqdn' -Expand $CommandParameters, $LogThis -ExpandKeyMap @{ TargetPath = '$Items' }
+    Write-LogMsg @Log -Text '$ServerFqdns = Find-ServerFqdn' -Expand $CommandParameters, $LogThis -ExpandKeyMap @{ TargetPath = '$Items' } -Suffix " # for $($Items.Keys.Count) Total Paths"
     $ServerFqdns = Find-ServerFqdn @CommandParameters @LogThis
 
     $ProgressUpdate = @{
@@ -632,7 +637,7 @@ end {
         CimCache = $CimCache
         Fqdn     = $ServerFqdns
     }
-    Write-LogMsg @Log -Text 'Initialize-Cache' -Expand $CommandParameters, $LogThis, $CacheParams
+    Write-LogMsg @Log -Text 'Initialize-Cache' -Expand $CommandParameters, $LogThis, $CacheParams -Suffix " # for $($ServerFqdns.Count) Server FQDNs"
     Initialize-Cache @CommandParameters @LogThis @CacheParams
 
     # The resolved name will include the domain name (or local computer name for local accounts)
@@ -650,7 +655,7 @@ end {
         CimCache                = $CimCache
         InheritanceFlagResolved = $InheritanceFlagResolved
     }
-    Write-LogMsg @Log -Text 'Resolve-AccessControlList' -Expand $CommandParameters, $LogThis, $CacheParams
+    Write-LogMsg @Log -Text 'Resolve-AccessControlList' -Expand $CommandParameters, $LogThis, $CacheParams -Suffix " # for $($AclByPath.Keys.Count) Access Control Lists"
     Resolve-AccessControlList @CommandParameters @LogThis @CacheParams
 
     $ProgressUpdate = @{
@@ -675,7 +680,7 @@ end {
         NoGroupMembers   = $NoMembers
         PrincipalByID    = $PrincipalByID
     }
-    Write-LogMsg @Log -Text "Get-PermissionPrincipal" -Expand $CommandParameters, $LogThis, $CacheParams
+    Write-LogMsg @Log -Text 'Get-PermissionPrincipal' -Expand $CommandParameters, $LogThis, $CacheParams -Suffix " # for $($AceGuidByID.Keys.Count) Identity References"
     Get-PermissionPrincipal @CommandParameters @LogThis @CacheParams
 
     $ProgressUpdate = @{
@@ -695,7 +700,7 @@ end {
         SplitBy                = $SplitBy
         TargetPath             = $Parents
     }
-    Write-LogMsg @Log -Text "`$Permissions = Expand-Permission" -Expand $CommandParameters, $LogThis
+    Write-LogMsg @Log -Text "`$Permissions = Expand-Permission" -Expand $CommandParameters, $LogThis -Suffix " # for $($AceGuidByID.Keys.Count) Access Control Entries"
     $Permissions = Expand-Permission @CommandParameters @LogThis
 
     $ProgressUpdate = @{
@@ -715,7 +720,7 @@ end {
         PrincipalByID              = $PrincipalByID
         ShortNameByID              = $ShortNameByID
     }
-    Write-LogMsg @Log -Text 'Select-PermissionPrincipal' -Expand $CommandParameters, $LogThis
+    Write-LogMsg @Log -Text 'Select-PermissionPrincipal' -Expand $CommandParameters, $LogThis -Suffix " # for $($PrincipalByID.Keys.Count) Security Principals"
     Select-PermissionPrincipal @CommandParameters @LogThis
 
     $ProgressUpdate = @{
@@ -749,7 +754,7 @@ end {
         Permission                 = $Permissions
         ShortNameByID              = $ShortNameByID
     }
-    Write-LogMsg @Log -Text '$FormattedPermissions = Format-Permission' -Expand $CommandParameters
+    Write-LogMsg @Log -Text '$FormattedPermissions = Format-Permission' -Expand $CommandParameters -Suffix " # for $($Permissions.Count) Permissions"
     $FormattedPermissions = Format-Permission @CommandParameters
 
     $ProgressUpdate = @{
@@ -774,7 +779,7 @@ end {
         ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn
 
     }
-    Write-LogMsg @Log -Text 'Out-PermissionFile' -Expand $CommandParameters
+    Write-LogMsg @Log -Text 'Out-PermissionFile' -Expand $CommandParameters -Suffix " # for $($AceGuidByID.Keys.Count) Access Control Entries"
     $ReportFile = Out-PermissionFile @CommandParameters
 
     $ProgressUpdate = @{

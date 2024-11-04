@@ -14,7 +14,7 @@
             "name": "C:\\ RecurseDepth 0",
             "type": "PowerShell",
             "request": "launch",
-            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -RecurseDepth 0 -ExcludeClass $null -Interactive; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+            "script": "try { $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -RecurseDepth 0 -ExcludeClass $null -Interactive; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
         },
         {
             "name": "C:\\ RecurseDepth 1",
@@ -32,7 +32,7 @@
             "name": "C:\\ RecurseDepth 3",
             "type": "PowerShell",
             "request": "launch",
-            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\' -RecurseDepth 3 -ExcludeClass $null -Interactive; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+            "script": "try { $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\' -RecurseDepth 3 -ExcludeClass $null -Interactive; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
         },
         {
             "name": "C:\\ RecurseDepth -1",

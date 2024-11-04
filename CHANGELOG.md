@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.403] - 2024-11-03
+### Added
+- implement new-permissioncache
+
 ## [0.0.402] - 2024-10-18
 ### Changed
 - update adsi module
