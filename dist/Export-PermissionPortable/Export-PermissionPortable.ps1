@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.403
+.VERSION 0.0.404
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement new-permissioncache
+bugfix must now pass directoryentrycache as ref var now that dependencies have been updated
 
 .PRIVATEDATA
 
@@ -2864,7 +2864,8 @@ function Get-DirectoryEntry {
         Buffer       = $LogBuffer
         WhoAmI       = $WhoAmI
     }
-    $CacheResult = $DirectoryEntryCache[$DirectoryPath]
+    $CacheResult = $null
+    $DirectoryEntryCache.Value.TryGetValue($DirectoryPath, [ref]$CacheResult)
     if ($CacheResult) {
         return $CacheResult
     }
@@ -2938,7 +2939,7 @@ function Get-DirectoryEntry {
             return
         }
     }
-    $DirectoryEntryCache[$DirectoryPath] = $DirectoryEntry
+    $DirectoryEntryCache.Value.AddOrUpdate( $DirectoryPath, $DirectoryEntry )
     return $DirectoryEntry
 }
 function Get-KnownCaptionHashTable {
@@ -9785,7 +9786,7 @@ function Send-PrtgXmlSensorOutput {
     Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-DnsFqdn -ComputerName '$ThisHostName'" -Expand $LogThis
     $ThisFqdn = ConvertTo-DnsFqdn -ComputerName $ThisHostName @LogThis
     $CacheParams = @{
-        DirectoryEntryCache = $DirectoryEntryCache
+        DirectoryEntryCache = [ref]$DirectoryEntryCache
         DomainsByFqdn       = $DomainsByFqdn
         DomainsByNetbios    = $DomainsByNetbios
         DomainsBySid        = $DomainsBySid

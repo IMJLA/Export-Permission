@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.403
+.VERSION 0.0.404
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement new-permissioncache
+bugfix must now pass directoryentrycache as ref var now that dependencies have been updated
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ implement new-permissioncache
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#
@@ -548,7 +549,7 @@ begin {
 
     # Create a splat of caching-related parameters to pass to various functions for script readability
     $CacheParams = @{
-        DirectoryEntryCache = $DirectoryEntryCache
+        DirectoryEntryCache = [ref]$DirectoryEntryCache
         DomainsByFqdn       = $DomainsByFqdn
         DomainsByNetbios    = $DomainsByNetbios
         DomainsBySid        = $DomainsBySid
