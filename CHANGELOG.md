@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.405] - 2024-11-10
+### Added
+- implement unified in-process cache
+
 ## [0.0.404] - 2024-11-03
 ### Fixed
 - bugfix must now pass directoryentrycache as ref var now that dependencies have been updated
