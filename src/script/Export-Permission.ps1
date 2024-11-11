@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.405
+.VERSION 0.0.406
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement unified in-process cache
+fix output type
 
 .PRIVATEDATA
 
@@ -39,8 +39,6 @@ implement unified in-process cache
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
 
 
 <#
@@ -89,7 +87,7 @@ implement unified in-process cache
 
     Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 .OUTPUTS
-    [System.String] XML output formatted for a Custom XML Sensor in Paessler PRTG Network Monitor
+    [PSCustomObject] Items, permissions, and accounts formatted according to specified parameters.
 .NOTES
     This code has not been reviewed or audited by a third party
 
@@ -248,6 +246,9 @@ implement unified in-process cache
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 #>
+
+[OutputType([PSCustomObject])]
+[CmdletBinding()]
 
 param (
 

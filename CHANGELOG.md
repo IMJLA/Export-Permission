@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.406] - 2024-11-10
+### Fixed
+- fix output type
+
 ## [0.0.405] - 2024-11-10
 ### Added
 - implement unified in-process cache

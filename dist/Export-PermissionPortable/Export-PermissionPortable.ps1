@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.405
+.VERSION 0.0.406
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement unified in-process cache
+fix output type
 
 .PRIVATEDATA
 
@@ -73,6 +73,8 @@ Behavior:
 - Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor 
 
 #>
+[OutputType([PSCustomObject])]
+[CmdletBinding()]
 param (
     [Parameter(ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]

@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.405
+help version: 0.0.406
 locale: en-US
 script name: 
 online version:
@@ -724,7 +724,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 ## OUTPUTS
 
-### [System.String] XML output formatted for a Custom XML Sensor in Paessler PRTG Network Monitor
+### [PSCustomObject] Items, permissions, and accounts formatted according to specified parameters.
 ## NOTES
 This code has not been reviewed or audited by a third party
 

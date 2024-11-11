@@ -648,7 +648,7 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>[System.String] XML output formatted for a Custom XML Sensor in Paessler PRTG Network Monitor</maml:name>
+          <maml:name>[PSCustomObject] Items, permissions, and accounts formatted according to specified parameters.</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
