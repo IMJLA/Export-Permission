@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.406
+.VERSION 0.0.407
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix output type
+cleanup
 
 .PRIVATEDATA
 
@@ -3865,43 +3865,43 @@ function Resolve-IdentityReference {
     )
     $Log = @{ ThisHostname = $ThisHostname ; Type = $DebugOutputStream ; Buffer = $Cache.Value['LogBuffer'] ; WhoAmI = $WhoAmI }
     $LogThis = @{ ThisHostname = $ThisHostname ; Cache = $Cache ; WhoAmI = $WhoAmI ; DebugOutputStream = $DebugOutputStream }
-    $LastSlashIndex = $IdentityReference.LastIndexOf('\')
-    if ($LastSlashIndex -eq -1) {
-        $Name = $IdentityReference
-    } else {
-        $StartIndex = $LastSlashIndex + 1
-        $Name = $IdentityReference.Substring( $StartIndex , $IdentityReference.Length - $StartIndex )
-    }
     $ServerNetBIOS = $AdsiServer.Netbios
     $splat1 = @{ WellKnownSidBySid = $WellKnownSidBySid ; WellKnownSidByCaption = $WellKnownSidByCaption }
     $splat3 = @{ AdsiServer = $AdsiServer; ServerNetBIOS = $ServerNetBIOS }
     $splat5 = @{ ThisFqdn = $ThisFqdn }
     $splat8 = @{ IdentityReference = $IdentityReference }
     $CacheResult = Resolve-IdRefCached -IdentityReference $IdentityReference @splat3
-    if ($CacheResult) {
+    if ($null -ne $CacheResult) {
         return $CacheResult
     }
-    switch -Wildcard ($IdentityReference) {
-        'S-1-*' {
-            $Resolved = Resolve-IdRefSID -AdsiServersByDns $AdsiServersByDns @splat3 @splat5 @splat8 @LogThis
-            return $Resolved
-        }
-        'NT SERVICE\*' {
-            $Resolved = Resolve-IdRefSvc -Name $Name @splat3 @splat5 @splat8 @LogThis
-            return $Resolved
-        }
-        'APPLICATION PACKAGE AUTHORITY\*' {
-            $Resolved = Resolve-IdRefAppPkgAuth -Name $Name @splat1 @splat3 @splat5 @splat8 @LogThis
-            return $Resolved
-        }
-        'BUILTIN\*' {
-            $Resolved = Resolve-IdRefBuiltIn -Name $Name @splat3 @splat5 @splat8 @LogThis
-            return $Resolved
+    $LastSlashIndex = $IdentityReference.LastIndexOf('\')
+    if ($LastSlashIndex -eq -1) {
+        $Name = $IdentityReference
+        $Domain = ''
+    } else {
+        $StartIndex = $LastSlashIndex + 1
+        $Name = $IdentityReference.Substring( $StartIndex , $IdentityReference.Length - $StartIndex )
+        $Domain = $IdentityReference.Substring( 0 , $StartIndex - 1 )
+    }
+    $ScriptBlocks = @{
+        'NT SERVICE'                    = { Resolve-IdRefSvc -Name $Name @splat3 @splat5 @splat8 @LogThis }
+        'APPLICATION PACKAGE AUTHORITY' = { Resolve-IdRefAppPkgAuth -Name $Name @splat1 @splat3 @splat5 @splat8 @LogThis }
+        'BUILTIN'                       = { Resolve-IdRefBuiltIn -Name $Name @splat3 @splat5 @splat8 @LogThis }
+    }
+    $ScriptToRun = $ScriptBlocks[$Domain]
+    if ($null -ne $ScriptToRun) {
+        $KnownAuthorityResult = & $ScriptToRun
+        if ($null -ne $KnownAuthorityResult) {
+            return $KnownAuthorityResult
         }
     }
-    if ($ServerNetBIOS) {
+    if ($Name.Substring(0, 4) -eq 'S-1-') {
+        $Resolved = Resolve-IdRefSID -AdsiServersByDns $AdsiServersByDns @splat3 @splat5 @splat8 @LogThis
+        return $Resolved
+    }
+    if ($null -ne $ServerNetBIOS) {
         $CacheResult = $null
-        $TryGetValueResult = $Cache.Value['DomainByNetbios'].Value.TryGetValue($ServerNetBIOS, [ref]$CacheResult)
+        $TryGetValueResult = $Cache.Value['DomainByNetbios'].Value.TryGetValue( $ServerNetBIOS, [ref]$CacheResult )
         if ($TryGetValueResult) {
         } else {
             $CacheResult = Get-AdsiServer -Netbios $ServerNetBIOS @splat5 @LogThis
@@ -3924,7 +3924,7 @@ function Resolve-IdentityReference {
         return [PSCustomObject]@{
             IdentityReference        = $IdentityReference
             SIDString                = $SIDString
-            IdentityReferenceNetBios = "$ServerNetBIOS\$Name" 
+            IdentityReferenceNetBios = "$ServerNetBIOS\$Name"
             IdentityReferenceDns     = "$DomainDns\$Name"
         }
     }
@@ -4945,6 +4945,15 @@ function Get-HtmlReportElements {
         $BestPracticeIssue,
         [string[]]$Parent,
         [string[]]$FileFormat,
+        [uint64]$TargetCount,
+        [uint64]$ParentCount,
+        [uint64]$ChildCount,
+        [uint64]$ItemCount,
+        [uint64]$FqdnCount,
+        [uint64]$AclCount,
+        [uint64]$AceCount,
+        [uint64]$IdCount,
+        [UInt64]$PrincipalCount,
         [String]$OutputFormat
     )
     Write-LogMsg @LogParams -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
@@ -4988,11 +4997,16 @@ function Get-HtmlReportElements {
     Write-LogMsg @LogParams -Text "New-BootstrapColumn -Html '`$HtmlReportsHeading`$HtmlReportsDiv',`$HtmlLogsHeading`$HtmlListOfLogs"
     $HtmlDivOfFileColumns = New-BootstrapColumn -Html "$HtmlReportsHeading$HtmlReportsDiv", "$HtmlLogsHeading$HtmlListOfLogs" -Width 6
     Write-LogMsg @LogParams -Text "New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content '`$HtmlOutputDir`$HtmlDivOfFileColumns'"
-    $HtmlDivOfFiles = New-BootstrapDivWithHeading -HeadingText "Output Folder:" -Content "$HtmlOutputDir$HtmlDivOfFileColumns" -HeadingLevel 6
+    $HtmlDivOfFiles = New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content "$HtmlOutputDir$HtmlDivOfFileColumns" -HeadingLevel 6
     Write-LogMsg @LogParams -Text "Get-ReportFooter -StopWatch `$StopWatch -ReportInstanceId '$ReportInstanceId' -WhoAmI '$WhoAmI' -ThisFqdn '$ThisFqdn'"
     $FooterParams = @{
-        ItemCount        = $AclByPath.Keys.Count
-        PermissionCount  = (
+        ItemCount                = $ItemCount
+        FormattedPermissionCount = (
+            @('csv', 'html', 'js', 'json', 'prtgxml', 'xml') |
+            ForEach-Object { $FormattedPermissions.Values.NetworkPaths.$_.Count } |
+            Measure-Object -Sum
+        ).Sum
+        PermissionCount          = (
             @(
                 $Permission.AccountPermissions.Access.Access.Count, 
                 $Permission.ItemPermissions.Access.Access.Count,
@@ -5003,13 +5017,18 @@ function Get-HtmlReportElements {
             ) |
             Measure-Object -Maximum
         ).Maximum
-        PrincipalCount   = $PrincipalByID.Keys.Count
-        ReportInstanceId = $ReportInstanceId
-        StopWatch        = $StopWatch
-        ThisFqdn         = $ThisFqdn
-        WhoAmI           = $WhoAmI
-        AceByGUID        = $AceByGUID
-        AclByPath        = $AclByPath
+        ReportInstanceId         = $ReportInstanceId
+        StopWatch                = $StopWatch
+        ThisFqdn                 = $ThisFqdn
+        WhoAmI                   = $WhoAmI
+        TargetCount              = $TargetCount
+        ParentCount              = $ParentCount
+        ChildCount               = $ChildCount
+        FqdnCount                = $FqdnCount
+        AclCount                 = $AclCount
+        AceCount                 = $AceCount
+        PrincipalCount           = $PrincipalCount
+        IdCount                  = $IdCount
     }
     $ReportFooter = Get-HtmlReportFooter @FooterParams
     [PSCustomObject]@{
@@ -5028,14 +5047,20 @@ function Get-HtmlReportFooter {
         [System.Diagnostics.Stopwatch]$StopWatch,
         [String]$WhoAmI = (whoami.EXE),
         [String]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
+        [uint64]$TargetCount,
+        [uint64]$ParentCount,
+        [uint64]$ChildCount,
         [uint64]$ItemCount,
+        [uint64]$FqdnCount,
+        [uint64]$AclCount,
+        [uint64]$AceCount,
+        [uint64]$IdCount,
+        [UInt64]$PrincipalCount,
+        [UInt64]$PermissionCount,
+        [uint64]$FormattedPermissionCount,
         [uint64]$TotalBytes,
         [String]$ReportInstanceId,
-        [UInt64]$PermissionCount,
-        [UInt64]$PrincipalCount,
-        [string[]]$UnitsToResolve = @('day', 'hour', 'minute', 'second'),
-        [Hashtable]$AceByGUID,
-        [Hashtable]$AclByPath
+        [string[]]$UnitsToResolve = @('day', 'hour', 'minute', 'second')
     )
     $null = $StopWatch.Stop()
     $FinishTime = Get-Date
@@ -5043,14 +5068,82 @@ function Get-HtmlReportFooter {
     $TimeZoneName = Get-TimeZoneName -Time $FinishTime
     $Duration = Format-TimeSpan -TimeSpan $StopWatch.Elapsed -UnitsToResolve $UnitsToResolve
     if ($TotalBytes) {
-        $Size = " ($($TotalBytes / 1TB) TiB"
+        $TiB = $TotalBytes / 1TB
+        $Size = " ($TiB TiB)"
     }
+    $AllUnits = @('day', 'hour', 'minute', 'second', 'millisecond')
+    $CompletionTime = @(
+        @{
+            'Name'              = 'Target paths (specified in report parameters)'
+            'Count'             = $TargetCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $TargetCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'Parents (resolved from target paths)'
+            'Count'             = $ParentCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $ParentCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'Children (found beneath parent paths)'
+            'Count'             = $ChildCount
+            'Average Time Each' = if ($ChildCount -gt 0) { Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $ChildCount ) ) -UnitsToResolve $AllUnits }
+        },
+        @{
+            'Name'              = 'Items (parents and children)'
+            'Count'             = $ItemCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $ItemCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'Servers (hosting items)'
+            'Count'             = $FqdnCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $FqdnCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'ACLs (found on items)'
+            'Count'             = $AclCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $AclCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'ACEs (in ACLs)'
+            'Count'             = $AceCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $AceCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'IDs (in ACEs)'
+            'Count'             = $IdCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $IdCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'Security Principals (represented by IDs, including group members)'
+            'Count'             = $PrincipalCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $PrincipalCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'Unique Permissions for those security principals (non-inherited)'
+            'Count'             = $PermissionCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $PermissionCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'Formatted Permissions (according to report parameters)'
+            'Count'             = $FormattedPermissionCount
+            'Average Time Each' = Format-TimeSpan -TimeSpan ( New-TimeSpan -Milliseconds ( $StopWatch.Elapsed.TotalMilliseconds / $FormattedPermissionCount ) ) -UnitsToResolve $AllUnits
+        },
+        @{
+            'Name'              = 'TOTAL REPORT TIME'
+            'Count'             = 1
+            'Average Time Each' = Format-TimeSpan -TimeSpan $StopWatch.Elapsed -UnitsToResolve $AllUnits
+        }
+    )
+    $Heading = New-HtmlHeading 'Performance' -Level 6
+    $Html = $CompletionTime | Select-Object -Property Name, Count, 'Average Time Each' | ConvertTo-Html -Fragment
+    $Table = $Html | New-BootstrapTable
+    $Div = New-BootstrapDiv -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
     $Text = @"
-Report generated by $WhoAmI on $ThisFQDN starting at $StartTime and ending at $FinishTime $TimeZoneName<br />
-Processed $($AceByGUID.Keys.Count) ACEs with $PermissionCount permissions for $PrincipalCount accounts on $ItemCount items$Size in $Duration<br />
+Report generated by $WhoAmI on $ThisFQDN starting at $StartTime and ending at $FinishTime $TimeZoneName (elapsed: $Duration)<br />
 Report instance: $ReportInstanceId
 "@
-    New-BootstrapAlert -Class Light -Text $Text -AdditionalClasses ' small'
+    $Alert = New-BootstrapAlert -Class Light -Text $Text -AdditionalClasses ' small'
+    "$Div<br />$Alert"
 }
 function Get-ReportDescription {
     param (
@@ -5134,10 +5227,10 @@ function Group-AccountPermissionReference {
         }
         [PSCustomObject]@{
             Account = $Identity
-            Access  = ForEach ($Item in ($ItemPaths.Keys | Sort-Object)) {
+            Access  = ForEach ($Item in ($ItemPaths.Value.Keys | Sort-Object)) {
                 [PSCustomObject]@{
                     Path     = $Item
-                    AceGUIDs = $ItemPaths[$Item]
+                    AceGUIDs = $ItemPaths.Value[$Item]
                 }
             }
         }
@@ -5193,10 +5286,10 @@ function Group-TargetPermissionReference {
                     $ItemsForThisNetworkPath.AddRange([string[]]$Children[$NetworkPath])
                     $IDsWithAccess = Find-ResolvedIDsWithAccess -ItemPath $ItemsForThisNetworkPath @CommonParams
                     $AceGuidsForThisNetworkPath = @{}
-                    ForEach ($Guid in $AceGUIDsByPath.Value[$ItemsForThisNetworkPath]) {
-                        if ($Guid) {
+                    ForEach ($Item in $ItemsForThisNetworkPath) {
+                        ForEach ($Guid in $AceGUIDsByPath.Value[$Item]) {
                             ForEach ($ListItem in $Guid) {
-                                $AceGuidsForThisNetworkPath[$ListItem] = $true
+                                $AceGuidsForThisNetworkPath[$ListItem] = $null
                             }
                         }
                     }
@@ -5204,8 +5297,7 @@ function Group-TargetPermissionReference {
                     ForEach ($ID in $IDsWithAccess.Value.Keys) {
                         $GuidsForThisIDAndNetworkPath = [System.Collections.Generic.List[guid]]::new()
                         ForEach ($Guid in $AceGuidByID.Value[$ID]) {
-                            $AceContainsThisID = $AceGuidsForThisNetworkPath[$Guid]
-                            if ($AceContainsThisID) {
+                            if ($AceGuidsForThisNetworkPath.ContainsKey($Guid)) {
                                 $GuidsForThisIDAndNetworkPath.Add($Guid)
                             }
                         }
@@ -5213,7 +5305,7 @@ function Group-TargetPermissionReference {
                     }
                     [PSCustomObject]@{
                         Path     = $NetworkPath
-                        Accounts = Group-AccountPermissionReference -ID $IDsWithAccess.Value.Keys -AceGuidByID [ref]$AceGuidByIDForThisNetworkPath -AceByGuid $ACEsByGUID
+                        Accounts = Group-AccountPermissionReference -ID $IDsWithAccess.Value.Keys -AceGuidByID ([ref]$AceGuidByIDForThisNetworkPath) -AceByGuid $ACEsByGUID
                     }
                 }
                 [pscustomobject]$TargetProperties
@@ -5906,8 +5998,10 @@ function ConvertTo-PermissionFqdn {
 }
 function Expand-Permission {
     param (
-        $SplitBy,
-        $GroupBy,
+        [ValidateSet('account', 'item', 'none', 'target')]
+        [string[]]$SplitBy = 'target',
+        [ValidateSet('account', 'item', 'none', 'target')]
+        [string]$GroupBy = 'item',
         [Hashtable]$Children,
         [String]$ThisHostName = (HOSTNAME.EXE),
         [String]$WhoAmI = (whoami.EXE),
@@ -5927,7 +6021,7 @@ function Expand-Permission {
     } else {
         $Progress['Id'] = 0
     }
-    Write-Progress @Progress -Status '0% : Group permission references, then expand them into objects' -CurrentOperation 'Resolve-SplitByParameter' -PercentComplete 0
+    Write-Progress @Progress -Status '0% : Prepare to group permission references, then expand them into objects' -CurrentOperation 'Resolve-SplitByParameter' -PercentComplete 0
     Write-LogMsg @Log -Text "Resolve-SplitByParameter -SplitBy $SplitBy"
     $HowToSplit = Resolve-SplitByParameter -SplitBy $SplitBy
     Write-LogMsg @Log -Text "`$SortedPaths = `$AceGuidByPath.Keys | Sort-Object"
@@ -5945,30 +6039,37 @@ function Expand-Permission {
     if (
         $HowToSplit['account']
     ) {
+        Write-Progress @Progress -Status '13% : Group permission references by account' -CurrentOperation 'Resolve-SplitByParameter' -PercentComplete 17
         Write-LogMsg @Log -Text '$AccountPermissionReferences = Group-AccountPermissionReference -ID $PrincipalsByResolvedID.Keys -AceGuidByID $AceGuidByID -AceByGuid $ACEsByGUID'
         $AccountPermissionReferences = Group-AccountPermissionReference -ID $PrincipalsByResolvedID.Value.Keys -AceGuidByID $AceGuidByID -AceByGuid $ACEsByGUID
+        Write-Progress @Progress -Status '25% : Expand account permissions into objects' -CurrentOperation 'Resolve-SplitByParameter' -PercentComplete 33
         Write-LogMsg @Log -Text '$AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences @CommonParams'
         $AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences @CommonParams
     }
     if (
         $HowToSplit['item']
     ) {
+        Write-Progress @Progress -Status '38% : Group permission references by item' -CurrentOperation 'Group-ItemPermissionReference' -PercentComplete 50
         Write-LogMsg @Log -Text '$ItemPermissionReferences = Group-ItemPermissionReference @CommonParams -SortedPath $SortedPaths -AceGUIDsByPath $AceGuidByPath -ACLsByPath $ACLsByPath'
         $ItemPermissionReferences = Group-ItemPermissionReference -SortedPath $SortedPaths -AceGUIDsByPath $AceGuidByPath -ACLsByPath $ACLsByPath @CommonParams
+        Write-Progress @Progress -Status '50% : Expand item permissions into objects' -CurrentOperation 'Expand-ItemPermissionReference' -PercentComplete 67
         Write-LogMsg @Log -Text '$ItemPermissions = Expand-ItemPermissionReference -Reference $ItemPermissionReferences -ACLsByPath $ACLsByPath @CommonParams'
         $ItemPermissions = Expand-ItemPermissionReference -Reference $ItemPermissionReferences -ACLsByPath $ACLsByPath @CommonParams
     }
     if (
         $HowToSplit['none']
     ) {
+        Write-Progress @Progress -Status '63% : Expand flat permissions into objects' -CurrentOperation 'Expand-FlatPermissionReference' -PercentComplete 83
         Write-LogMsg @Log -Text '$FlatPermissions = Expand-FlatPermissionReference -SortedPath $SortedPaths -AceGUIDsByPath $AceGuidByPath @CommonParams'
         $FlatPermissions = Expand-FlatPermissionReference -SortedPath $SortedPaths -AceGUIDsByPath $AceGuidByPath @CommonParams
     }
     if (
         $HowToSplit['target']
     ) {
+        Write-Progress @Progress -Status '75% : Group permission references by target' -CurrentOperation 'Group-TargetPermissionReference' -PercentComplete 17
         Write-LogMsg @Log -Text '$TargetPermissionReferences = Group-TargetPermissionReference -TargetPath $TargetPath -Children $Children -AceGUIDsByPath $AceGuidByPath -ACLsByPath $ACLsByPath -GroupBy $GroupBy -AceGuidByID $AceGuidByID @CommonParams'
         $TargetPermissionReferences = Group-TargetPermissionReference -TargetPath $TargetPath -Children $Children -AceGUIDsByPath $AceGuidByPath -ACLsByPath $ACLsByPath -GroupBy $GroupBy -AceGuidByID $AceGuidByID @CommonParams
+        Write-Progress @Progress -Status '88% : Expand item permissions into objects' -CurrentOperation 'Expand-TargetPermissionReference' -PercentComplete 67
         Write-LogMsg @Log -Text '$TargetPermissions = Expand-TargetPermissionReference -Reference $TargetPermissionReferences -GroupBy $GroupBy -ACLsByPath $ACLsByPath @CommonParams'
         $TargetPermissions = Expand-TargetPermissionReference -Reference $TargetPermissionReferences -GroupBy $GroupBy -ACLsByPath $ACLsByPath -AceGuidByPath $AceGuidByPath @CommonParams
     }
@@ -6683,10 +6784,9 @@ function Get-PermissionTrustedDomain {
 }
 function Get-PermissionWhoAmI {
     param (
-        [String]$ThisHostname = (HOSTNAME.EXE),
-        [ref]$Cache
+        [String]$ThisHostname = (HOSTNAME.EXE)
     )
-    Get-CurrentWhoAmI -ThisHostName $ThisHostname -LogBuffer $Cache.Value['LogBuffer']
+    Get-CurrentWhoAmI -ThisHostName $ThisHostname
 }
 function Get-TimeZoneName {
     param (
@@ -6866,7 +6966,7 @@ function New-PermissionCache {
             ExcludeClassFilterContents   = New-PermissionCacheRef -Key $String -Value $Boolean 
             IdByShortName                = New-PermissionCacheRef -Key $String -Value $StringList 
             IncludeAccountFilterContents = New-PermissionCacheRef -Key $String -Value $Boolean 
-            LogBuffer                    = [ref][System.Collections.Concurrent.ConcurrentQueue[PSCustomObject]]::new() 
+            LogBuffer                    = [ref][System.Collections.Concurrent.ConcurrentQueue[hashtable]]::new() 
             ParentByTargetPath           = New-PermissionCacheRef -Key $DirectoryInfo -Value $StringArray 
             PrincipalByID                = New-PermissionCacheRef -Key $String -Value $PSCustomObject 
             ShortNameByID                = New-PermissionCacheRef -Key $String -Value $String  
@@ -6916,6 +7016,15 @@ function Out-PermissionFile {
         [ValidateSet('none', 'all', 'target', 'item', 'account')]
         [string[]]$SplitBy = 'target',
         [PSCustomObject]$BestPracticeEval,
+        [uint64]$TargetCount,
+        [uint64]$ParentCount,
+        [uint64]$ChildCount,
+        [uint64]$ItemCount,
+        [uint64]$FqdnCount,
+        [uint64]$AclCount,
+        [uint64]$AceCount,
+        [uint64]$IdCount,
+        [UInt64]$PrincipalCount,
         [ref]$Cache
     )
     $AceByGUID = $Cache.Value['AceByGUID']
@@ -7905,38 +8014,46 @@ function New-HtmlParagraph {
 }
 function Get-ParamStringMap {
     return @{
-        'System.Collections.Hashtable'                = {
+        'System.Collections.Hashtable'                 = {
             param ($ParamName, $ParamValue)
             "`$$ParamName"
         }
-        'System.Collections.Hashtable+SyncHashtable'  = {
+        'System.Collections.Hashtable+SyncHashtable'   = {
             param ($ParamName, $ParamValue)
             "`$$ParamName"
         }
-        'System.Int32'                                = {
+        'System.Int32'                                 = {
             param ($ParamName, $ParamValue)
             "($ParamValue)" 
         }
-        'System.UInt16'                               = {
+        'System.UInt16'                                = {
             param ($ParamName, $ParamValue)
             "($ParamValue)" 
         }
-        'System.Object[]'                             = {
+        'System.Object[]'                              = {
             param ($ParamName, $ParamValue)
             "@('$($ParamValue -join "','")')"
         }
-        'System.String[]'                             = {
+        'System.String[]'                              = {
             param ($ParamName, $ParamValue)
             $NewValues = Get-ParamValueString -String $ParamValue
             "@($($NewValues -join ','))"
         }
-        'System.Management.Automation.PSCustomObject' = {
+        'System.Management.Automation.PSCustomObject'  = {
             param ($ParamName, $ParamValue)
             "[PSCustomObject]$ParamValue"
         }
-        'System.String'                               = {
+        'System.String'                                = {
             param ($ParamName, $ParamValue)
             Get-ParamValueString -String $ParamValue
+        }
+        'System.Boolean'                               = {
+            param ($ParamName, $ParamValue)
+            "`$$ParamValue"
+        }
+        'System.Management.Automation.SwitchParameter' = {
+            param ($ParamName, $ParamValue)
+            "`$$ParamValue"
         }
     }
 }
@@ -8034,20 +8151,9 @@ function Get-CurrentHostName {
 function Get-CurrentWhoAmI {
     param (
         [string]$ThisHostName = (HOSTNAME.EXE),
-        [string]$WhoAmI = (whoami.EXE),
-        [Parameter(Mandatory)]
-        [ref]$LogBuffer
+        [string]$WhoAmI = (whoami.EXE)
     )
     $WhoAmI -replace "^$ThisHostname\\", "$ThisHostname\" -replace "$ENV:USERNAME", $ENV:USERNAME
-    if (-not $PSBoundParameters.ContainsKey('WhoAmI')) {
-        $Log = @{
-            ThisHostname = $ThisHostname
-            Type         = 'Debug'
-            Buffer       = $LogBuffer
-            WhoAmI       = $WhoAmI
-        }
-        Write-LogMsg @Log -Text 'whoami.exe # This command was already run but is now being logged'
-    }
 }
 function New-DatedSubfolder {
     param (
@@ -8092,9 +8198,9 @@ function Write-LogMsg {
     ForEach ($Splat in $Expand) {
         ForEach ($ParamName in $Splat.Keys) {
             $ParamValue = $ExpandKeyMap[$ParamName]
-            if (-not $ParamValue) {
+            if ($null -eq $ParamValue) {
                 $ParamValue = $Splat[$ParamName]
-                if ($ParamValue) {
+                if ($null -ne $ParamValue) {
                     $TypeName = $ParamValue.GetType().FullName
                     $ValueScript = $ParamStringMap[$TypeName]
                     if ($ValueScript) {
@@ -8109,10 +8215,11 @@ function Write-LogMsg {
             $Text = "$Text -$ParamName $ParamValue"
         }
     }
+    $FullText = "$Text$Suffix"
     if ($AddPrefix) {
-        $MessageToLog = "$Timestamp`t$ThisHostname`t$WhoAmI`t$Location`t$Command`t$($MyInvocation.ScriptLineNumber)`t$Type`t$Text$Suffix"
+        $MessageToLog = "$Timestamp`t$ThisHostname`t$WhoAmI`t$Location`t$Command`t$($MyInvocation.ScriptLineNumber)`t$Type`t$FullText"
     } else {
-        $MessageToLog = "$Text$Suffix"
+        $MessageToLog = $FullText
     }
     Switch ($Type) {
         'Quiet' { break }
@@ -8131,7 +8238,7 @@ function Write-LogMsg {
     if ($PassThru -or $OutputToPipeline) {
         $MessageToLog
     }
-    $Obj = [pscustomobject]@{
+    $Obj = @{
         Timestamp = $Timestamp
         Hostname  = $ThisHostname
         WhoAmI    = $WhoAmI
@@ -8139,7 +8246,7 @@ function Write-LogMsg {
         Command   = $Command
         Line      = $MyInvocation.ScriptLineNumber
         Type      = $Type
-        Text      = $Text
+        Text      = $FullText
     }
     $null = $Buffer.Value.Enqueue($Obj)
 }
@@ -9478,30 +9585,23 @@ function Send-PrtgXmlSensorOutput {
     Write-Information $TranscriptFile
     $LogFile = Join-Path -Path $OutputDir -ChildPath 'Export-Permission.log'
     $PermissionCache = New-PermissionCache
-    $Cache = @{
-        Cache = [ref]$PermissionCache
-    }
+    $Cache = @{ Cache = [ref]$PermissionCache }
     $ThisHostname = HOSTNAME.EXE
-    $WhoAmI = Get-PermissionWhoAmI -ThisHostName $ThisHostname @Cache
+    $WhoAmI = Get-PermissionWhoAmI -ThisHostname $ThisHostname
     $Threads = @{ ThreadCount = $ThreadCount }
-    $LogThis = @{
-        ThisHostname = $ThisHostname
-        WhoAmI       = $WhoAmI
-    }
+    $LogThis = @{ ThisHostname = $ThisHostname ; WhoAmI = $WhoAmI }
     $LogBuffer = [ref]$PermissionCache['LogBuffer']
-    $Log = @{
-        ThisHostname = $ThisHostname
-        Type         = 'Debug'
-        Buffer       = $LogBuffer
-        WhoAmI       = $WhoAmI
-    }
-    Write-LogMsg @Log -Text '$PermissionCache = New-PermissionCache'
-    Write-LogMsg @Log -Text '$ThisHostname = HOSTNAME.EXE'
-    Write-LogMsg @Log -Text "`$WhoAmI = Get-CurrentWhoAmI -ThisHostName '$ThisHostname' -LogBuffer `[ref]`$PermissionCache['LogBuffer']"
-    Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname" -Expand $Cache, $LogThis -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $Log = @{ ThisHostname = $ThisHostname ; Type = 'Debug' ; Buffer = $LogBuffer ; WhoAmI = $WhoAmI }
+    $LogMap = @{ ExpandKeyMap = @{ Cache = '[ref]$PermissionCache' } }
+    $LogEmptyMap = @{ ExpandKeyMap = @{} }
+    Write-LogMsg -Text '$StopWatch = [System.Diagnostics.Stopwatch]::new() ; $StopWatch.Start() # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text '$PermissionCache = New-PermissionCache # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text '$ThisHostname = HOSTNAME.EXE # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text "`$WhoAmI = Get-PermissionWhoAmI -ThisHostName '$ThisHostname'" -Suffix ' # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text "`$ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname" -Expand $LogThis, $Cache @Log @LogMap
     $ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname @Cache @LogThis
     $Fqdn = @{ ThisFqdn = $ThisFqdn }
-    Write-LogMsg @Log -Text '$TrustedDomains = Get-PermissionTrustedDomain' -Expand $Cache, $LogThis -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$TrustedDomains = Get-PermissionTrustedDomain' -Expand $Cache, $LogThis @Log @LogMap
     $TrustedDomains = Get-PermissionTrustedDomain @Cache @LogThis
     $LogThis['ProgressParentId'] = 0
 }
@@ -9515,7 +9615,8 @@ process {
     $Cmd = @{
         TargetPath = $TargetPath
     }
-    Write-LogMsg @Log -Text 'Resolve-PermissionTarget' -Suffix " # for $($TargetPath.Count) Target Paths" -Expand $Cmd, $LogThis, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $TargetCount = $TargetPath.Count
+    Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $LogThis, $Cache @Log @LogMap
     Resolve-PermissionTarget @Cmd @Cache @LogThis
 }
 end {
@@ -9529,7 +9630,7 @@ end {
         RecurseDepth = $RecurseDepth
     }
     $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Keys.Count
-    Write-LogMsg @Log -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parent Item Paths" -Expand $Cmd, $Threads, $LogThis, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Threads, $LogThis, $Cache @Log @LogMap
     $Items = Expand-PermissionTarget @Cmd @Cache @LogThis @Threads
     $ProgressUpdate = @{
         CurrentOperation = 'Get the ACL of each path'
@@ -9542,7 +9643,9 @@ end {
         TargetPath  = $Items
     }
     $ChildCount = $Items.Values.GetEnumerator().Count
-    Write-LogMsg @Log -Text 'Get-AccessControlList' -Suffix " # for $($ParentCount + $ChildCount) Item Paths ($ParentCount parents and $ChildCount children)" -Expand $Cmd, $Threads, $LogThis, $Cache -ExpandKeyMap @{ TargetPath = '$Items' ; Cache = '[ref]$PermissionCache' }
+    $ItemCount = $ParentCount + $ChildCount
+    $ExpandKeyMap = @{ TargetPath = '$Items' ; Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Get-AccessControlList' -Suffix " # for $ItemCount Items" -Expand $Cmd, $Threads, $LogThis, $Cache -ExpandKeyMap $ExpandKeyMap @Log
     Get-AccessControlList @Cmd @Cache @LogThis @Threads
     $ProgressUpdate = @{
         CurrentOperation = 'Get the FQDN of this computer, each trusted domain, and each server in the paths'
@@ -9555,7 +9658,7 @@ end {
         TargetPath = $Items
         ThisFqdn   = $ThisFqdn
     }
-    Write-LogMsg @Log -Text '$ServerFqdns = Find-ServerFqdn' -Expand $Cmd -ExpandKeyMap @{ TargetPath = '$Items' } -Suffix " # for $ParentCount Parent Item Paths"
+    Write-LogMsg -Text '$ServerFqdns = Find-ServerFqdn' -Suffix " # for $ParentCount Parent Item Paths" -Expand $Cmd -ExpandKeyMap @{ TargetPath = '$Items' } @Log
     $ServerFqdns = Find-ServerFqdn @Cmd
     $ProgressUpdate = @{
         CurrentOperation = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
@@ -9566,7 +9669,8 @@ end {
     $Cmd = @{
         Fqdn = $ServerFqdns
     }
-    Write-LogMsg @Log -Text 'Initialize-Cache' -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache -Suffix " # for $($ServerFqdns.Count) Server FQDNs" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $FqdnCount = $ServerFqdns.Count
+    Write-LogMsg -Text 'Initialize-Cache' -Suffix " # for $FqdnCount Server FQDNs" -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache @Log @LogMap
     Initialize-Cache @Cmd @Cache @LogThis @Fqdn @Threads
     $ProgressUpdate = @{
         CurrentOperation = 'Resolve each identity reference to its SID and NTAccount name'
@@ -9578,7 +9682,7 @@ end {
         InheritanceFlagResolved = $InheritanceFlagResolved
     }
     $AclCount = $PermissionCache['AclByPath'].Value.Keys.Count
-    Write-LogMsg @Log -Text 'Resolve-AccessControlList' -Expand $Threads, $Fqdn, $LogThis, $Cache, $Cmd -Suffix " # for $AclCount ACLs" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Resolve-AccessControlList' -Suffix " # for $AclCount ACLs" -Expand $Threads, $Fqdn, $LogThis, $Cache, $Cmd @Log @LogMap
     Resolve-AccessControlList @Cmd @Cache @LogThis @Fqdn @Threads
     $ProgressUpdate = @{
         CurrentOperation = 'Get the current domain'
@@ -9591,7 +9695,7 @@ end {
         ThisFqdn     = $ThisFqdn
         WhoAmI       = $WhoAmI
     }
-    Write-LogMsg @Log -Text '$CurrentDomain = Get-CurrentDomain' -Expand $Cmd, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$CurrentDomain = Get-CurrentDomain' -Expand $Cmd, $Cache @Log @LogMap
     $CurrentDomain = Get-CurrentDomain @Cmd @Cache
     $ProgressUpdate = @{
         CurrentOperation = 'Use ADSI to get details about each resolved identity reference'
@@ -9605,7 +9709,7 @@ end {
     }
     $AceCount = $PermissionCache['AceByGuid'].Value.Keys.Count
     $IdCount = $PermissionCache['AceGuidById'].Value.Keys.Count
-    Write-LogMsg @Log -Text 'Get-PermissionPrincipal' -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache -Suffix " # for $IdCount Identity References" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Get-PermissionPrincipal' -Suffix " # for $IdCount Identity References" -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache @Log @LogMap
     Get-PermissionPrincipal @Cmd @Cache @LogThis @Fqdn @Threads
     $ProgressUpdate = @{
         CurrentOperation = 'Join access rules with their associated accounts'
@@ -9618,7 +9722,7 @@ end {
         GroupBy  = $GroupBy
         SplitBy  = $SplitBy
     }
-    Write-LogMsg @Log -Text "`$Permissions = Expand-Permission" -Expand $Cmd, $LogThis, $Cache -Suffix " # for $AceCount ACEs in $AclCount ACLs" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text "`$Permissions = Expand-Permission" -Suffix " # for $AceCount ACEs in $AclCount ACLs" -Expand $Cmd, $LogThis, $Cache @Log @LogMap
     $Permissions = Expand-Permission @Cmd @Cache @LogThis
     $ProgressUpdate = @{
         CurrentOperation = 'Hide domain names and include/exclude accounts as specified'
@@ -9632,7 +9736,7 @@ end {
         IncludeAccount = $IncludeAccount
     }
     $PrincipalCount = $PermissionCache['PrincipalByID'].Value.Keys.Count
-    Write-LogMsg @Log -Text 'Select-PermissionPrincipal' -Expand $Cmd, $LogThis, $Cache -Suffix " # for $PrincipalCount Security Principals" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Select-PermissionPrincipal' -Suffix " # for $PrincipalCount Security Principals" -Expand $Cmd, $LogThis, $Cache @Log @LogMap
     Select-PermissionPrincipal @Cmd @Cache @LogThis
     $ProgressUpdate = @{
         CurrentOperation = 'Analyze the permissions against established best practices'
@@ -9644,7 +9748,7 @@ end {
         AllowDisabledInheritance = $Items
         AccountConvention        = $AccountConvention
     }
-    Write-LogMsg @Log -Text 'Invoke-PermissionAnalyzer' -Expand $Cmd, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Invoke-PermissionAnalyzer' -Expand $Cmd, $Cache @Log @LogMap
     $BestPracticeEval = Invoke-PermissionAnalyzer @Cmd @Cache
     $ProgressUpdate = @{
         CurrentOperation = 'Format the permissions'
@@ -9660,7 +9764,7 @@ end {
         OutputFormat = $OutputFormat
         Permission   = $Permissions
     }
-    Write-LogMsg @Log -Text '$FormattedPermissions = Format-Permission' -Expand $Cmd, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$FormattedPermissions = Format-Permission' -Expand $Cmd, $Cache @Log @LogMap
     $FormattedPermissions = Format-Permission @Cmd @Cache
     $ProgressUpdate = @{
         CurrentOperation = 'Export the report files'
@@ -9669,14 +9773,18 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        BestPracticeEval = $BestPracticeEval ; TargetPath = $TargetPath ; Permission = $Permissions ; FormattedPermission = $FormattedPermissions
+        BestPracticeEval = $BestPracticeEval; FormattedPermission = $FormattedPermissions ; Permission = $Permissions ; TargetPath = $TargetPath
         Detail = $Detail ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; FileFormat = $FileFormat ;
         GroupBy = $GroupBy ; IgnoreDomain = $IgnoreDomain ; OutputDir = $OutputDir ; OutputFormat = $OutputFormat ;
         NoMembers = $NoMembers ; RecurseDepth = $RecurseDepth ; SplitBy = $SplitBy ; Title = $Title ;
         LogFileList = $TranscriptFile, $LogFile ; LogParams = $Log ; StopWatch = $StopWatch
         ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn
+        TargetCount = $TargetCount ; ParentCount = $ParentCount ; ChildCount = $ChildCount ; FqdnCount = $FqdnCount ;
+        AclCount = $AclCount ; AceCount = $AceCount ; IdCount = $IdCount ; PrincipalCount = $PrincipalCount ; ItemCount = $ItemCount
     }
-    Write-LogMsg @Log -Text 'Out-PermissionFile' -Expand $Cmd, $Cache -Suffix " # for $($AceGuidByID.Keys.Count) Access Control Entries" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $ExpandKeyMap = $LogMap['ExpandKeyMap']
+    $ExpandKeyMap['StopWatch'] = '$StopWatch'
+    Write-LogMsg -Text 'Out-PermissionFile' -Suffix " # for $IdCount Access Control Entries" -Expand $Cmd, $Cache -ExpandKeyMap $ExpandKeyMap @Log
     $ReportFile = Out-PermissionFile @Cmd @Cache
     $ProgressUpdate = @{
         CurrentOperation = 'Open the HTML report file (if the -Interactive switch was used)'
@@ -9685,7 +9793,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     if ($Interactive -and $ReportFile) {
-        Write-LogMsg @Log -Text "Invoke-Item -Path '$ReportFile'"
+        Write-LogMsg -Text "Invoke-Item -Path '$ReportFile'" @Log @LogEmptyMap
         Invoke-Item -Path $ReportFile
     }
     $ProgressUpdate = @{
@@ -9701,7 +9809,7 @@ end {
         PrtgPort     = $PrtgPort
         PrtgToken    = $PrtgToken
     }
-    Write-LogMsg @Log -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd
+    Write-LogMsg -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd @Log @LogEmptyMap
     Send-PrtgXmlSensorOutput @Cmd
     $ProgressUpdate = @{
         CurrentOperation = 'Output the result to the pipeline'
@@ -9714,7 +9822,7 @@ end {
         GroupBy             = $GroupBy
         OutputFormat        = $OutputFormat
     }
-    Write-LogMsg @Log -Text 'Out-Permission' -Expand $Cmd -ExpandKeyMap @{ FormattedPermission = '$FormattedPermissions' }
+    Write-LogMsg -Text 'Out-Permission' -Expand $Cmd -ExpandKeyMap @{ FormattedPermission = '$FormattedPermissions' } @Log
     Out-Permission @Cmd
     $ProgressUpdate = @{
         CurrentOperation = 'Cleanup CIM sessions'
@@ -9722,7 +9830,7 @@ end {
         Status           = '85 % (step 18 of 20) Remove-CachedCimSession'
     }
     Write-Progress @Progress @ProgressUpdate
-    Write-LogMsg @Log -Text 'Remove-CachedCimSession -CimCache $CimCache'
+    Write-LogMsg -Text 'Remove-CachedCimSession -CimCache $CimCache' @Log @LogEmptyMap
     Remove-CachedCimSession -CimCache $CimCache
     $ProgressUpdate = @{
         CurrentOperation = 'Export the buffered log messages to a CSV file'
@@ -9736,7 +9844,7 @@ end {
         ThisHostname = $ThisHostname
         WhoAmI       = $WhoAmI
     }
-    Write-LogMsg @Log -Text 'Export-LogCsv' -Expand $Cmd -ExpandKeyMap @{ Buffer = '[ref]$LogBuffer' }
+    Write-LogMsg -Text 'Export-LogCsv' -Expand $Cmd -ExpandKeyMap @{ Buffer = '[ref]$LogBuffer' } @Log
     Export-LogCsv @Cmd
     Stop-Transcript  *>$null
     Write-Progress @Progress -Completed

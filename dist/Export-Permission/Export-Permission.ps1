@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.406
+.VERSION 0.0.407
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix output type
+cleanup
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ fix output type
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#
@@ -463,7 +464,7 @@ begin {
         Status           = '0% (step 1 of 20)'
     }
 
-    # Start the progress bar
+    # Start the progress bar.
     Write-Progress @Progress @ProgressUpdate
 
     #----------------[ Functions ]------------------
@@ -497,52 +498,47 @@ begin {
     # Create an in-process cache to reduce calls to other processes or to disk.
     $PermissionCache = New-PermissionCache
 
-    # Create a splat of the cache parameter to pass to various functions for script readability
-    $Cache = @{
-        Cache = [ref]$PermissionCache
-    }
+    # Create a splat of the cache parameter to pass to various functions for script readability.
+    $Cache = @{ Cache = [ref]$PermissionCache }
 
-    # Get the hostname of the computer running the script
+    # Get the hostname of the computer running the script.
     $ThisHostname = HOSTNAME.EXE
 
-    # Get the NTAccount caption of the user running the script, with the correct capitalization
-    $WhoAmI = Get-PermissionWhoAmI -ThisHostName $ThisHostname @Cache
+    # Get the NTAccount caption of the user running the script, with the correct capitalization.
+    $WhoAmI = Get-PermissionWhoAmI -ThisHostname $ThisHostname
 
-    # Create a splat of the ThreadCount parameter to pass to various functions for script readability
+    # Create a splat of the ThreadCount parameter to pass to various functions for script readability.
     $Threads = @{ ThreadCount = $ThreadCount }
 
-    # Create a splat of log-related parameters to pass to various functions for script readability
-    $LogThis = @{
-        ThisHostname = $ThisHostname
-        WhoAmI       = $WhoAmI
-    }
+    # Create a splat of log-related parameters to pass to various functions for script readability.
+    $LogThis = @{ ThisHostname = $ThisHostname ; WhoAmI = $WhoAmI }
 
-    # Create a splat of constant Write-LogMsg parameters for script readability
+    # Create a splat of constant Write-LogMsg parameters for script readability.
     $LogBuffer = [ref]$PermissionCache['LogBuffer']
-    $Log = @{
-        ThisHostname = $ThisHostname
-        Type         = 'Debug'
-        Buffer       = $LogBuffer
-        WhoAmI       = $WhoAmI
-    }
+    $Log = @{ ThisHostname = $ThisHostname ; Type = 'Debug' ; Buffer = $LogBuffer ; WhoAmI = $WhoAmI }
 
-    # These events already happened but we will log them now that we have the correct capitalization of the user
-    Write-LogMsg @Log -Text '$PermissionCache = New-PermissionCache'
-    Write-LogMsg @Log -Text '$ThisHostname = HOSTNAME.EXE'
-    Write-LogMsg @Log -Text "`$WhoAmI = Get-CurrentWhoAmI -ThisHostName '$ThisHostname' -LogBuffer `[ref]`$PermissionCache['LogBuffer']"
+    # Store the ExpandKeyMap parameter value in memory to avoid scriptblock evaluation in each Write-LogMsg call.
+    $LogMap = @{ ExpandKeyMap = @{ Cache = '[ref]$PermissionCache' } }
+    $LogEmptyMap = @{ ExpandKeyMap = @{} }
 
-    # Get the FQDN of the computer running the script
-    Write-LogMsg @Log -Text "`$ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname" -Expand $Cache, $LogThis -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    # These events already happened but we will log them now that we have the correct capitalization of the user.
+    Write-LogMsg -Text '$StopWatch = [System.Diagnostics.Stopwatch]::new() ; $StopWatch.Start() # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text '$PermissionCache = New-PermissionCache # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text '$ThisHostname = HOSTNAME.EXE # This command was already run but is now being logged' @Log @LogEmptyMap
+    Write-LogMsg -Text "`$WhoAmI = Get-PermissionWhoAmI -ThisHostName '$ThisHostname'" -Suffix ' # This command was already run but is now being logged' @Log @LogEmptyMap
+
+    # Get the FQDN of the computer running the script.
+    Write-LogMsg -Text "`$ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname" -Expand $LogThis, $Cache @Log @LogMap
     $ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname @Cache @LogThis
 
-    # Create a splat of the ThisFqdn parameter to pass to various functions for script readability
+    # Create a splat of the ThisFqdn parameter to pass to various functions for script readability.
     $Fqdn = @{ ThisFqdn = $ThisFqdn }
 
-    # Discover any domains trusted by the domain of the computer running the script
-    Write-LogMsg @Log -Text '$TrustedDomains = Get-PermissionTrustedDomain' -Expand $Cache, $LogThis -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    # Discover any domains trusted by the domain of the computer running the script.
+    Write-LogMsg -Text '$TrustedDomains = Get-PermissionTrustedDomain' -Expand $Cache, $LogThis @Log @LogMap
     $TrustedDomains = Get-PermissionTrustedDomain @Cache @LogThis
 
-    # Initialize the parent progress bar ID to pass to various functions for progress bar nesting
+    # Initialize the parent progress bar ID to pass to various functions for progress bar nesting.
     $LogThis['ProgressParentId'] = 0
 
 }
@@ -559,7 +555,8 @@ process {
     $Cmd = @{
         TargetPath = $TargetPath
     }
-    Write-LogMsg @Log -Text 'Resolve-PermissionTarget' -Suffix " # for $($TargetPath.Count) Target Paths" -Expand $Cmd, $LogThis, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $TargetCount = $TargetPath.Count
+    Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $LogThis, $Cache @Log @LogMap
     Resolve-PermissionTarget @Cmd @Cache @LogThis
 
 }
@@ -576,7 +573,7 @@ end {
         RecurseDepth = $RecurseDepth
     }
     $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Keys.Count
-    Write-LogMsg @Log -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parent Item Paths" -Expand $Cmd, $Threads, $LogThis, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Threads, $LogThis, $Cache @Log @LogMap
     $Items = Expand-PermissionTarget @Cmd @Cache @LogThis @Threads
 
     $ProgressUpdate = @{
@@ -590,7 +587,9 @@ end {
         TargetPath  = $Items
     }
     $ChildCount = $Items.Values.GetEnumerator().Count
-    Write-LogMsg @Log -Text 'Get-AccessControlList' -Suffix " # for $($ParentCount + $ChildCount) Item Paths ($ParentCount parents and $ChildCount children)" -Expand $Cmd, $Threads, $LogThis, $Cache -ExpandKeyMap @{ TargetPath = '$Items' ; Cache = '[ref]$PermissionCache' }
+    $ItemCount = $ParentCount + $ChildCount
+    $ExpandKeyMap = @{ TargetPath = '$Items' ; Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Get-AccessControlList' -Suffix " # for $ItemCount Items" -Expand $Cmd, $Threads, $LogThis, $Cache -ExpandKeyMap $ExpandKeyMap @Log
     Get-AccessControlList @Cmd @Cache @LogThis @Threads
 
     $ProgressUpdate = @{
@@ -604,7 +603,7 @@ end {
         TargetPath = $Items
         ThisFqdn   = $ThisFqdn
     }
-    Write-LogMsg @Log -Text '$ServerFqdns = Find-ServerFqdn' -Expand $Cmd -ExpandKeyMap @{ TargetPath = '$Items' } -Suffix " # for $ParentCount Parent Item Paths"
+    Write-LogMsg -Text '$ServerFqdns = Find-ServerFqdn' -Suffix " # for $ParentCount Parent Item Paths" -Expand $Cmd -ExpandKeyMap @{ TargetPath = '$Items' } @Log
     $ServerFqdns = Find-ServerFqdn @Cmd
 
     $ProgressUpdate = @{
@@ -616,7 +615,8 @@ end {
     $Cmd = @{
         Fqdn = $ServerFqdns
     }
-    Write-LogMsg @Log -Text 'Initialize-Cache' -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache -Suffix " # for $($ServerFqdns.Count) Server FQDNs" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $FqdnCount = $ServerFqdns.Count
+    Write-LogMsg -Text 'Initialize-Cache' -Suffix " # for $FqdnCount Server FQDNs" -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache @Log @LogMap
     Initialize-Cache @Cmd @Cache @LogThis @Fqdn @Threads
 
     # The resolved name will include the domain name (or local computer name for local accounts)
@@ -630,7 +630,7 @@ end {
         InheritanceFlagResolved = $InheritanceFlagResolved
     }
     $AclCount = $PermissionCache['AclByPath'].Value.Keys.Count
-    Write-LogMsg @Log -Text 'Resolve-AccessControlList' -Expand $Threads, $Fqdn, $LogThis, $Cache, $Cmd -Suffix " # for $AclCount ACLs" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Resolve-AccessControlList' -Suffix " # for $AclCount ACLs" -Expand $Threads, $Fqdn, $LogThis, $Cache, $Cmd @Log @LogMap
     Resolve-AccessControlList @Cmd @Cache @LogThis @Fqdn @Threads
 
     $ProgressUpdate = @{
@@ -644,7 +644,7 @@ end {
         ThisFqdn     = $ThisFqdn
         WhoAmI       = $WhoAmI
     }
-    Write-LogMsg @Log -Text '$CurrentDomain = Get-CurrentDomain' -Expand $Cmd, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$CurrentDomain = Get-CurrentDomain' -Expand $Cmd, $Cache @Log @LogMap
     $CurrentDomain = Get-CurrentDomain @Cmd @Cache
 
     $ProgressUpdate = @{
@@ -659,7 +659,7 @@ end {
     }
     $AceCount = $PermissionCache['AceByGuid'].Value.Keys.Count
     $IdCount = $PermissionCache['AceGuidById'].Value.Keys.Count
-    Write-LogMsg @Log -Text 'Get-PermissionPrincipal' -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache -Suffix " # for $IdCount Identity References" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Get-PermissionPrincipal' -Suffix " # for $IdCount Identity References" -Expand $Cmd, $Threads, $LogThis, $Fqdn, $Cache @Log @LogMap
     Get-PermissionPrincipal @Cmd @Cache @LogThis @Fqdn @Threads
 
     $ProgressUpdate = @{
@@ -673,7 +673,7 @@ end {
         GroupBy  = $GroupBy
         SplitBy  = $SplitBy
     }
-    Write-LogMsg @Log -Text "`$Permissions = Expand-Permission" -Expand $Cmd, $LogThis, $Cache -Suffix " # for $AceCount ACEs in $AclCount ACLs" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text "`$Permissions = Expand-Permission" -Suffix " # for $AceCount ACEs in $AclCount ACLs" -Expand $Cmd, $LogThis, $Cache @Log @LogMap
     $Permissions = Expand-Permission @Cmd @Cache @LogThis
 
     $ProgressUpdate = @{
@@ -688,7 +688,7 @@ end {
         IncludeAccount = $IncludeAccount
     }
     $PrincipalCount = $PermissionCache['PrincipalByID'].Value.Keys.Count
-    Write-LogMsg @Log -Text 'Select-PermissionPrincipal' -Expand $Cmd, $LogThis, $Cache -Suffix " # for $PrincipalCount Security Principals" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Select-PermissionPrincipal' -Suffix " # for $PrincipalCount Security Principals" -Expand $Cmd, $LogThis, $Cache @Log @LogMap
     Select-PermissionPrincipal @Cmd @Cache @LogThis
 
     $ProgressUpdate = @{
@@ -701,7 +701,7 @@ end {
         AllowDisabledInheritance = $Items
         AccountConvention        = $AccountConvention
     }
-    Write-LogMsg @Log -Text 'Invoke-PermissionAnalyzer' -Expand $Cmd, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text 'Invoke-PermissionAnalyzer' -Expand $Cmd, $Cache @Log @LogMap
     $BestPracticeEval = Invoke-PermissionAnalyzer @Cmd @Cache
 
     $ProgressUpdate = @{
@@ -718,7 +718,7 @@ end {
         OutputFormat = $OutputFormat
         Permission   = $Permissions
     }
-    Write-LogMsg @Log -Text '$FormattedPermissions = Format-Permission' -Expand $Cmd, $Cache -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    Write-LogMsg -Text '$FormattedPermissions = Format-Permission' -Expand $Cmd, $Cache @Log @LogMap
     $FormattedPermissions = Format-Permission @Cmd @Cache
 
     $ProgressUpdate = @{
@@ -730,7 +730,7 @@ end {
     $Cmd = @{
 
         # Objects as they progressed through the data pipeline
-        BestPracticeEval = $BestPracticeEval ; TargetPath = $TargetPath ; Permission = $Permissions ; FormattedPermission = $FormattedPermissions
+        BestPracticeEval = $BestPracticeEval; FormattedPermission = $FormattedPermissions ; Permission = $Permissions ; TargetPath = $TargetPath
 
         # Parameters
         Detail = $Detail ; ExcludeAccount = $ExcludeAccount ; ExcludeClass = $ExcludeClass ; FileFormat = $FileFormat ;
@@ -741,8 +741,14 @@ end {
         LogFileList = $TranscriptFile, $LogFile ; LogParams = $Log ; StopWatch = $StopWatch
         ReportInstanceId = $ReportInstanceId ; WhoAmI = $WhoAmI ; ThisFqdn = $ThisFqdn
 
+        # Measurements taken
+        TargetCount = $TargetCount ; ParentCount = $ParentCount ; ChildCount = $ChildCount ; FqdnCount = $FqdnCount ;
+        AclCount = $AclCount ; AceCount = $AceCount ; IdCount = $IdCount ; PrincipalCount = $PrincipalCount ; ItemCount = $ItemCount
+
     }
-    Write-LogMsg @Log -Text 'Out-PermissionFile' -Expand $Cmd, $Cache -Suffix " # for $($AceGuidByID.Keys.Count) Access Control Entries" -ExpandKeyMap @{ Cache = '[ref]$PermissionCache' }
+    $ExpandKeyMap = $LogMap['ExpandKeyMap']
+    $ExpandKeyMap['StopWatch'] = '$StopWatch'
+    Write-LogMsg -Text 'Out-PermissionFile' -Suffix " # for $IdCount Access Control Entries" -Expand $Cmd, $Cache -ExpandKeyMap $ExpandKeyMap @Log
     $ReportFile = Out-PermissionFile @Cmd @Cache
 
     $ProgressUpdate = @{
@@ -752,7 +758,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     if ($Interactive -and $ReportFile) {
-        Write-LogMsg @Log -Text "Invoke-Item -Path '$ReportFile'"
+        Write-LogMsg -Text "Invoke-Item -Path '$ReportFile'" @Log @LogEmptyMap
         Invoke-Item -Path $ReportFile
     }
 
@@ -769,7 +775,7 @@ end {
         PrtgPort     = $PrtgPort
         PrtgToken    = $PrtgToken
     }
-    Write-LogMsg @Log -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd
+    Write-LogMsg -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd @Log @LogEmptyMap
     Send-PrtgXmlSensorOutput @Cmd
 
     $ProgressUpdate = @{
@@ -783,7 +789,7 @@ end {
         GroupBy             = $GroupBy
         OutputFormat        = $OutputFormat
     }
-    Write-LogMsg @Log -Text 'Out-Permission' -Expand $Cmd -ExpandKeyMap @{ FormattedPermission = '$FormattedPermissions' }
+    Write-LogMsg -Text 'Out-Permission' -Expand $Cmd -ExpandKeyMap @{ FormattedPermission = '$FormattedPermissions' } @Log
     Out-Permission @Cmd
 
     $ProgressUpdate = @{
@@ -792,7 +798,7 @@ end {
         Status           = '85 % (step 18 of 20) Remove-CachedCimSession'
     }
     Write-Progress @Progress @ProgressUpdate
-    Write-LogMsg @Log -Text 'Remove-CachedCimSession -CimCache $CimCache'
+    Write-LogMsg -Text 'Remove-CachedCimSession -CimCache $CimCache' @Log @LogEmptyMap
     Remove-CachedCimSession -CimCache $CimCache
 
     $ProgressUpdate = @{
@@ -807,7 +813,7 @@ end {
         ThisHostname = $ThisHostname
         WhoAmI       = $WhoAmI
     }
-    Write-LogMsg @Log -Text 'Export-LogCsv' -Expand $Cmd -ExpandKeyMap @{ Buffer = '[ref]$LogBuffer' }
+    Write-LogMsg -Text 'Export-LogCsv' -Expand $Cmd -ExpandKeyMap @{ Buffer = '[ref]$LogBuffer' } @Log
     Export-LogCsv @Cmd
 
     Stop-Transcript  *>$null
