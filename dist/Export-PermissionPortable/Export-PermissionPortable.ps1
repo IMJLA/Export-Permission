@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.407
+.VERSION 0.0.408
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -6210,9 +6210,11 @@ function Find-ResolvedIDsWithAccess {
 function Find-ServerFqdn {
     param (
         [string[]]$Known,
-        [Hashtable]$TargetPath,
         [String]$ThisFqdn = ([System.Net.Dns]::GetHostByName((HOSTNAME.EXE)).HostName),
-        [int]$ProgressParentId
+        [int]$ProgressParentId,
+        [uint64]$ParentCount,
+        [Parameter(Mandatory)]
+        [ref]$Cache
     )
     $Progress = @{
         Activity = 'Find-ServerFqdn'
@@ -6224,8 +6226,7 @@ function Find-ServerFqdn {
         $ProgressId = 0
     }
     $Progress['Id'] = $ProgressId
-    $Count = $TargetPath.Keys.Count
-    Write-Progress @Progress -Status "0% (path 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
+    Write-Progress @Progress -Status "0% (path 0 of $ParentCount)" -CurrentOperation 'Initializing' -PercentComplete 0
     $UniqueValues = @{
         $ThisFqdn = $null
     }
@@ -6236,12 +6237,12 @@ function Find-ServerFqdn {
     $ProgressStopWatch.Start()
     $LastRemainder = [int]::MaxValue
     $i = 0
-    ForEach ($ThisPath in $TargetPath.Keys) {
+    ForEach ($ThisPath in $Cache['ParentByTargetPath'].Value.Values) {
         $NewRemainder = $ProgressStopWatch.ElapsedTicks % 5000
         if ($NewRemainder -lt $LastRemainder) {
             $LastRemainder = $NewRemainder
-            [int]$PercentComplete = $i / $Count * 100
-            Write-Progress @Progress -Status "$PercentComplete% (path $($i + 1) of $Count)" -CurrentOperation "Find-ServerNameInPath '$ThisPath'" -PercentComplete $PercentComplete
+            [int]$PercentComplete = $i / $ParentCount * 100
+            Write-Progress @Progress -Status "$PercentComplete% (path $($i + 1) of $ParentCount)" -CurrentOperation "Find-ServerNameInPath '$ThisPath'" -PercentComplete $PercentComplete
         }
         $i++ 
         $UniqueValues[(Find-ServerNameInPath -LiteralPath $ThisPath -ThisFqdn $ThisFqdn)] = $null
@@ -9629,7 +9630,7 @@ end {
     $Cmd = @{
         RecurseDepth = $RecurseDepth
     }
-    $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Keys.Count
+    $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Values.Count
     Write-LogMsg -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Threads, $LogThis, $Cache @Log @LogMap
     $Items = Expand-PermissionTarget @Cmd @Cache @LogThis @Threads
     $ProgressUpdate = @{
@@ -9654,12 +9655,12 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        Known      = $TrustedDomains.DomainFqdn
-        TargetPath = $Items
-        ThisFqdn   = $ThisFqdn
+        Known       = $TrustedDomains.DomainFqdn
+        ParentCount = $ParentCount
+        ThisFqdn    = $ThisFqdn
     }
-    Write-LogMsg -Text '$ServerFqdns = Find-ServerFqdn' -Suffix " # for $ParentCount Parent Item Paths" -Expand $Cmd -ExpandKeyMap @{ TargetPath = '$Items' } @Log
-    $ServerFqdns = Find-ServerFqdn @Cmd
+    Write-LogMsg -Text '$ServerFqdns = Find-ServerFqdn' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Cache @Log @LogMap
+    $ServerFqdns = Find-ServerFqdn @Cmd @Cache
     $ProgressUpdate = @{
         CurrentOperation = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
         PercentComplete  = 25

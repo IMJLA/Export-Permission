@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.407
+.VERSION 0.0.408
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -39,6 +39,7 @@ cleanup
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -337,8 +338,11 @@ param (
     #>
     [scriptblock]$AccountConvention = { $true },
 
-    # Number of asynchronous threads to use
-    # Recommended starting with the # of logical CPUs (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
+    <#
+    Number of asynchronous threads to use
+    Recommended starting with the # of logical CPUs:
+    (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
+    #>
     [uint16]$ThreadCount = 1,
 
     # Open the HTML report after the script is finished using Invoke-Item (only useful interactively)
@@ -572,7 +576,7 @@ end {
     $Cmd = @{
         RecurseDepth = $RecurseDepth
     }
-    $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Keys.Count
+    $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Values.Count
     Write-LogMsg -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Threads, $LogThis, $Cache @Log @LogMap
     $Items = Expand-PermissionTarget @Cmd @Cache @LogThis @Threads
 
@@ -599,12 +603,12 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        Known      = $TrustedDomains.DomainFqdn
-        TargetPath = $Items
-        ThisFqdn   = $ThisFqdn
+        Known       = $TrustedDomains.DomainFqdn
+        ParentCount = $ParentCount
+        ThisFqdn    = $ThisFqdn
     }
-    Write-LogMsg -Text '$ServerFqdns = Find-ServerFqdn' -Suffix " # for $ParentCount Parent Item Paths" -Expand $Cmd -ExpandKeyMap @{ TargetPath = '$Items' } @Log
-    $ServerFqdns = Find-ServerFqdn @Cmd
+    Write-LogMsg -Text '$ServerFqdns = Find-ServerFqdn' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Cache @Log @LogMap
+    $ServerFqdns = Find-ServerFqdn @Cmd @Cache
 
     $ProgressUpdate = @{
         CurrentOperation = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
