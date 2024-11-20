@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.408
+.VERSION 0.0.409
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-cleanup
+expand cache usage
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ cleanup
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -522,7 +523,7 @@ begin {
     $Log = @{ ThisHostname = $ThisHostname ; Type = 'Debug' ; Buffer = $LogBuffer ; WhoAmI = $WhoAmI }
 
     # Store the ExpandKeyMap parameter value in memory to avoid scriptblock evaluation in each Write-LogMsg call.
-    $LogMap = @{ ExpandKeyMap = @{ Cache = '[ref]$PermissionCache' } }
+    $LogMap = @{ ExpandKeyMap = @{ Cache = '([ref]$PermissionCache)' } }
     $LogEmptyMap = @{ ExpandKeyMap = @{} }
 
     # These events already happened but we will log them now that we have the correct capitalization of the user.
@@ -539,8 +540,8 @@ begin {
     $Fqdn = @{ ThisFqdn = $ThisFqdn }
 
     # Discover any domains trusted by the domain of the computer running the script.
-    Write-LogMsg -Text '$TrustedDomains = Get-PermissionTrustedDomain' -Expand $Cache, $LogThis @Log @LogMap
-    $TrustedDomains = Get-PermissionTrustedDomain @Cache @LogThis
+    Write-LogMsg -Text 'Get-PermissionTrustedDomain' -Expand $Cache, $LogThis @Log @LogMap
+    Get-PermissionTrustedDomain @Cache @LogThis
 
     # Initialize the parent progress bar ID to pass to various functions for progress bar nesting.
     $LogThis['ProgressParentId'] = 0
@@ -603,7 +604,6 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        Known       = $TrustedDomains.DomainFqdn
         ParentCount = $ParentCount
         ThisFqdn    = $ThisFqdn
     }
