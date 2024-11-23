@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.410
+.VERSION 0.0.411
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add AccountProperty param as far as Get-PermissionPrincipal in prep for implementation in report
+implement simplified get-currentdomain for bugfix
 
 .PRIVATEDATA
 
@@ -2592,57 +2592,10 @@ function Get-CurrentDomain {
     }
     $Comp = Get-CachedCimInstance -ClassName Win32_ComputerSystem -KeyProperty Name @CimParams
     if ($Comp.Domain -eq 'WORKGROUP') {
-        $SIDString = Find-LocalAdsiServerSid @CimParams
-        $SID = $SIDString | ConvertTo-SidByteArray
-        $DomainDns = $ComputerName
-        $DomainNetBIOS = $ComputerName
-        $OutputProperties = @{
-            Dns               = $DomainDns
-            Netbios           = $DomainNetBIOS
-            SIDString         = $SIDString
-            ObjectSid         = [PSCustomObject]@{
-                Value = $Sid
-            }
-            DistinguishedName = [PSCustomObject]@{
-                Value = "DC=$ComputerName"
-            }
-        }
+        Get-AdsiServer -Fqdn $ComputerName -ThisFqdn $ThisFqdn -Cache $Cache
     } else {
-        $DomainDns = $Comp.Domain
-        $AdsiServer = Get-AdsiServer -Fqdn $DomainDns -ThisFqdn $ThisFqdn -Cache $Cache
-        if ($AdsiServer) {
-            return $AdsiServer
-        }
-        Write-LogMsg @Log -Text "[adsi]::new().RefreshCache('objectSid')"
-        $CurrentDomain = [adsi]::new()
-        try {
-            $null = $CurrentDomain.RefreshCache('objectSid')
-        } catch {
-            Write-LogMsg @Log -Text " # $($_.Exception.Message) # for ComputerName '$ComputerName'"
-            return
-        }
-        Write-LogMsg @Log -Text "[System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0)# for '$ComputerName'"
-        $SIDString = & { [System.Security.Principal.SecurityIdentifier]::new([byte[]]$CurrentDomain.objectSid.Value, 0) } 2>$null
-        $OutputProperties = @{
-            Dns       = $DomainDns
-            Netbios   = $DomainNetBIOS
-            SIDString = $SIDString
-        }
-        if ($CurrentDomain -is [System.Collections.IEnumerable]) {
-            $FirstDomain = $CurrentDomain[0]
-        } else {
-            $FirstDomain = $CurrentDomain
-        }
-        $InputProperties = $FirstDomain.PSObject.Properties.GetEnumerator().Name
-        ForEach ($ThisProperty in $InputProperties) {
-            $OutputProperties[$ThisProperty] = $FirstDomain.$ThisProperty
-        }
+        Get-AdsiServer -Fqdn $Comp.Domain -ThisFqdn $ThisFqdn -Cache $Cache
     }
-    $OutputObject = [PSCustomObject]$OutputProperties
-    $Cache.Value['DomainByFqdn'].Value[$DomainDnsName] = $OutputObject
-    $Cache.Value['DomainByNetbios'].Value[$DomainNetBIOS] = $OutputObject
-    $Cache.Value['DomainBySid'].Value[$DomainSid] = $OutputObject
-    return $OutputObject
 }
 function Get-DirectoryEntry {
     [OutputType([System.DirectoryServices.DirectoryEntry], [PSCustomObject])]
@@ -5689,8 +5642,8 @@ function Resolve-IdentityReferenceDomainDNS {
         $IndexOfLastHyphen = $IdentityReference.LastIndexOf('-')
         $DomainSid = $IdentityReference.Substring(0, $IndexOfLastHyphen)
         if ($DomainSid) {
-            $DomainCacheResult = $null
-            if ($Cache.Value['DomainBySid'].Value.TryGetValue( $DomainSid, [ref]$DomainCacheResult )) {
+            $DomainCacheResult = $Cache.Value['DomainBySid'].Value[$DomainSid]
+            if ($DomainCacheResult) {
                 return $DomainCacheResult.Dns
             }
             $KnownSid = Get-KnownSid -SID $IdentityReference
@@ -5718,8 +5671,8 @@ function Resolve-IdentityReferenceDomainDNS {
             $DomainDNS = Find-ServerNameInPath -LiteralPath $ItemPath -ThisFqdn $ThisFqdn
             return $DomainDNS
         }
-        $DomainCacheResult = $null
-        if ($Cache.Value['DomainByNetbios'].Value.TryGetValue( $DomainNetBIOS, [ref]$DomainCacheResult )) {
+        $DomainCacheResult = $Cache.Value['DomainByNetbios'].Value[$DomainNetBIOS]
+        if ($CDomainCacheResult) {
             return $DomainCacheResult.Dns
         }
         $ThisServerDn = ConvertTo-DistinguishedName -Domain $DomainNetBIOS -ThisFqdn $ThisFqdn @LogThis
@@ -6016,13 +5969,12 @@ function Add-PermissionCacheItem {
         $Value,
         [type]$Type = [System.Object]
     )
-    $List = $null
-    $AddOrUpdateScriptblock = { param($key, $val) $val }
-    if ( -not $Cache.Value.TryGetValue( $Key, [ref]$List ) ) {
+    $List = $Cache.Value[$Key]
+    if ( -not $List ) {
         $genericTypeDefinition = [System.Collections.Generic.List`1]
         $genericType = $genericTypeDefinition.MakeGenericType($Type)
         $List = [Activator]::CreateInstance($genericType)
-        $null = $Cache.Value.AddOrUpdate($Key, $List, $AddOrUpdateScriptblock)
+        $Cache.Value[$Key] = $List
     }
     $List.Add($Value)
 }
@@ -6646,19 +6598,18 @@ function Get-CachedCimInstance {
     } else {
         $InstanceCacheKey = "$Query`By$KeyProperty"
     }
-    $CimServer = $null
-    $AddOrUpdateScriptblock = { param($key, $val) $val }
     $CimCache = $Cache.Value['CimCache']
+    $CimServer = $CimCache.Value[$ComputerName]
     $String = [type]'String'
-    if ( $CimCache.Value.TryGetValue( $ComputerName , [ref]$CimServer ) ) {
-        $InstanceCache = $null
-        if ( $CimServer.Value.TryGetValue( $InstanceCacheKey , [ref]$InstanceCache ) ) {
+    if ($CimServer) {
+        $InstanceCache = $CimServer.Value[$InstanceCacheKey]
+        if ($InstanceCache) {
             return $InstanceCache.Value.Values
         } else {
         }
     } else {
         $CimServer = New-PermissionCacheRef -Key $String -Value ([type]'System.Management.Automation.PSReference')
-        $null = $CimCache.Value.AddOrUpdate( $ComputerName , $CimServer, $AddOrUpdateScriptblock )
+        $CimCache.Value[$ComputerName] = $CimServer
     }
     $GetCimSessionParams = @{
         Cache             = $Cache
@@ -6694,11 +6645,11 @@ function Get-CachedCimInstance {
                 } else {
                     $InstanceCacheKey = "$Query`By$Prop"
                 }
-                $null = $CimServer.Value.AddOrUpdate( $InstanceCacheKey , $InstanceCache, $AddOrUpdateScriptblock  )
+                $CimServer.Value[$InstanceCacheKey] = $InstanceCache
                 ForEach ($Instance in $CimInstance) {
                     $InstancePropertyValue = $Instance.$Prop
                     Write-LogMsg @Log -Text " # Add '$InstancePropertyValue' to the '$InstanceCacheKey' cache for '$ComputerName'"
-                    $null = $InstanceCache.Value.AddOrUpdate( $InstancePropertyValue , $Instance , $AddOrUpdateScriptblock  )
+                    $InstanceCache.Value[$InstancePropertyValue] = $Instance
                 }
             }
             return $CimInstance
@@ -6725,23 +6676,22 @@ function Get-CachedCimSession {
         Type         = $DebugOutputStream
         WhoAmI       = $WhoAmI
     }
-    $AddOrUpdateScriptblock = { param($key, $val) $val }
     $CimCache = $Cache.Value['CimCache']
-    $CimServer = $null
+    $CimServer = $CimCache.Value[$ComputerName]
     $String = [type]'String'
-    if ( $CimCache.Value.TryGetValue( $ComputerName , [ref]$CimServer ) ) {
-        $CimSession = $null
-        if ( $CimServer.Value.TryGetValue( 'CimSession' , [ref]$CimSession ) ) {
+    if ( $CimServer ) {
+        $CimSession = $CimServer.Value['CimSession']
+        if ( $CimSession ) {
             return $CimSession.Value
         } else {
-            $PastFailures = $null
-            if ( $CimServer.Value.TryGetValue( 'CimFailure' , [ref]$PastFailures ) ) {
+            $PastFailures = $CimServer.Value['CimFailure']
+            if ( $PastFailures ) {
                 return
             }
         }
     } else {
         $CimServer = New-PermissionCacheRef -Key $String -Value ([type]'System.Management.Automation.PSReference')
-        $null = $CimCache.Value.AddOrUpdate( $ComputerName , $CimServer, $AddOrUpdateScriptblock )
+        $CimCache.Value[$ComputerName] = $CimServer
     }
     $CimErrors = $null
     if (
@@ -6763,11 +6713,11 @@ function Get-CachedCimSession {
         ForEach ($thisErr in $CimErrors) {
             Write-LogMsg @Log -Text "  connection error: $($thisErr.Exception.Message -replace  '\s', ' ' )) # for '$ComputerName'"
         }
-        $null = $CimServer.Value.AddOrUpdate( 'CimFailure' , $CimErrors , $AddOrUpdateScriptblock )
+        $CimServer.Value['CimFailure'] = $CimErrors
         return
     }
     if ($CimSession) {
-        $null = $CimServer.Value.AddOrUpdate( 'CimSession' , $CimSession , $AddOrUpdateScriptblock )
+        $CimServer.Value['CimSession'] = $CimSession
         return $CimSession
     } else {
         $Log['Type'] = 'Warning'
