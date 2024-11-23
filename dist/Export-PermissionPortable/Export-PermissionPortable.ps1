@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.411
+.VERSION 0.0.412
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement simplified get-currentdomain for bugfix
+implement AccountProperty param
 
 .PRIVATEDATA
 
@@ -4187,7 +4187,7 @@ function ConvertTo-PermissionGroup {
         [String]$Format,
         [ValidateSet('account', 'item', 'none', 'target')]
         [String]$GroupBy = 'item',
-        [string[]]$AccountProperty = @('Account', 'Name', 'DisplayName', 'Description', 'Department', 'Title'),
+        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description'),
         [string[]]$ItemProperty = @('Folder', 'Inheritance'),
         [Hashtable]$HowToSplit
     )
@@ -4215,7 +4215,7 @@ function ConvertTo-PermissionGroup {
             }
             switch ($GroupBy) {
                 'account' {
-                    $OrderedProperties = $AccountProperty
+                    [string[]]$OrderedProperties = @('Account', 'Name') + $AccountProperty
                     $JavaScriptTable['SearchableColumn'] = $OrderedProperties
                     break
                 }
@@ -4250,7 +4250,8 @@ function ConvertTo-PermissionList {
         [ValidateSet('account', 'item', 'none', 'target')]
         [String]$GroupBy = 'item',
         [Hashtable]$HowToSplit,
-        [PSCustomObject]$Analysis
+        [PSCustomObject]$Analysis,
+        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     switch ($Format) {
         'csv' {
@@ -4386,22 +4387,25 @@ function ConvertTo-PermissionList {
                 $Heading = New-HtmlHeading "Permissions in $NetworkPath" -Level 6
                 $StartingPermissions = $Permission.Values | Sort-Object -Property Item, Account
                 $ObjectsForJsonData = ForEach ($Obj in $StartingPermissions) {
-                    [PSCustomObject]@{
+                    $Props = [ordered]@{
                         Item              = $Obj.Item
                         Account           = $Obj.Account
                         Access            = $Obj.Access
                         DuetoMembershipIn = $Obj.'Due to Membership In'
                         SourceofAccess    = $Obj.'Source of Access'
                         Name              = $Obj.Name
-                        Department        = $Obj.Department
-                        Title             = $Obj.Title
                     }
+                    ForEach ($PropName in $AccountProperty) {
+                        $Props[$PropName] = $Obj.$PropName
+                    }
+                    [PSCustomObject]$Props
                 }
                 $TableId = 'Perms'
                 $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable -PageSize 25
+                [string[]]$PropNames = @('Item', 'Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                 [PSCustomObject]@{
                     PSTypeName = 'Permission.PermissionList'
-                    Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames Item, Account, Access, 'Due to Membership In', 'Source of Access', Name, Department, Title
+                    Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
                     Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
                     Div        = New-BootstrapDiv -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
                     PassThru   = $ObjectsForJsonData
@@ -4443,21 +4447,24 @@ function ConvertTo-PermissionList {
                             $StartingPermissions = $Permission[$GroupID]
                             if ($StartingPermissions) {
                                 $ObjectsForJsonData = ForEach ($Obj in $StartingPermissions) {
-                                    [PSCustomObject]@{
+                                    $Props = [ordered]@{
                                         Account           = $Obj.Account
                                         Access            = $Obj.Access
                                         DuetoMembershipIn = $Obj.'Due to Membership In'
                                         SourceofAccess    = $Obj.'Source of Access'
                                         Name              = $Obj.Name
-                                        Department        = $Obj.Department
-                                        Title             = $Obj.Title
                                     }
+                                    ForEach ($PropName in $AccountProperty) {
+                                        $Props[$PropName] = $Obj.$PropName
+                                    }
+                                    [PSCustomObject]$Props
                                 }
                                 $TableId = "Perms_$($GroupID -replace '[^A-Za-z0-9\-_]', '-')"
                                 $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable
+                                [string[]]$PropNames = @('Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                                 [PSCustomObject]@{
                                     PSTypeName = 'Permission.ItemPermissionList'
-                                    Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames Account, Access, 'Due to Membership In', 'Source of Access', Name, Department, Title
+                                    Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
                                     Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
                                     Div        = New-BootstrapDiv -Text ($Heading + $SubHeading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
                                     Grouping   = $GroupID
@@ -4474,22 +4481,25 @@ function ConvertTo-PermissionList {
                             $Heading = New-HtmlHeading "Permissions in $GroupID" -Level 5
                             $StartingPermissions = $Permission[$GroupID]
                             $ObjectsForJsonData = ForEach ($Obj in $StartingPermissions) {
-                                [PSCustomObject]@{
+                                $Props = [ordered]@{
                                     Item              = $Obj.Item
                                     Account           = $Obj.Account
                                     Access            = $Obj.Access
                                     DuetoMembershipIn = $Obj.'Due to Membership In'
                                     SourceofAccess    = $Obj.'Source of Access'
                                     Name              = $Obj.Name
-                                    Department        = $Obj.Department
-                                    Title             = $Obj.Title
                                 }
+                                ForEach ($PropName in $AccountProperty) {
+                                    $Props[$PropName] = $Obj.$PropName
+                                }
+                                [PSCustomObject]$Props
                             }
                             $TableId = "Perms_$($GroupID -replace '[^A-Za-z0-9\-_]', '-')"
                             $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable -PageSize 25
+                            [string[]]$PropNames = @('Item', 'Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                             [PSCustomObject]@{
                                 PSTypeName = 'Permission.TargetPermissionList'
-                                Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames Item, Account, Access, 'Due to Membership In', 'Source of Access', Name, Department, Title
+                                Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
                                 Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
                                 Div        = New-BootstrapDiv -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
                                 Grouping   = $GroupID
@@ -5709,19 +5719,22 @@ function Select-AccountTableProperty {
     param (
         $InputObject,
         [cultureinfo]$Culture = (Get-Culture), 
-        [Hashtable]$ShortNameByID = [Hashtable]::Synchronized(@{})
+        [Hashtable]$ShortNameByID = [Hashtable]::Synchronized(@{}),
+        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     ForEach ($Object in $InputObject) {
         $AccountName = $ShortNameByID[$Object.Account.ResolvedAccountName]
         if ($AccountName) {
-            [PSCustomObject]@{
+            $Props = [ordered]@{
                 Account     = $AccountName
                 Name        = $Object.Account.Name
                 DisplayName = $Object.Account.DisplayName
                 Description = $Object.Account.Description
-                Department  = $Object.Account.Department
-                Title       = $Object.Account.Title
             }
+            ForEach ($PropName in $AccountProperty) {
+                $Props[$PropName] = $Object.Account.$PropName
+            }
+            [PSCustomObject]$Props
         }
     }
 }
@@ -5752,7 +5765,8 @@ function Select-PermissionTableProperty {
         [ref]$ShortNameByID = @{},
         [hashtable]$OutputHash = @{},
         [ref]$ExcludeClassFilterContents = @{},
-        [ref]$IncludeAccountFilterContents = @{}
+        [ref]$IncludeAccountFilterContents = @{},
+        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     $Type = [PSCustomObject]
     $IncludeFilterCount = $IncludeAccountFilterContents.Value.Keys.Count
@@ -5825,15 +5839,17 @@ function Select-PermissionTableProperty {
                                 }
                             }
                             if ($null -ne $GroupString) {
-                                [pscustomobject]@{
+                                $Props = [ordered]@{
                                     'Account'              = $AccountName
                                     'Access'               = $ACE.Access 
                                     'Due to Membership In' = $GroupString
                                     'Source of Access'     = $ACE.SourceOfAccess 
                                     'Name'                 = $AceList.Account.Name
-                                    'Department'           = $AceList.Account.Department
-                                    'Title'                = $AceList.Account.Title
                                 }
+                                ForEach ($PropName in $AccountProperty) {
+                                    $Props[$PropName] = $AceList.Account.$PropName
+                                }
+                                [PSCustomObject]$Props
                             }
                         }
                     }
@@ -5864,16 +5880,18 @@ function Select-PermissionTableProperty {
                             }
                         }
                         if ($null -ne $GroupString) {
-                            [pscustomobject]@{
+                            $Props = [ordered]@{
                                 'Item'                 = $Object.ItemPath
                                 'Account'              = $AccountName
                                 'Access'               = $ACE.Access
                                 'Due to Membership In' = $GroupString
                                 'Source of Access'     = $ACE.SourceOfAccess
                                 'Name'                 = $ACE.Name
-                                'Department'           = $ACE.Department
-                                'Title'                = $ACE.Title
                             }
+                            ForEach ($PropName in $AccountProperty) {
+                                $Props[$PropName] = $ACE.$PropName
+                            }
+                            [PSCustomObject]$Props
                         }
                     }
                 }
@@ -6277,7 +6295,8 @@ function Format-Permission {
         [String]$OutputFormat = 'passthru',
         [cultureinfo]$Culture = (Get-Culture),
         [int]$ProgressParentId,
-        [ref]$Cache
+        [ref]$Cache,
+        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     $Progress = @{
         Activity = 'Format-Permission'
@@ -6295,6 +6314,7 @@ function Format-Permission {
     $ShortNameByID = $Cache.Value['ShortNameByID']
     $ExcludeClassFilterContents = $Cache.Value['ExcludeClassFilterContents']
     $IncludeAccountFilterContents = $Cache.Value['IncludeAccountFilterContents']
+    $ConvertSplat = @{ AccountProperty = $AccountProperty ; GroupBy = $GroupBy }
     if ($Permission.SplitBy['account']) {
         $i = 0
         $Count = $Permission.AccountPermissions.Count
@@ -6304,15 +6324,15 @@ function Format-Permission {
             Write-Progress -Status "$Percent% (Account $i of $Count)" -CurrentOperation $Account.Account.ResolvedAccountName -PercentComplete $Percent @Progress
             $Selection = $Account
             $PermissionGroupingsWithChosenProperties = Invoke-Command -ScriptBlock $Grouping['Script'] -ArgumentList $Selection, $Culture, $IgnoreDomain, $IncludeAccountFilterContents, $ExcludeClassFilterContents
-            $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
+            $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -AccountProperty $AccountProperty -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
             $OutputProperties = @{
                 Account      = $Account.Account
                 Path         = $Permission.TargetPermissions.Path.FullName
                 NetworkPaths = $Permission.TargetPermissions.NetworkPaths.Item
             }
             ForEach ($Format in $Formats) {
-                $OutputProperties["$Format`Group"] = ConvertTo-PermissionGroup -Format $Format -Permission $PermissionGroupingsWithChosenProperties -GroupBy $GroupBy
-                $OutputProperties[$Format] = ConvertTo-PermissionList -Format $Format -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -GroupBy $GroupBy -HowToSplit $Permission.SplitBy
+                $OutputProperties["$Format`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format @ConvertSplat
+                $OutputProperties[$Format] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
             }
             [PSCustomObject]$OutputProperties
         }
@@ -6326,15 +6346,15 @@ function Format-Permission {
             Write-Progress -Status "$Percent% (Account $i of $Count)" -CurrentOperation $Item.Path -PercentComplete $Percent @Progress
             $Selection = $Item.Access
             $PermissionGroupingsWithChosenProperties = Invoke-Command -ScriptBlock $Grouping['Script'] -ArgumentList $Selection, $Culture, $IgnoreDomain, $IncludeAccountFilterContents, $ExcludeClassFilterContents
-            $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
+            $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -AccountProperty $AccountProperty -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
             $OutputProperties = @{
                 Item         = $Item.Item
                 TargetPaths  = $Permission.TargetPermissions.Path.FullName
                 NetworkPaths = $Permission.TargetPermissions.NetworkPaths.Item
             }
             ForEach ($Format in $Formats) {
-                $OutputProperties["$Format`Group"] = ConvertTo-PermissionGroup -Format $Format -Permission $PermissionGroupingsWithChosenProperties -GroupBy $GroupBy
-                $OutputProperties[$Format] = ConvertTo-PermissionList -Format $Format -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -GroupBy $GroupBy -HowToSplit $Permission.SplitBy
+                $OutputProperties["$Format`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format @ConvertSplat
+                $OutputProperties[$Format] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
             }
             [PSCustomObject]$OutputProperties
         }
@@ -6366,7 +6386,7 @@ function Format-Permission {
                         $Selection = $NetworkPath.$Prop
                     }
                     $PermissionGroupingsWithChosenProperties = Invoke-Command -ScriptBlock $Grouping['Script'] -ArgumentList $Selection, $Culture, $ShortNameByID, $IncludeAccountFilterContents, $ExcludeClassFilterContents
-                    $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
+                    $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -AccountProperty $AccountProperty -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
                     $OutputProperties = @{
                         PSTypeName = "Permission.Parent$($Culture.TextInfo.ToTitleCase($GroupBy))Permission"
                         Item       = $NetworkPath.Item
@@ -6376,8 +6396,8 @@ function Format-Permission {
                         if ($Format -eq 'js') {
                             $FormatString = 'json'
                         }
-                        $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Format $Format -Permission $PermissionGroupingsWithChosenProperties -GroupBy $GroupBy -HowToSplit $Permission.SplitBy
-                        $OutputProperties[$FormatString] = ConvertTo-PermissionList -Format $Format -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath $NetworkPath.Item.Path -GroupBy $GroupBy -HowToSplit $Permission.SplitBy -NetworkPath $NetworkPath.Item.Path -Analysis $Analysis
+                        $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
+                        $OutputProperties[$FormatString] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath $NetworkPath.Item.Path -HowToSplit $Permission.SplitBy -NetworkPath $NetworkPath.Item.Path -Analysis $Analysis -Format $Format @ConvertSplat
                     }
                     [PSCustomObject]$OutputProperties
                 }
@@ -9784,12 +9804,13 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        Analysis     = $BestPracticeEval
-        FileFormat   = $FileFormat
-        GroupBy      = $GroupBy
-        IgnoreDomain = $IgnoreDomain
-        OutputFormat = $OutputFormat
-        Permission   = $Permissions
+        AccountProperty = $AccountProperty
+        Analysis        = $BestPracticeEval
+        FileFormat      = $FileFormat
+        GroupBy         = $GroupBy
+        IgnoreDomain    = $IgnoreDomain
+        OutputFormat    = $OutputFormat
+        Permission      = $Permissions
     }
     Write-LogMsg -Text '$FormattedPermissions = Format-Permission' -Expand $Cmd, $Cache @Log @LogMap
     $FormattedPermissions = Format-Permission @Cmd @Cache

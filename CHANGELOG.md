@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.412] - 2024-11-23
+### Added
+- implement AccountProperty param
+
 ## [0.0.411] - 2024-11-23
 ### Added
 - implement simplified get-currentdomain for bugfix

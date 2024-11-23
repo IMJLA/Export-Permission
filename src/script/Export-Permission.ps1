@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.411
+.VERSION 0.0.412
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement simplified get-currentdomain for bugfix
+implement AccountProperty param
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ implement simplified get-currentdomain for bugfix
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -722,12 +723,13 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        Analysis     = $BestPracticeEval
-        FileFormat   = $FileFormat
-        GroupBy      = $GroupBy
-        IgnoreDomain = $IgnoreDomain
-        OutputFormat = $OutputFormat
-        Permission   = $Permissions
+        AccountProperty = $AccountProperty
+        Analysis        = $BestPracticeEval
+        FileFormat      = $FileFormat
+        GroupBy         = $GroupBy
+        IgnoreDomain    = $IgnoreDomain
+        OutputFormat    = $OutputFormat
+        Permission      = $Permissions
     }
     Write-LogMsg -Text '$FormattedPermissions = Format-Permission' -Expand $Cmd, $Cache @Log @LogMap
     $FormattedPermissions = Format-Permission @Cmd @Cache
