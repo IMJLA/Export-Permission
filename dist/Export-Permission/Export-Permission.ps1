@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.409
+.VERSION 0.0.410
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-expand cache usage
+add AccountProperty param as far as Get-PermissionPrincipal in prep for implementation in report
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ expand cache usage
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -101,6 +102,7 @@ expand cache usage
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 
     ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
+
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
 
@@ -442,7 +444,10 @@ param (
     [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files'),
 
     # Workaround for https://github.com/PowerShell/PowerShell/issues/20657
-    [switch]$NoProgress
+    [switch]$NoProgress,
+
+    # Properties of each Account to display on the report (left out: managedby)
+    [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 
 )
 
@@ -658,8 +663,9 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        CurrentDomain  = $CurrentDomain
-        NoGroupMembers = $NoMembers
+        AccountProperty = $AccountProperty
+        CurrentDomain   = $CurrentDomain
+        NoGroupMembers  = $NoMembers
     }
     $AceCount = $PermissionCache['AceByGuid'].Value.Keys.Count
     $IdCount = $PermissionCache['AceGuidById'].Value.Keys.Count

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.410] - 2024-11-23
+### Added
+- add AccountProperty param as far as Get-PermissionPrincipal in prep for implementation in report
+
 ## [0.0.409] - 2024-11-19
 ### Changed
 - expand cache usage

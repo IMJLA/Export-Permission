@@ -201,6 +201,18 @@
           </dev:type>
           <dev:defaultValue>@('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="21" aliases="none">
+          <maml:name>AccountProperty</maml:name>
+          <maml:description>
+            <maml:para>Properties of each Account to display on the report (left out: managedby)</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>@('DisplayName', 'Company', 'Department', 'Title', 'Description')</dev:defaultValue>
+        </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
           <maml:name>IncludeAccount</maml:name>
           <maml:description>
@@ -347,6 +359,18 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>{ $true }</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="21" aliases="none">
+        <maml:name>AccountProperty</maml:name>
+        <maml:description>
+          <maml:para>Properties of each Account to display on the report (left out: managedby)</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>@('DisplayName', 'Company', 'Department', 'Title', 'Description')</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
         <maml:name>Detail</maml:name>

@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.409
+help version: 0.0.410
 locale: en-US
 script name: 
 online version:
@@ -22,7 +22,7 @@ Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <Stri
  [[-AccountConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
  [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>] [[-PrtgToken] <String>] [[-SplitBy] <String[]>]
  [[-GroupBy] <String>] [[-FileFormat] <String[]>] [[-OutputFormat] <String>] [[-Detail] <Int32[]>]
- [[-InheritanceFlagResolved] <String[]>] [-NoProgress] [-ProgressAction <ActionPreference>]
+ [[-InheritanceFlagResolved] <String[]>] [-NoProgress] [[-AccountProperty] <String[]>]
  [<CommonParameters>]
 ```
 
@@ -307,6 +307,21 @@ Aliases:
 Required: False
 Position: 9
 Default value: { $true }
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -AccountProperty
+Properties of each Account to display on the report (left out: managedby)
+
+```yaml
+Type: System.String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 21
+Default value: @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
