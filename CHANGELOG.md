@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.414] - 2024-11-23
+### Changed
+- improve log file
+
+## [0.0.413] - 2024-11-23
+### Changed
+- improve log file
+
 ## [0.0.412] - 2024-11-23
 ### Added
 - implement AccountProperty param

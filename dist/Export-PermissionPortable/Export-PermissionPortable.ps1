@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.412
+.VERSION 0.0.414
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement AccountProperty param
+improve log file
 
 .PRIVATEDATA
 
@@ -6994,7 +6994,7 @@ function New-PermissionCache {
     $DirectoryInfo = [type]'System.IO.DirectoryInfo'
     $PSReference = [type]'ref'
     $WellKnownSidBySid = Get-KnownSidHashTable
-    $WellKnownSidByName = Get-KnownSidByName -WellKnownSidBySid $WellKnownSidBySid
+    $WellKnownSidByName = Get-KnownSidByName -WellKnownSIDBySID $WellKnownSidBySid
     return [hashtable]::Synchronized(@{
             AceByGUID                    = New-PermissionCacheRef -Key $String -Value $Object 
             AceGuidByID                  = New-PermissionCacheRef -Key $String -Value $GuidList 
@@ -7009,7 +7009,7 @@ function New-PermissionCache {
             ExcludeClassFilterContents   = New-PermissionCacheRef -Key $String -Value $Boolean 
             IdByShortName                = New-PermissionCacheRef -Key $String -Value $StringList 
             IncludeAccountFilterContents = New-PermissionCacheRef -Key $String -Value $Boolean 
-            LogBuffer                    = [ref][System.Collections.Concurrent.ConcurrentQueue[hashtable]]::new() 
+            LogBuffer                    = [ref][System.Collections.Concurrent.ConcurrentQueue[System.Collections.Specialized.OrderedDictionary]]::new() 
             ParentByTargetPath           = New-PermissionCacheRef -Key $DirectoryInfo -Value $StringArray 
             PrincipalByID                = New-PermissionCacheRef -Key $String -Value $PSCustomObject 
             ShortNameByID                = New-PermissionCacheRef -Key $String -Value $String  
@@ -8283,7 +8283,7 @@ function Write-LogMsg {
     if ($PassThru -or $OutputToPipeline) {
         $MessageToLog
     }
-    $Obj = @{
+    $Obj = [ordered]@{
         Timestamp = $Timestamp
         Hostname  = $ThisHostname
         WhoAmI    = $WhoAmI
