@@ -204,7 +204,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="21" aliases="none">
           <maml:name>AccountProperty</maml:name>
           <maml:description>
-            <maml:para>Properties of each Account to display on the report (left out: managedby)</maml:para>
+            <maml:para>Properties of each Account to display on the report (left out: managedBy, operatingSystem)</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
@@ -363,7 +363,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="21" aliases="none">
         <maml:name>AccountProperty</maml:name>
         <maml:description>
-          <maml:para>Properties of each Account to display on the report (left out: managedby)</maml:para>
+          <maml:para>Properties of each Account to display on the report (left out: managedBy, operatingSystem)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>

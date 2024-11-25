@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.414
+help version: 0.0.415
 locale: en-US
 script name: 
 online version:
@@ -312,7 +312,7 @@ Accept wildcard characters: False
 ```
 
 ### -AccountProperty
-Properties of each Account to display on the report (left out: managedby)
+Properties of each Account to display on the report (left out: managedBy, operatingSystem)
 
 ```yaml
 Type: System.String[]

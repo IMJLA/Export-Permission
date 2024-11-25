@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.414
+.VERSION 0.0.415
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-improve log file
+expand use of accountproperty
 
 .PRIVATEDATA
 
@@ -39,14 +39,6 @@ improve log file
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
-
-
-
-
-
-
 
 
 <#
@@ -450,7 +442,7 @@ param (
     # Workaround for https://github.com/PowerShell/PowerShell/issues/20657
     [switch]$NoProgress,
 
-    # Properties of each Account to display on the report (left out: managedby)
+    # Properties of each Account to display on the report (left out: managedBy, operatingSystem)
     [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 
 )
@@ -542,7 +534,7 @@ begin {
     Write-LogMsg -Text "`$WhoAmI = Get-PermissionWhoAmI -ThisHostName '$ThisHostname'" -Suffix ' # This command was already run but is now being logged' @Log @LogEmptyMap
 
     # Get the FQDN of the computer running the script.
-    Write-LogMsg -Text "`$ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname" -Expand $LogThis, $Cache @Log @LogMap
+    Write-LogMsg -Text "`$ThisFqdn = ConvertTo-PermissionFqdn -ComputerName '$ThisHostname'" -Expand $LogThis, $Cache @Log @LogMap
     $ThisFqdn = ConvertTo-PermissionFqdn -ComputerName $ThisHostname @Cache @LogThis
 
     # Create a splat of the ThisFqdn parameter to pass to various functions for script readability.
@@ -640,6 +632,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
+        AccountProperty         = $AccountProperty
         InheritanceFlagResolved = $InheritanceFlagResolved
     }
     $AclCount = $PermissionCache['AclByPath'].Value.Keys.Count

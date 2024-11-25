@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.415] - 2024-11-24
+### Changed
+- expand use of accountproperty
+
 ## [0.0.414] - 2024-11-23
 ### Changed
 - improve log file
