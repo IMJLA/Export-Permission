@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.417] - 2024-11-30
+### Added
+- implement cache for clearer code and logs
+
 ## [0.0.416] - 2024-11-24
 ### Changed
 - move repetitive params to cache, and make dictionary keys more robust by forcing string keys
