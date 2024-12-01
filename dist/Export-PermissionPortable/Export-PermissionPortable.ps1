@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.421
+.VERSION 0.0.422
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix nullify output now that cache is in use instead
+integrate bugfixes in dependency modules
 
 .PRIVATEDATA
 
@@ -4343,7 +4343,7 @@ function Search-Directory {
         $Workgroup = (Get-CachedCimInstance -ClassName 'Win32_ComputerSystem' -KeyProperty 'Name' @CimParams).Workgroup
         $DirectoryPath = "WinNT://$Workgroup/$($Cache.Value['ThisHostName'].Value))"
     }
-    Write-LogMsg -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath' -Cache `$Cache" -Expand $DirectoryEntryParameters -ExpansionMap $Cache.Value['LogCacheMap'].Value
+    Write-LogMsg -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath' -Cache `$Cache" -Expand $DirectoryEntryParameters -ExpansionMap $Cache.Value['LogCacheMap'].Value -Cache $Cache
     $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath @DirectoryEntryParameters
     Write-LogMsg -Text "`$DirectorySearcher = [System.DirectoryServices.DirectorySearcher]::new(([System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')))" -Cache $Cache
     $DirectorySearcher = [System.DirectoryServices.DirectorySearcher]::new($DirectoryEntry)
@@ -6714,7 +6714,6 @@ function Get-AccessControlList {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    $LogBuffer = $Cache.Value['LogBuffer']
     $AclByPath = $Cache.Value['AclByPath']
     $Progress = Get-PermissionProgress -Activity 'Get-AccessControlList' -Cache $Cache
     $ChildProgress = @{
@@ -6769,16 +6768,10 @@ function Get-AccessControlList {
             Get-DirectorySecurity -LiteralPath $Parent -IncludeInherited @GetDirectorySecurity
             $Children = $TargetPath[$Parent]
             $SplitThread = @{
-                Command           = 'Get-DirectorySecurity'
-                InputObject       = $Children
-                InputParameter    = 'LiteralPath'
-                DebugOutputStream = $DebugOutputStream
-                ThisHostname      = $ThisHostname
-                WhoAmI            = $WhoAmI
-                LogBuffer         = $LogBuffer
-                Threads           = $ThreadCount
-                ProgressParentId  = $ChildProgress['Id']
-                AddParam          = $GetDirectorySecurity
+                Command        = 'Get-DirectorySecurity'
+                InputObject    = $Children
+                InputParameter = 'LiteralPath'
+                AddParam       = $GetDirectorySecurity
             }
             Split-Thread @SplitThread
         }
@@ -6786,7 +6779,7 @@ function Get-AccessControlList {
     }
     if ($WarningCache.Keys.Count -ge 1) {
         $StartingLogType = $Cache.Value['LogType'].Value
-        $Log['Type'] = 'Warning' 
+        $Cache.Value['LogType'].Value = 'Warning' 
         Write-LogMsg -Text " # Errors on $($WarningCache.Keys.Count) items while getting access control lists. See verbose log for details." -Cache $Cache
         $Cache.Value['LogType'].Value = $StartingLogType
     }
@@ -6830,16 +6823,10 @@ function Get-AccessControlList {
             Get-OwnerAce -Item $Parent @GetOwnerAce
             $Children = $TargetPath[$Parent]
             $SplitThread = @{
-                Command           = 'Get-OwnerAce'
-                InputObject       = $Children
-                InputParameter    = 'Item'
-                DebugOutputStream = $DebugOutputStream
-                ThisHostname      = $ThisHostname
-                WhoAmI            = $WhoAmI
-                LogBuffer         = $LogBuffer
-                Threads           = $ThreadCount
-                ProgressParentId  = $ChildProgress['Id']
-                AddParam          = $GetOwnerAce
+                Command        = 'Get-OwnerAce'
+                InputObject    = $Children
+                InputParameter = 'Item'
+                AddParam       = $GetOwnerAce
             }
             Split-Thread @SplitThread
         }
@@ -6982,8 +6969,10 @@ function Get-CachedCimSession {
         $CimServer.Value['CimSession'] = $CimSession
         return $CimSession
     } else {
-        $Log['Type'] = 'Warning'
+        $StartingLogType = $Cache.Value['LogType'].Value
+        $Cache.Value['LogType'].Value = 'Warning'
         Write-LogMsg @Log -Text "  connection failure without error message # for '$ComputerName'"
+        $Cache.Value['LogType'].Value = $StartingLogType
     }
 }
 function Get-PermissionPrincipal {

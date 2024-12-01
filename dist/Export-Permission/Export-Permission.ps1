@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.421
+.VERSION 0.0.422
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix nullify output now that cache is in use instead
+integrate bugfixes in dependency modules
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix nullify output now that cache is in use instead
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.422] - 2024-12-01
+### Changed
+- integrate bugfixes in dependency modules
+
 ## [0.0.421] - 2024-12-01
 ### Fixed
 - bugfix nullify output now that cache is in use instead
