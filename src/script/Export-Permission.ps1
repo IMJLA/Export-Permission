@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.420
+.VERSION 0.0.421
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,7 +18,7 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES
+.EXTERNALMODULEDEPENDENCIES 
 
 .REQUIREDSCRIPTS
 
@@ -29,7 +29,7 @@ bugfix nullify output now that cache is in use instead
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -39,6 +39,7 @@ bugfix nullify output now that cache is in use instead
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -522,7 +523,7 @@ begin {
         'ComputerName' = $PermissionCache['ThisHostname'].Value
     }
     Write-LogMsg -Text 'ConvertTo-PermissionFqdn -ThisFqdn' -Expand $Cmd, $Cached @Cached @CacheMap
-    ConvertTo-PermissionFqdn -ThisFqdn @Cmd @Cached
+    $null = ConvertTo-PermissionFqdn -ThisFqdn @Cmd @Cached
 
     # Discover any domains trusted by the domain of the computer running the script.
     Write-LogMsg -Text 'Get-PermissionTrustedDomain' -Expand $Cached @Cached @CacheMap
