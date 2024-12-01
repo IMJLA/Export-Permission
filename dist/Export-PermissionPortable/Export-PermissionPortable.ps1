@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.423
+.VERSION 0.0.424
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate latest build of permission module
+integrate bugfixes in adsi module (implement cache in test-adsiprovider)
 
 .PRIVATEDATA
 
@@ -1061,7 +1061,7 @@ function Find-AdsiProvider {
     Write-LogMsg -Text 'Get-CachedCimInstance' -Expand $CommandParameters -ExpansionMap $Cache.Value['LogCacheMap'].Value -Cache $Cache
     $CimInstance = Get-CachedCimInstance @CommandParameters
     if ($Cache.Value['CimCache'].Value[$AdsiServer].Value.TryGetValue( 'CimFailure' , [ref]$null )) {
-        $TestResult = Test-AdsiProvider -AdsiServer $AdsiServer -ThisHostName $ThisHostName -WhoAmI $WhoAmI -DebugOutputStream $DebugOutputStream -Cache $Cache
+        $TestResult = Test-AdsiProvider -AdsiServer $AdsiServer -Cache $Cache
         return $TestResult
     }
     if ($CimInstance) {
@@ -1615,14 +1615,10 @@ function Test-AdsiProvider {
     [OutputType([System.String])]
     param (
         [string]$AdsiServer,
-        [string]$ThisHostName = (HOSTNAME.EXE),
-        [string]$WhoAmI = (whoami.EXE),
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [string]$DebugOutputStream = 'Debug',
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    $Log = @{ ThisHostname = $ThisHostname ; Type = $DebugOutputStream ; Buffer = $Cache.Value['LogBuffer'] ; WhoAmI = $WhoAmI }
+    $Log = @{ 'Cache' = $Cache }
     $AdsiPath = "LDAP://$AdsiServer"
     Write-LogMsg @Log -Text "[System.DirectoryServices.DirectoryEntry]::Exists('$AdsiPath') # for '$AdsiServer'"
     try {
