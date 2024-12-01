@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.419
+.VERSION 0.0.420
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI
 
-.EXTERNALMODULEDEPENDENCIES 
+.EXTERNALMODULEDEPENDENCIES
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix permission module for thishostname caching
+bugfix nullify output now that cache is in use instead
 
 .PRIVATEDATA
 
-#> 
+#>
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -39,6 +39,7 @@ bugfix permission module for thishostname caching
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

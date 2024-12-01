@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.419
+.VERSION 0.0.420
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix permission module for thishostname caching
+bugfix nullify output now that cache is in use instead
 
 .PRIVATEDATA
 
@@ -9855,7 +9855,7 @@ function Send-PrtgXmlSensorOutput {
         'ComputerName' = $PermissionCache['ThisHostname'].Value
     }
     Write-LogMsg -Text 'ConvertTo-PermissionFqdn -ThisFqdn' -Expand $Cmd, $Cached @Cached @CacheMap
-    ConvertTo-PermissionFqdn -ThisFqdn @Cmd @Cached
+    $null = ConvertTo-PermissionFqdn -ThisFqdn @Cmd @Cached
     Write-LogMsg -Text 'Get-PermissionTrustedDomain' -Expand $Cached @Cached @CacheMap
     Get-PermissionTrustedDomain @Cached
 }

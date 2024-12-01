@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.420] - 2024-12-01
+### Fixed
+- bugfix nullify output now that cache is in use instead
+
 ## [0.0.419] - 2024-12-01
 ### Fixed
 - bugfix permission module for thishostname caching
