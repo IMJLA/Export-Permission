@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.417
+help version: 0.0.418
 locale: en-US
 script name: 
 online version:
@@ -22,8 +22,7 @@ Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <Stri
  [[-AccountConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
  [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>] [[-PrtgToken] <String>] [[-SplitBy] <String[]>]
  [[-GroupBy] <String>] [[-FileFormat] <String[]>] [[-OutputFormat] <String>] [[-Detail] <Int32[]>]
- [[-InheritanceFlagResolved] <String[]>] [-NoProgress] [[-AccountProperty] <String[]>]
- [<CommonParameters>]
+ [-NoProgress] [[-AccountProperty] <String[]>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -320,7 +319,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 21
+Position: 20
 Default value: @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -474,23 +473,6 @@ Aliases:
 Required: False
 Position: 3
 Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -InheritanceFlagResolved
-String translations indexed by value in the \[System.Security.AccessControl.InheritanceFlags\] enum
-Parameter default value is on a single line as a workaround to a PlatyPS bug
-TODO: Move to i18n
-
-```yaml
-Type: System.String[]
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: 20
-Default value: @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

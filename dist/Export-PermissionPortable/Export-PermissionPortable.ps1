@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.417
+.VERSION 0.0.418
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement cache for clearer code and logs
+bugfixes in new version of permission module for retrieving threadcount from cache
 
 .PRIVATEDATA
 
@@ -103,7 +103,6 @@ param (
     [ValidateSet('passthru', 'none', 'csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
     [string]$OutputFormat = 'passthru',
     [int[]]$Detail = 10,
-    [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files'),
     [switch]$NoProgress,
     [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 )
@@ -5816,7 +5815,6 @@ function Resolve-Ace {
         [object]$ItemPath,
         [string[]]$ACEPropertyName = $ACE.PSObject.Properties.GetEnumerator().Name,
         [String]$Source,
-        [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files'),
         [Parameter(Mandatory)]
         [ref]$Cache,
         [type]$Type = [guid],
@@ -5826,7 +5824,7 @@ function Resolve-Ace {
     $AdsiServer = Get-AdsiServer -Fqdn $DomainDNS -Cache $Cache
     $ResolvedIdentityReference = Resolve-IdentityReference -IdentityReference $ACE.IdentityReference -AdsiServer $AdsiServer -AccountProperty $AccountProperty -Cache $Cache
     $ObjectProperties = @{
-        Access                    = "$($ACE.AccessControlType) $($ACE.FileSystemRights) $($InheritanceFlagResolved[$ACE.InheritanceFlags])"
+        Access                    = "$($ACE.AccessControlType) $($ACE.FileSystemRights) $($Cache.Value['InheritanceFlagResolved'].Value[$ACE.InheritanceFlags])"
         AdsiProvider              = $AdsiServer.AdsiProvider
         AdsiServer                = $DomainDNS
         IdentityReferenceSID      = $ResolvedIdentityReference.SIDString
@@ -5849,14 +5847,13 @@ function Resolve-Acl {
     param (
         [object]$ItemPath,
         [string[]]$ACEPropertyName = $ItemPath.PSObject.Properties.GetEnumerator().Name,
-        [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files'),
         [Parameter(Mandatory)]
         [ref]$Cache,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     $AceParams = @{
         AccountProperty = $AccountProperty ; Cache = $Cache ; Type = [guid] ; ItemPath = $ItemPath ;
-        ACEPropertyName = $ACEPropertyName ; InheritanceFlagResolved = $InheritanceFlagResolved
+        ACEPropertyName = $ACEPropertyName
     }
     $ACL = $Cache.Value['AclByPath'].Value[$ItemPath]
     if ($ACL.Owner.IdentityReference) {
@@ -6445,6 +6442,7 @@ function Expand-PermissionTarget {
     $TargetCount = $Targets.Count
     Write-Progress @Progress -Status "0% (item 0 of $TargetCount)" -CurrentOperation 'Initializing...' -PercentComplete 0
     $LogBuffer = $Cache.Value['LogBuffer']
+    $ThreadCount = $Cache.Value['ThreadCount'].Value
     $Output = [Hashtable]::Synchronized(@{})
     $GetSubfolderParams = @{
         Cache        = $Cache
@@ -6736,6 +6734,7 @@ function Get-AccessControlList {
     }
     $TargetIndex = 0
     $ParentCount = $TargetPath.Keys.Count
+    $ThreadCount = $Cache.Value['ThreadCount'].Value
     if ($ThreadCount -eq 1) {
         ForEach ($Parent in $TargetPath.Keys) {
             [int]$PercentComplete = $TargetIndex / $ParentCount * 100
@@ -7219,6 +7218,7 @@ function New-PermissionCache {
     $PSReference = [type]'ref'
     $WellKnownSidBySid = Get-KnownSidHashTable
     $WellKnownSidByName = Get-KnownSidByName -WellKnownSIDBySID $WellKnownSidBySid
+    $InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
     return [hashtable]::Synchronized(@{
             'AceByGUID'                    = New-PermissionCacheRef -Key $String -Value $Object 
             'AceGuidByID'                  = New-PermissionCacheRef -Key $String -Value $GuidList 
@@ -7233,6 +7233,7 @@ function New-PermissionCache {
             'ExcludeClassFilterContents'   = New-PermissionCacheRef -Key $String -Value $Boolean 
             'IdByShortName'                = New-PermissionCacheRef -Key $String -Value $StringList 
             'IncludeAccountFilterContents' = New-PermissionCacheRef -Key $String -Value $Boolean 
+            'InheritanceFlagResolved'      = [ref]$InheritanceFlagResolved
             'Log'                          = [ref]$Log
             'LogBuffer'                    = [ref]$LogBuffer 
             'LogEmptyMap'                  = [ref]$LogEmptyMap
@@ -7598,7 +7599,6 @@ function Remove-CachedCimSession {
 }
 function Resolve-AccessControlList {
     param (
-        [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files'),
         [Parameter(Mandatory)]
         [ref]$Cache,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
@@ -7611,10 +7611,9 @@ function Resolve-AccessControlList {
     Write-Progress @Progress -Status "0% (ACL 0 of $Count)" -CurrentOperation 'Initializing' -PercentComplete 0
     $ACEPropertyName = $ACLsByPath.Value.Values.Access[0].PSObject.Properties.GetEnumerator().Name
     $ResolveAclParams = @{
-        AccountProperty         = $AccountProperty
-        ACEPropertyName         = $ACEPropertyName
-        Cache                   = $Cache
-        InheritanceFlagResolved = $InheritanceFlagResolved
+        AccountProperty = $AccountProperty
+        ACEPropertyName = $ACEPropertyName
+        Cache           = $Cache
     }
     $ThreadCount = $Cache.Value['ThreadCount'].Value
     if ($ThreadCount -eq 1) {
@@ -9930,8 +9929,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'AccountProperty'         = $AccountProperty
-        'InheritanceFlagResolved' = $InheritanceFlagResolved
+        'AccountProperty' = $AccountProperty
     }
     $AclCount = $PermissionCache['AclByPath'].Value.Keys.Count
     Write-LogMsg -Text 'Resolve-AccessControlList' -Suffix " # for $AclCount ACLs" -Expand $Cached, $Cmd @Cached @CacheMap
@@ -10080,7 +10078,7 @@ end {
     $ProgressUpdate = @{
         'CurrentOperation' = 'Export the buffered log messages to a CSV file'
         'PercentComplete'  = 90
-        'Status'           = '95 % (step 19 of 20) Export-LogCsv'
+        'Status'           = '90 % (step 19 of 20) Export-LogCsv'
     }
     Write-Progress @Progress @ProgressUpdate
     Write-LogMsg -Text "Export-LogCsv -LogFile '$LogFile'" -Expand $Cached @Cached @CacheMap

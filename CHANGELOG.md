@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.418] - 2024-12-01
+### Fixed
+- bugfixes in new version of permission module for retrieving threadcount from cache
+
 ## [0.0.417] - 2024-11-30
 ### Added
 - implement cache for clearer code and logs

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.417
+.VERSION 0.0.418
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement cache for clearer code and logs
+bugfixes in new version of permission module for retrieving threadcount from cache
 
 .PRIVATEDATA
 
@@ -39,8 +39,6 @@ implement cache for clearer code and logs
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
 
 
 <#
@@ -436,11 +434,6 @@ param (
     #>
     [int[]]$Detail = 10,
 
-    # String translations indexed by value in the [System.Security.AccessControl.InheritanceFlags] enum
-    # Parameter default value is on a single line as a workaround to a PlatyPS bug
-    # TODO: Move to i18n
-    [string[]]$InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files'),
-
     # Workaround for https://github.com/PowerShell/PowerShell/issues/20657
     [switch]$NoProgress,
 
@@ -616,8 +609,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'AccountProperty'         = $AccountProperty
-        'InheritanceFlagResolved' = $InheritanceFlagResolved
+        'AccountProperty' = $AccountProperty
     }
     $AclCount = $PermissionCache['AclByPath'].Value.Keys.Count
     Write-LogMsg -Text 'Resolve-AccessControlList' -Suffix " # for $AclCount ACLs" -Expand $Cached, $Cmd @Cached @CacheMap
@@ -787,7 +779,7 @@ end {
     $ProgressUpdate = @{
         'CurrentOperation' = 'Export the buffered log messages to a CSV file'
         'PercentComplete'  = 90
-        'Status'           = '95 % (step 19 of 20) Export-LogCsv'
+        'Status'           = '90 % (step 19 of 20) Export-LogCsv'
     }
     Write-Progress @Progress @ProgressUpdate
     Write-LogMsg -Text "Export-LogCsv -LogFile '$LogFile'" -Expand $Cached @Cached @CacheMap
