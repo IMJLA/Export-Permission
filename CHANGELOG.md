@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.425] - 2024-12-01
+### Changed
+- integrate bugfixes in adsi module (implement cache in test-adsiprovider)
+
 ## [0.0.424] - 2024-12-01
 ### Changed
 - integrate bugfixes in adsi module (implement cache in test-adsiprovider)
