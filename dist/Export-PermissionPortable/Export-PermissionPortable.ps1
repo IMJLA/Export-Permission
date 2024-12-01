@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.422
+.VERSION 0.0.423
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate bugfixes in dependency modules
+integrate latest build of permission module
 
 .PRIVATEDATA
 
@@ -5985,12 +5985,16 @@ function Resolve-IdentityReferenceDomainDNS {
                 $DomainDNS = Find-ServerNameInPath -LiteralPath $ItemPath -Cache $Cache
                 return $DomainDNS
             }
-            $Log['Type'] = 'Warning'
+            $StartingLogType = $Cache.Value['LogType'].Value
+            $Cache.Value['LogType'].Value = 'Warning'
             Write-LogMsg @Log -Text " # IdentityReference '$IdentityReference' # Domain SID '$DomainSid' # Unknown domain (possibly offline). Unable to resolve domain FQDN"
+            $Cache.Value['LogType'].Value = $StartingLogType
             return $DomainSid
         }
-        $Log['Type'] = 'Error'
+        $StartingLogType = $Cache.Value['LogType'].Value
+        $Cache.Value['LogType'].Value = 'Error'
         Write-LogMsg @Log -Text " # IdentityReference '$IdentityReference' # Bug before Resolve-IdentityReferenceDomainDNS. Unable to resolve a DNS FQDN due to malformed SID"
+        $Cache.Value['LogType'].Value = $StartingLogType
         return $IdentityReference
     }
     $DomainNetBIOS = ($IdentityReference.Split('\'))[0]
@@ -6013,8 +6017,10 @@ function Resolve-IdentityReferenceDomainDNS {
         $DomainDNS = ConvertTo-Fqdn -DistinguishedName $ThisServerDn -Cache $Cache
         return $DomainDNS
     }
-    $Log['Type'] = 'Error'
+    $StartingLogType = $Cache.Value['LogType'].Value
+    $Cache.Value['LogType'].Value = 'Error'
     Write-LogMsg @Log -Text " # IdentityReference '$IdentityReference' # Bug before Resolve-IdentityReferenceDomainDNS. Unexpectedly unable to resolve a DNS FQDN due to malformed NTAccount caption"
+    $Cache.Value['LogType'].Value = $StartingLogType
     return $IdentityReference
 }
 function Resolve-SplitByParameter {
@@ -6833,8 +6839,10 @@ function Get-AccessControlList {
     }
     Write-Progress @Progress -Completed
     if ($AclByPath.Value.Keys.Count -eq 0) {
-        $Log['Type'] = 'Error' 
-        Write-LogMsg -Text ' # 0 access control lists could be retrieved.  Exiting script.' -Cache $Cache
+        $StartingLogType = $Cache.Value['LogType'].Value
+        $Cache.Value['LogType'].Value = 'Error'
+        Write-LogMsg -Text ' # 0 access control lists could be retrieved. Exiting script.' -Cache $Cache
+        $Cache.Value['LogType'].Value = $StartingLogType
     }
 }
 function Get-CachedCimInstance {
@@ -6909,8 +6917,10 @@ function Get-CachedCimInstance {
         } else {
         }
     } else {
-        $Log['Type'] = 'Warning'
+        $StartingLogType = $Cache.Value['LogType'].Value
+        $Cache.Value['LogType'].Value = 'Warning'
         Write-LogMsg @Log -Text '  connection failure'
+        $Cache.Value['LogType'].Value = $StartingLogType
     }
 }
 function Get-CachedCimSession {

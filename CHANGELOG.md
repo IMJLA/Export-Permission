@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.423] - 2024-12-01
+### Changed
+- integrate latest build of permission module
+
 ## [0.0.422] - 2024-12-01
 ### Changed
 - integrate bugfixes in dependency modules
