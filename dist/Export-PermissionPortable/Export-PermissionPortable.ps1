@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.425
+.VERSION 0.0.426
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate bugfixes in adsi module (implement cache in test-adsiprovider)
+integrate latest versions of adsi and permission modules
 
 .PRIVATEDATA
 
@@ -761,7 +761,7 @@ function ConvertTo-DirectoryEntry {
         $DomainNetBIOS,
         $AccountProperty,
         $SamAccountNameOrSid,
-        $AccessControlEntries,
+        $AceGuid,
         $LogSuffixComment,
         $IdentityReference,
         $DomainDn,
@@ -790,9 +790,10 @@ function ConvertTo-DirectoryEntry {
     $DirectoryParams = @{ Cache = $Cache ; PropertiesToLoad = $PropertiesToLoad }
     $SearchSplat = @{ PropertiesToLoad = $PropertiesToLoad }
     $CurrentDomain = $Cache.Value['ThisParentDomain']
+    $SampleAce = $Cache.Value['AceByGUID'].Value[@($AceGuid)[0]]
     if (
         $null -ne $SamAccountNameOrSid -and
-        @($AccessControlEntries.AdsiProvider)[0] -eq 'LDAP'
+        $SampleAce.AdsiProvider -eq 'LDAP'
     ) {
         $DomainNetbiosCacheResult = $Cache.Value['DomainByNetbios'].Value[$DomainNetBIOS]
         if ($DomainNetbiosCacheResult) {
@@ -893,7 +894,7 @@ function ConvertTo-DirectoryEntry {
     } else {
         $DirectoryPath = "WinNT://$DomainNetBIOS/$SamAccountNameOrSid"
     }
-    Write-LogMsg @Log -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath'" -Expand $DirectoryParams -ExpansionMap $Cache.Value['LogCacheMap'].Value
+    Write-LogMsg @Log -Text "`$DirectoryEntry = Get-DirectoryEntry -DirectoryPath '$DirectoryPath'" -Expand $DirectoryParams -ExpansionMap $Cache.Value['LogCacheMap'].Value
     try {
         $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath @DirectoryParams
     } catch {
@@ -914,7 +915,7 @@ function ConvertTo-PermissionPrincipal {
         $NoGroupMembers,
         $LogSuffixComment,
         $SamAccountNameOrSid,
-        $AccessControlEntries,
+        $AceGuid,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description'),
         [Parameter(Mandatory)]
         [ref]$Cache
@@ -996,7 +997,7 @@ function ConvertTo-PermissionPrincipal {
                     }
                     $OutputProperties['ResolvedAccountName'] = $ResolvedAccountName
                     $PrincipalById.Value[$ResolvedAccountName] = [PSCustomObject]$OutputProperties
-                    $AceGuidByID.Value[$ResolvedAccountName] = $AccessControlEntries
+                    $AceGuidByID.Value[$ResolvedAccountName] = $AceGuid
                     $ResolvedAccountName
                 }
             }
@@ -1302,7 +1303,7 @@ function Resolve-IdRefAppPkgAuth {
     $DomainCacheResult.WellKnownSidBySid[$SIDString] = $Win32Acct
     $DomainCacheResult.WellKnownSidByName[$Name] = $Win32Acct
     $Cache.Value['DomainByFqdn'].Value[$DomainCacheResult.Dns] = $DomainCacheResult
-    $DomainsByNetbios.Value[$DomainCacheResult].Value.Netbios = $DomainCacheResult
+    $Cache.Value['DomainByNetbios'].Value[$DomainCacheResult.Netbios] = $DomainCacheResult
     $Cache.Value['DomainBySid'].Value[$DomainCacheResult.Sid] = $DomainCacheResult
     return [PSCustomObject]@{
         IdentityReference        = $IdentityReference
@@ -1762,8 +1763,9 @@ function ConvertFrom-ResolvedID {
         $LogSuffix = "for resolved Identity Reference '$IdentityReference'"
         $LogSuffixComment = " # $LogSuffix"
         $Log = @{ 'Cache' = $Cache ; 'Suffix' = $LogSuffixComment }
+        Write-LogMsg @Log -Text "`$AceGuids = `$Cache.Value['AceGuidByID'].Value['$IdentityReference'] # ADSI Principal cache miss"
         $AceGuidByID = $Cache.Value['AceGuidByID']
-        $AccessControlEntries = $AceGuidByID.Value[ $IdentityReference ]
+        $AceGuids = $AceGuidByID.Value[ $IdentityReference ]
         $split = $IdentityReference.Split('\')
         $DomainNetBIOS = $split[0]
         $SamAccountNameOrSid = $split[1]
@@ -1771,14 +1773,14 @@ function ConvertFrom-ResolvedID {
         $CachedWellKnownSID = Find-CachedWellKnownSID -IdentityReference $SamAccountNameOrSid -DomainNetBIOS $DomainNetBIOS -DomainByNetbios $Cache.Value['DomainByNetbios']
         $DomainDn = $null
         $CommonSplat = @{
-            'AccessControlEntries' = $AccessControlEntries
-            'AccountProperty'      = $AccountProperty
-            'Cache'                = $Cache
-            'DomainDn'             = $DomainDn
-            'DomainNetBIOS'        = $DomainNetBIOS
-            'IdentityReference'    = $IdentityReference
-            'LogSuffixComment'     = $LogSuffixComment
-            'SamAccountNameOrSid'  = $SamAccountNameOrSid
+            'AceGuid'             = $AceGuids
+            'AccountProperty'     = $AccountProperty
+            'Cache'               = $Cache
+            'DomainDn'            = $DomainDn
+            'DomainNetBIOS'       = $DomainNetBIOS
+            'IdentityReference'   = $IdentityReference
+            'LogSuffixComment'    = $LogSuffixComment
+            'SamAccountNameOrSid' = $SamAccountNameOrSid
         }
         $DirectoryEntryConversion = @{
             'CachedWellKnownSID' = $CachedWellKnownSID
@@ -2721,7 +2723,6 @@ function Get-KnownSid {
             }
         }
     }
-    if ($SID.Length -lt 9) { Pause } 
     $TheNine = $SID.Substring(0, 9)
     $Match = $StartingPatterns[$TheNine]
     if ($Match) {
@@ -4339,7 +4340,7 @@ function Search-Directory {
         $Workgroup = (Get-CachedCimInstance -ClassName 'Win32_ComputerSystem' -KeyProperty 'Name' @CimParams).Workgroup
         $DirectoryPath = "WinNT://$Workgroup/$($Cache.Value['ThisHostName'].Value))"
     }
-    Write-LogMsg -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath' -Cache `$Cache" -Expand $DirectoryEntryParameters -ExpansionMap $Cache.Value['LogCacheMap'].Value -Cache $Cache
+    Write-LogMsg -Text "Get-DirectoryEntry -DirectoryPath '$DirectoryPath'" -Expand $DirectoryEntryParameters -ExpansionMap $Cache.Value['LogCacheMap'].Value -Cache $Cache
     $DirectoryEntry = Get-DirectoryEntry -DirectoryPath $DirectoryPath @DirectoryEntryParameters
     Write-LogMsg -Text "`$DirectorySearcher = [System.DirectoryServices.DirectorySearcher]::new(([System.DirectoryServices.DirectoryEntry]::new('$DirectoryPath')))" -Cache $Cache
     $DirectorySearcher = [System.DirectoryServices.DirectorySearcher]::new($DirectoryEntry)
@@ -7180,14 +7181,13 @@ function New-PermissionCache {
     $WhoAmI = Get-PermissionWhoAmI -ThisHostname $ThisHostname
     $ProgressParentId = 0
     $LogType = 'Debug'
-    $LogPermissionCacheMap = @{ 'Cache' = '([ref]$PermissionCache)' }
     $LogCacheMap = @{ 'Cache' = '$Cache' }
     $LogAnalysisMap = @{ 'Cache' = '$Cache' ; 'Analysis' = '$PermissionAnalysis' ; 'Permission' = '$Permissions' }
-    $LogWellKnownMap = @{ 'Cache' = '$Cache' ; 'CachedWellKnownSID' = '$CachedWellKnownSID' }
+    $LogWellKnownMap = @{ 'Cache' = '$Cache' ; 'CachedWellKnownSID' = '$CachedWellKnownSID' ; 'AceGuid' = '$AceGuids' }
     $LogStopWatchMap = @{ 'Cache' = '$Cache' ; 'StopWatch' = '$StopWatch' ; 'Analysis' = '$PermissionAnalysis' ; 'Permission' = '$Permissions' ; 'FormattedPermission' = '$FormattedPermissions' }
     $LogCimMap = @{ 'Cache' = '$Cache' ; 'CimSession' = '$CimSession' }
     $LogFormattedMap = @{ 'FormattedPermission' = '$FormattedPermissions' ; 'Analysis' = '$PermissionAnalysis' }
-    $LogDirEntryMap = @{ 'Cache' = '$Cache' ; 'DirectoryEntry' = '$DirectoryEntry' }
+    $LogDirEntryMap = @{ 'Cache' = '$Cache' ; 'DirectoryEntry' = '$DirectoryEntry' ; 'AceGuid' = '$AceGuids' }
     $LogTargetPathMap = @{ 'Cache' = '$Cache' ; 'TargetPath' = '$Items' }
     $LogEmptyMap = @{}
     $ParamStringMap = Get-ParamStringMap
@@ -7214,6 +7214,7 @@ function New-PermissionCache {
     $PSReference = [type]'ref'
     $WellKnownSidBySid = Get-KnownSidHashTable
     $WellKnownSidByName = Get-KnownSidByName -WellKnownSIDBySID $WellKnownSidBySid
+    $WellKnownSidByCaption = Get-KnownCaptionHashTable -WellKnownSidBySid $WellKnownSidBySid
     $InheritanceFlagResolved = @('this folder but not subfolders', 'this folder and subfolders', 'this folder and files, but not subfolders', 'this folder, subfolders, and files')
     return [hashtable]::Synchronized(@{
             'AceByGUID'                    = New-PermissionCacheRef -Key $String -Value $Object 
@@ -7234,7 +7235,6 @@ function New-PermissionCache {
             'LogBuffer'                    = [ref]$LogBuffer 
             'LogEmptyMap'                  = [ref]$LogEmptyMap
             'LogCacheMap'                  = [ref]$LogCacheMap
-            'LogPermissionCacheMap'        = [ref]$LogPermissionCacheMap
             'LogAnalysisMap'               = [ref]$LogAnalysisMap
             'LogTargetPathMap'             = [ref]$LogTargetPathMap
             'LogFormattedMap'              = [ref]$LogFormattedMap
@@ -7251,8 +7251,9 @@ function New-PermissionCache {
             'ThisFqdn'                     = [ref]''
             'ThisHostname'                 = [ref]$ThisHostname
             'ThreadCount'                  = [ref]$ThreadCount
-            'WellKnownSidBySid'            = [ref]$WellKnownSidBySid
+            'WellKnownSidByCaption'        = [ref]$WellKnownSidByCaption
             'WellKnownSidByName'           = [ref]$WellKnownSidByName
+            'WellKnownSidBySid'            = [ref]$WellKnownSidBySid
             'WhoAmI'                       = [ref]$WhoAmI
         })
 }

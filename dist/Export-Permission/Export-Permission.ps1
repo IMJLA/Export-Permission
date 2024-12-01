@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.425
+.VERSION 0.0.426
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate bugfixes in adsi module (implement cache in test-adsiprovider)
+integrate latest versions of adsi and permission modules
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ integrate bugfixes in adsi module (implement cache in test-adsiprovider)
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
