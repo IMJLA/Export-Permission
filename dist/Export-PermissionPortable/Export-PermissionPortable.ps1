@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.418
+.VERSION 0.0.419
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfixes in new version of permission module for retrieving threadcount from cache
+bugfix permission module for thishostname caching
 
 .PRIVATEDATA
 
@@ -5870,14 +5870,15 @@ function Resolve-Folder {
         [ref]$Cache
     )
     $RegEx = '^(?<DriveLetter>\w):'
+    $ComputerName = $Cache.Value['ThisHostname'].Value
     if ($TargetPath -match $RegEx) {
         $CimParams = @{
             Cache       = $Cache
             ClassName   = 'Win32_MappedLogicalDisk'
             KeyProperty = 'DeviceID'
         }
-        Write-LogMsg -Text "Get-CachedCimInstance -ComputerName '$ThisHostname'" -Expand $CimParams -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value
-        $MappedNetworkDrives = Get-CachedCimInstance -ComputerName $ThisHostname @CimParams
+        Write-LogMsg -Text "Get-CachedCimInstance -ComputerName '$ComputerName'" -Expand $CimParams -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value
+        $MappedNetworkDrives = Get-CachedCimInstance -ComputerName $ComputerName @CimParams
         $MatchingNetworkDrive = $MappedNetworkDrives |
         Where-Object -FilterScript { $_.DeviceID -eq "$($Matches.DriveLetter):" }
         if ($MatchingNetworkDrive) {

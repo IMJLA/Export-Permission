@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.418
+.VERSION 0.0.419
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfixes in new version of permission module for retrieving threadcount from cache
+bugfix permission module for thishostname caching
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfixes in new version of permission module for retrieving threadcount from cac
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#
