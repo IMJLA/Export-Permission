@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.427] - 2024-12-05
+### Changed
+- avoid returning all AD users in CIM query for local users
+
 ## [0.0.426] - 2024-12-01
 ### Changed
 - integrate latest versions of adsi and permission modules

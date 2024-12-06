@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.426
+.VERSION 0.0.427
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate latest versions of adsi and permission modules
+avoid returning all AD users in CIM query for local users
 
 .PRIVATEDATA
 
@@ -39,14 +39,6 @@ integrate latest versions of adsi and permission modules
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
-
-
-
-
-
-
 
 
 <#
@@ -267,7 +259,7 @@ param (
     Currently supports NTFS folders
     TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
     #>
-    [Parameter(ValueFromPipeline)]
+    [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
 

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.426
+.VERSION 0.0.427
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-integrate latest versions of adsi and permission modules
+avoid returning all AD users in CIM query for local users
 
 .PRIVATEDATA
 
@@ -76,7 +76,7 @@ Behavior:
 [OutputType([PSCustomObject])]
 [CmdletBinding()]
 param (
-    [Parameter(ValueFromPipeline)]
+    [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
     [string[]]$ExcludeAccount = 'SYSTEM',
@@ -1276,16 +1276,23 @@ function Resolve-IdRefAppPkgAuth {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    $Known = $Cache.Value['WellKnownSidByCaption'].Value[$IdentityReference]
-    if ($Known) {
-        $SIDString = $Known.SID
-    } else {
-        $SIDString = $Name
-    }
     $Caption = "$ServerNetBIOS\$Name"
     $DomainCacheResult = $null
     $DomainsByNetbios = $Cache.Value['DomainByNetbios']
     $TryGetValueResult = $DomainsByNetbios.Value.TryGetValue($ServerNetBIOS, [ref]$DomainCacheResult)
+    $Known = $Cache.Value['WellKnownSidByCaption'].Value[$IdentityReference]
+    if ($null -eq $Known) {
+        $Known = $DomainCacheResult.WellKnownSidByName[$Name]
+    }
+    $AccountProperties = @{}
+    if ($null -ne $Known) {
+        $SIDString = $Known.SID        
+        ForEach ($Prop in $Known.PSObject.Properties.GetEnumerator().Name) {
+            $AccountProperties[$Prop] = $Known.$Prop
+        }
+    } else {
+        $SIDString = $Name
+    }
     if ($TryGetValueResult) {
         $DomainDns = $DomainCacheResult.Dns
     } else {
@@ -1294,23 +1301,21 @@ function Resolve-IdRefAppPkgAuth {
         Write-LogMsg -Text "Get-AdsiServer -Fqdn '$ServerNetBIOS' -Cache `$Cache # cache miss # IdentityReference '$IdentityReference' # Domain NetBIOS '$ServerNetBIOS'" -Cache $Cache
         $DomainCacheResult = Get-AdsiServer -Fqdn $DomainDns -Cache $Cache
     }
-    $Win32Acct = [PSCustomObject]@{
-        SID     = $SIDString
-        Caption = $Caption
-        Domain  = $ServerNetBIOS
-        Name    = $Name
-    }
+    $AccountProperties['SID'] = $SIDString
+    $AccountProperties['Caption'] = $Caption
+    $AccountProperties['Domain'] = $ServerNetBIOS
+    $AccountProperties['Name'] = $Name
+    $AccountProperties['IdentityReference'] = $IdentityReference
+    $AccountProperties['SIDString'] = $SIDString
+    $AccountProperties['IdentityReferenceNetBios'] = $Caption
+    $AccountProperties['IdentityReferenceDns'] = "$DomainDns\$Name"
+    $Win32Acct = [PSCustomObject]$AccountProperties
     $DomainCacheResult.WellKnownSidBySid[$SIDString] = $Win32Acct
     $DomainCacheResult.WellKnownSidByName[$Name] = $Win32Acct
     $Cache.Value['DomainByFqdn'].Value[$DomainCacheResult.Dns] = $DomainCacheResult
     $Cache.Value['DomainByNetbios'].Value[$DomainCacheResult.Netbios] = $DomainCacheResult
     $Cache.Value['DomainBySid'].Value[$DomainCacheResult.Sid] = $DomainCacheResult
-    return [PSCustomObject]@{
-        IdentityReference        = $IdentityReference
-        SIDString                = $SIDString
-        IdentityReferenceNetBios = $Caption
-        IdentityReferenceDns     = "$DomainDns\$Name"
-    }
+    return $Win32Acct
 }
 function Resolve-IdRefBuiltIn {
     [OutputType([PSCustomObject])]
@@ -1430,7 +1435,11 @@ function Resolve-IdRefSID {
         [ref]$Cache
     )
     $CachedWellKnownSID = Find-CachedWellKnownSID -IdentityReference $IdentityReference -DomainNetBIOS $ServerNetBIOS -DomainByNetbios $Cache.Value['DomainByNetbios']
+    $AccountProperties = @{}
     if ($CachedWellKnownSID) {
+        ForEach ($Prop in $CachedWellKnownSID.PSObject.Properties.GetEnumerator().Name) {
+            $AccountProperties[$Prop] = $CachedWellKnownSID.$Prop
+        }
         $NTAccount = $CachedWellKnownSID.IdentityReferenceNetBios
         $DomainNetBIOS = $ServerNetBIOS
         $DomainDns = ConvertTo-Fqdn -NetBIOS $DomainNetBIOS -Cache $Cache
@@ -1440,6 +1449,9 @@ function Resolve-IdRefSID {
         $KnownSid = Get-KnownSid -SID $IdentityReference
     }
     if ($KnownSid) {
+        ForEach ($Prop in $KnownSid.PSObject.Properties.GetEnumerator().Name) {
+            $AccountProperties[$Prop] = $KnownSid.$Prop
+        }
         $NTAccount = $KnownSid.NTAccount
         $DomainNetBIOS = $ServerNetBIOS
         $DomainDns = ConvertTo-Fqdn -NetBIOS $DomainNetBIOS -Cache $Cache
@@ -1475,12 +1487,11 @@ function Resolve-IdRefSID {
             $NameFromSplit = $split[1]
             $DomainNetBIOS = $ServerNetBIOS
             $Caption = "$ServerNetBIOS\$NameFromSplit"
-            $Win32Acct = [PSCustomObject]@{
-                SID     = $IdentityReference
-                Caption = $Caption
-                Domain  = $ServerNetBIOS
-                Name    = $NameFromSplit
-            }
+            $AccountProperties['SID'] = $IdentityReference
+            $AccountProperties['Caption'] = $Caption
+            $AccountProperties['Domain'] = $ServerNetBIOS
+            $AccountProperties['Name'] = $NameFromSplit
+            $Win32Acct = [PSCustomObject]$AccountProperties
         } else {
             $DomainNetBIOS = $DomainFromSplit
         }
@@ -1512,11 +1523,19 @@ function Resolve-IdRefSID {
         }
         $Resolved = Resolve-IdentityReference @ResolveIdentityReferenceParams
     } else {
-        $Resolved = [PSCustomObject]@{
-            IdentityReference        = $IdentityReference
-            SIDString                = $IdentityReference
-            IdentityReferenceNetBios = "$DomainNetBIOS\$IdentityReference"
-            IdentityReferenceDns     = "$DomainDns\$IdentityReference"
+        if ($Win32Acct) {
+            $AccountProperties['IdentityReference'] = $IdentityReference
+            $AccountProperties['SIDString'] = $IdentityReference
+            $AccountProperties['IdentityReferenceNetBios'] = "$DomainNetBIOS\$IdentityReference"
+            $AccountProperties['IdentityReferenceDns'] = "$DomainDns\$IdentityReference"
+            $Resolved = [PSCustomObject]$AccountProperties
+        } else {
+            $Resolved = [PSCustomObject]@{
+                IdentityReference        = $IdentityReference
+                SIDString                = $IdentityReference
+                IdentityReferenceNetBios = "$DomainNetBIOS\$IdentityReference"
+                IdentityReferenceDns     = "$DomainDns\$IdentityReference"
+            }
         }
     }
     return $Resolved
@@ -1744,7 +1763,9 @@ function ConvertFrom-PropertyValueCollectionToString {
     param (
         [System.DirectoryServices.PropertyValueCollection]$PropertyValueCollection
     )
-    $SubType = & { $PropertyValueCollection.Value.GetType().FullName } 2>$null
+    if ($null -ne $PropertyValueCollection.Value) {
+        $SubType = $PropertyValueCollection.Value.GetType().FullName
+    }
     switch ($SubType) {
         'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $PropertyValueCollection.Value ; break }
         default { "$($PropertyValueCollection.Value)" }
@@ -1799,7 +1820,9 @@ function ConvertFrom-ResultPropertyValueCollectionToString {
     param (
         [System.DirectoryServices.ResultPropertyValueCollection]$ResultPropertyValueCollection
     )
-    $SubType = & { $ResultPropertyValueCollection.Value.GetType().FullName } 2>$null
+    if ($null -ne $ResultPropertyValueCollection.Value) {
+        $SubType = $ResultPropertyValueCollection.Value.GetType().FullName
+    }
     switch ($SubType) {
         'System.Byte[]' { ConvertTo-DecStringRepresentation -ByteArray $ResultPropertyValueCollection.Value ; break }
         default { "$($ResultPropertyValueCollection.Value)" }
@@ -2477,8 +2500,8 @@ function Get-AdsiServer {
             $DomainSid = ConvertTo-DomainSidString -DomainDnsName $DomainFqdn -AdsiProvider $AdsiProvider -Cache $Cache
             Write-LogMsg @Log -Text "ConvertTo-DomainNetBIOS -DomainFQDN '$DomainFqdn' -AdsiProvider '$AdsiProvider' -Cache `$Cache"
             $DomainNetBIOS = ConvertTo-DomainNetBIOS -DomainFQDN $DomainFqdn -AdsiProvider $AdsiProvider -Cache $Cache
-            Write-LogMsg @Log -Text "Get-CachedCimInstance -ComputerName '$DomainFqdn' -ClassName 'Win32_Account' -KeyProperty 'Caption' -CacheByProperty @() -Cache `$Cache"
-            $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainFqdn -ClassName 'Win32_Account' -KeyProperty 'Caption' -CacheByProperty @() -Cache $Cache
+            Write-LogMsg @Log -Text "Get-CachedCimInstance -ComputerName '$DomainFqdn' -Query 'Select * from Win32_Account Where LocalAccount = TRUE' -KeyProperty 'Caption' -CacheByProperty @() -Cache `$Cache"
+            $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainFqdn -Query 'Select * from Win32_Account Where LocalAccount = TRUE' -KeyProperty 'Caption' -CacheByProperty @() -Cache $Cache
             Write-LogMsg @Log -Text "`$Win32Services = Get-CachedCimInstance -ComputerName '$DomainFqdn' -ClassName 'Win32_Service' -KeyProperty 'Name' -CacheByProperty @() -Cache `$Cache"
             $Win32Services = Get-CachedCimInstance -ComputerName $DomainFqdn -ClassName 'Win32_Service' -KeyProperty 'Name' -CacheByProperty @() -Cache $Cache
             Write-LogMsg @Log -Text "Resolve-ServiceNameToSID -InputObject `$Win32Services"
@@ -2539,8 +2562,8 @@ function Get-AdsiServer {
             }
             Write-LogMsg @Log -Text "ConvertTo-DomainSidString -DomainDnsName '$DomainDnsName' -AdsiProvider '$AdsiProvider' -Cache `$Cache"
             $DomainSid = ConvertTo-DomainSidString -DomainDnsName $DomainDnsName -AdsiProvider $AdsiProvider -Cache $Cache
-            Write-LogMsg @Log -Text "Get-CachedCimInstance -ComputerName '$DomainDnsName' -ClassName 'Win32_Account' -KeyProperty 'Caption' -CacheByProperty @('Caption', 'SID') -Cache `$Cache"
-            $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainDnsName -ClassName 'Win32_Account' -KeyProperty 'Caption' -CacheByProperty @('Caption', 'SID') -Cache $Cache
+            Write-LogMsg @Log -Text "Get-CachedCimInstance -ComputerName '$DomainDnsName' -Query 'Select * from Win32_Account Where LocalAccount = TRUE' -KeyProperty 'Caption' -CacheByProperty @() -Cache `$Cache"
+            $Win32Accounts = Get-CachedCimInstance -ComputerName $DomainDnsName -Query 'Select * from Win32_Account Where LocalAccount = TRUE' -KeyProperty 'Caption' -CacheByProperty @() -Cache $Cache
             Write-LogMsg @Log -Text "`$Win32Services = Get-CachedCimInstance -ComputerName '$DomainDnsName' -ClassName 'Win32_Service' -KeyProperty 'Name' -CacheByProperty @() -Cache `$Cache"
             $Win32Services = Get-CachedCimInstance -ComputerName $DomainDnsName -ClassName 'Win32_Service' -KeyProperty 'Name' -CacheByProperty @() -Cache $Cache
             Write-LogMsg @Log -Text "Resolve-ServiceNameToSID -InputObject `$Win32Services"
@@ -4772,11 +4795,12 @@ function ConvertTo-PermissionList {
                             }
                             $TableId = "Perms_$($GroupID -replace '[^A-Za-z0-9\-_]', '-')"
                             $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable
+                            $DivId = $TableId.Replace('Perms', 'Div')
                             [PSCustomObject]@{
                                 PSTypeName = 'Permission.AccountPermissionList'
                                 Columns    = Get-ColumnJson -InputObject $StartingPermissions-PropNames Path, Access, 'Due to Membership In', 'Source of Access'
                                 Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
-                                Div        = New-BootstrapDiv -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
+                                Div        = New-BootstrapDiv -Id $DivId -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
                                 PassThru   = $ObjectsForJsonData
                                 Grouping   = $GroupID
                                 Table      = $TableId
@@ -4805,13 +4829,14 @@ function ConvertTo-PermissionList {
                                     [PSCustomObject]$Props
                                 }
                                 $TableId = "Perms_$($GroupID -replace '[^A-Za-z0-9\-_]', '-')"
+                                $DivId = $TableId.Replace('Perms', 'Div')
                                 $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable
                                 [string[]]$PropNames = @('Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                                 [PSCustomObject]@{
                                     PSTypeName = 'Permission.ItemPermissionList'
                                     Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
                                     Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
-                                    Div        = New-BootstrapDiv -Text ($Heading + $SubHeading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
+                                    Div        = New-BootstrapDiv -Id $DivId -Text ($Heading + $SubHeading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
                                     Grouping   = $GroupID
                                     PassThru   = $ObjectsForJsonData
                                     Table      = $TableId
@@ -4840,13 +4865,14 @@ function ConvertTo-PermissionList {
                                 [PSCustomObject]$Props
                             }
                             $TableId = "Perms_$($GroupID -replace '[^A-Za-z0-9\-_]', '-')"
+                            $DivId = $TableId.Replace('Perms', 'Div')
                             $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable -PageSize 25
                             [string[]]$PropNames = @('Item', 'Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                             [PSCustomObject]@{
                                 PSTypeName = 'Permission.TargetPermissionList'
                                 Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
                                 Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
-                                Div        = New-BootstrapDiv -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
+                                Div        = New-BootstrapDiv -Id $DivId -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
                                 Grouping   = $GroupID
                                 PassThru   = $ObjectsForJsonData
                                 Table      = $TableId
@@ -4997,12 +5023,13 @@ function Expand-AccountPermissionReference {
     param (
         $Reference,
         [ref]$PrincipalsByResolvedID,
-        [ref]$ACEsByGUID
+        [ref]$ACEsByGUID,
+        [ref]$ACLsByPath
     )
     ForEach ($Account in $Reference) {
         $Access = ForEach ($PermissionRef in $Account.Access) {
             [PSCustomObject]@{
-                Path       = $PermissionRef.Path
+                Item       = $ACLsByPath.Value[$PermissionRef.Path]
                 PSTypeName = 'Permission.AccountPermissionItemAccess'
                 Access     = ForEach ($ACE in $ACEsByGUID.Value[$PermissionRef.AceGUIDs]) {
                     $ACE
@@ -5118,7 +5145,7 @@ function Expand-TargetPermissionReference {
                     [pscustomobject]@{
                         Item       = $AclsByPath.Value[$NetworkPath.Path]
                         PSTypeName = 'Permission.ParentItemPermission'
-                        Accounts   = Expand-AccountPermissionReference -Reference $NetworkPath.Accounts -ACEsByGUID $ACEsByGUID -PrincipalsByResolvedID $PrincipalsByResolvedID
+                        Accounts   = Expand-AccountPermissionReference -Reference $NetworkPath.Accounts -ACEsByGUID $ACEsByGUID -PrincipalsByResolvedID $PrincipalsByResolvedID -ACLsByPath $ACLsByPath
                     }
                 }
                 [pscustomobject]$TargetProperties
@@ -5667,7 +5694,10 @@ function Group-TargetPermissionReference {
                 $TargetProperties['NetworkPaths'] = ForEach ($NetworkPath in $NetworkPaths) {
                     $ItemsForThisNetworkPath = [System.Collections.Generic.List[String]]::new()
                     $ItemsForThisNetworkPath.Add($NetworkPath)
-                    $ItemsForThisNetworkPath.AddRange([string[]]$Children[$NetworkPath])
+                    $Kids = [string[]]$Children[$NetworkPath]
+                    if ($Kids) {
+                        $ItemsForThisNetworkPath.AddRange($Kids)
+                    }
                     $IDsWithAccess = Find-ResolvedIDsWithAccess -ItemPath $ItemsForThisNetworkPath @CommonParams
                     $AceGuidsForThisNetworkPath = @{}
                     ForEach ($Item in $ItemsForThisNetworkPath) {
@@ -6074,7 +6104,11 @@ function Select-ItemTableProperty {
     )
     ForEach ($Object in $InputObject) {
         if (-not $SkipFilterCheck) {
-            $AccountNames = $ShortNameByID[$Object.Access.Account.ResolvedAccountName]
+            $ResolvedAccountName = $Object.Access.Account.ResolvedAccountName
+            if (-not $ResolvedAccountName) {
+                $ResolvedAccountName = $Object.Account.ResolvedAccountName
+            }
+            $AccountNames = $ShortNameByID[$ResolvedAccountName]
             if (-not $AccountNames) { continue }
             $GroupString = $ShortNameByID[$Object.Access.Access.IdentityReferenceResolved]
             if (-not $GroupString) { continue }
@@ -6394,8 +6428,8 @@ function Expand-Permission {
         Write-LogMsg @Log -Text '$AccountPermissionReferences = Group-AccountPermissionReference -ID $PrincipalsByResolvedID.Keys -AceGuidByID $AceGuidByID -AceByGuid $ACEsByGUID'
         $AccountPermissionReferences = Group-AccountPermissionReference -ID $PrincipalsByResolvedID.Value.Keys -AceGuidByID $AceGuidByID -AceByGuid $ACEsByGUID
         Write-Progress @Progress -Status '25% : Expand account permissions into objects' -CurrentOperation 'Resolve-SplitByParameter' -PercentComplete 33
-        Write-LogMsg @Log -Text '$AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences @CommonParams'
-        $AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences @CommonParams
+        Write-LogMsg @Log -Text '$AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences -ACLsByPath $ACLsByPath @CommonParams'
+        $AccountPermissions = Expand-AccountPermissionReference -Reference $AccountPermissionReferences -ACLsByPath $ACLsByPath @CommonParams
     }
     if (
         $HowToSplit['item']
@@ -6604,7 +6638,7 @@ function Format-Permission {
             $i++ 
             Write-Progress -Status "$Percent% (Account $i of $Count)" -CurrentOperation $Account.Account.ResolvedAccountName -PercentComplete $Percent @Progress
             $Selection = $Account
-            $PermissionGroupingsWithChosenProperties = Invoke-Command -ScriptBlock $Grouping['Script'] -ArgumentList $Selection, $Culture, $IgnoreDomain, $IncludeAccountFilterContents, $ExcludeClassFilterContents
+            $PermissionGroupingsWithChosenProperties = Invoke-Command -ScriptBlock $Grouping['Script'] -ArgumentList $Selection, $Culture, $ShortNameByID, $IgnoreDomain, $IncludeAccountFilterContents, $ExcludeClassFilterContents
             $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -AccountProperty $AccountProperty -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
             $OutputProperties = @{
                 Account      = $Account.Account
@@ -7824,8 +7858,24 @@ function ConvertTo-BootstrapTableScript {
     $null = $ResultingJavaScript.AppendLine("      classes: '$Classes',")
     $null = $ResultingJavaScript.AppendLine("      headerStyle: '$HeaderStyle',")
     $null = $ResultingJavaScript.AppendLine("      columns: $ColumnJson,")
-    $null = $ResultingJavaScript.AppendLine("      data: $DataJson")
-    $null = $ResultingJavaScript.AppendLine('    });')
+    $null = $ResultingJavaScript.AppendLine("      data: $DataJson,")
+    $null = $ResultingJavaScript.AppendLine('      onClickRow: function (row, element, field) {')
+    $null = $ResultingJavaScript.AppendLine("          let modifiedString = 'Div_' + row.Folder.replace(/[^A-Za-z0-9\-_]/g, '-');")
+    $null = $ResultingJavaScript.AppendLine("          let uniqueHash = modifiedString + '_' + new Date().getTime();")
+    $null = $ResultingJavaScript.AppendLine("          let tempDiv = document.createElement('div');")
+    $null = $ResultingJavaScript.AppendLine('          tempDiv.id = uniqueHash;')
+    $null = $ResultingJavaScript.AppendLine('          let targetDiv = document.getElementById(modifiedString);')
+    $null = $ResultingJavaScript.AppendLine('          if (targetDiv) {')
+    $null = $ResultingJavaScript.AppendLine('              targetDiv.insertBefore(tempDiv, targetDiv.firstChild);')
+    $null = $ResultingJavaScript.AppendLine('              window.location.hash = uniqueHash;')
+    $null = $ResultingJavaScript.AppendLine('              setTimeout(function () {')
+    $null = $ResultingJavaScript.AppendLine('                  targetDiv.removeChild(tempDiv);')
+    $null = $ResultingJavaScript.AppendLine('              }, 1000);')
+    $null = $ResultingJavaScript.AppendLine('          } else {')
+    $null = $ResultingJavaScript.AppendLine("              console.error('Target div not found:', modifiedString);")
+    $null = $ResultingJavaScript.AppendLine('          }')
+    $null = $ResultingJavaScript.AppendLine('      }')
+    $null = $ResultingJavaScript.AppendLine('});')
     $null = $ResultingJavaScript.Append("    `$('")
     $null = $ResultingJavaScript.Append($TableId)
     $null = $ResultingJavaScript.Append("').attr(")
@@ -8035,15 +8085,19 @@ function New-BootstrapDiv {
         [Parameter(
             Position = 1
         )]
-        [string]$Class = 'h-100 p-1 bg-light border rounded-3'
+        [string]$Class = 'h-100 p-1 bg-light border rounded-3',
+        [string]$Id
     )
-    begin {}
-    process {
-        ForEach ($String in $Text) {
-            "<div class=`"alert alert-$($Class.ToLower())`">$String</div>"
+    begin {
+        if ($Id) {
+            $DivId = " id=`"$Id`""
         }
     }
-    end {}
+    process {
+        ForEach ($String in $Text) {
+            "<div$DivId class=`"alert alert-$($Class.ToLower())`">$String</div>"
+        }
+    }
 }
 function New-BootstrapDivWithHeading {
     param (

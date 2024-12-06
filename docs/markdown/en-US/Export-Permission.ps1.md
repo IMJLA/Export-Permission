@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.426
+help version: 0.0.427
 locale: en-US
 script name: 
 online version:
@@ -16,7 +16,7 @@ Create CSV, HTML, and XML reports of permissions
 ## SYNTAX
 
 ```
-Export-Permission.ps1 [[-TargetPath] <DirectoryInfo[]>] [[-ExcludeAccount] <String[]>]
+Export-Permission.ps1 [-TargetPath] <DirectoryInfo[]> [[-ExcludeAccount] <String[]>]
  [[-IncludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>]
  [[-OutputDir] <String>] [-NoMembers] [[-RecurseDepth] <Int32>] [[-Title] <String>]
  [[-AccountConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
@@ -674,7 +674,7 @@ Type: System.IO.DirectoryInfo[]
 Parameter Sets: (All)
 Aliases:
 
-Required: False
+Required: True
 Position: 1
 Default value: None
 Accept pipeline input: True (ByValue)

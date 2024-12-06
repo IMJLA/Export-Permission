@@ -36,7 +36,7 @@
     <command:syntax>
       <command:syntaxItem>
         <maml:name>Export-Permission.ps1</maml:name>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
           <maml:name>TargetPath</maml:name>
           <maml:description>
             <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
@@ -589,7 +589,7 @@
         </dev:type>
         <dev:defaultValue>Target</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
         <maml:name>TargetPath</maml:name>
         <maml:description>
           <maml:para>Path to the NTFS folder whose permissions to export</maml:para>
