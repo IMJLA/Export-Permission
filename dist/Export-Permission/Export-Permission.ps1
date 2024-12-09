@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.462
+.VERSION 0.0.463
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix favicon path in docusaurus cfg
+use svg for favicon
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ fix favicon path in docusaurus cfg
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

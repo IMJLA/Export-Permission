@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.463] - 2024-12-08
+### Changed
+- use svg for favicon
+
 ## [0.0.462] - 2024-12-08
 ### Fixed
 - fix favicon path in docusaurus cfg
