@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.459] - 2024-12-08
+### Changed
+- use custom imagery
+
 ## [0.0.458] - 2024-12-08
 ### Changed
 - use custom imagery

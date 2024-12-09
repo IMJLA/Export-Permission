@@ -153,21 +153,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -391,16 +391,16 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
 Task BuildArt -depends BuildMAMLHelp {
 
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'logo.ps1')
-    $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
-    Write-Host "`t. $ScriptToRun -OutputDir '$OutputDir'"
-    . $ScriptToRun -OutputDir $OutputDir
+    $Script:BuildImageDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
+    Write-Host "`t. $ScriptToRun -OutputDir '$BuildImageDir'"
+    . $ScriptToRun -OutputDir $BuildImageDir
 
 } -description 'Build SVG art using PSSVG.'
 
 Task ConvertArt -depends BuildArt {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
-    $sourceSVG = [IO.Path]::Combine($Script:OutputDir, 'logo.svg')
+    $sourceSVG = [IO.Path]::Combine($Script:BuildImageDir, 'logo.svg')
     Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 
