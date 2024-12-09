@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.461
+.VERSION 0.0.462
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-use custom imagery
+fix favicon path in docusaurus cfg
 
 .PRIVATEDATA
 

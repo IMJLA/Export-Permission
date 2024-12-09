@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.462] - 2024-12-08
+### Fixed
+- fix favicon path in docusaurus cfg
+
 ## [0.0.461] - 2024-12-08
 ### Changed
 - use custom imagery

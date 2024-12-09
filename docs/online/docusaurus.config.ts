@@ -37,7 +37,7 @@ const config: Config = {
 
 
   tagline: 'Present complex nested permissions and group memberships in a report that is easy to read',
-  favicon: 'img/logo-512-512.png',
+  favicon: 'img/logo-512x512.png',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
