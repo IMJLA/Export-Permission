@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.454] - 2024-12-08
+### Changed
+- custom favicon
+
 ## [0.0.453] - 2024-12-08
 ### Changed
 - update report mockups for docs

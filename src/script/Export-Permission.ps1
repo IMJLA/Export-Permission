@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.453
+.VERSION 0.0.454
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update report mockups for docs
+custom favicon
 
 .PRIVATEDATA
 
@@ -39,32 +39,6 @@ update report mockups for docs
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <#

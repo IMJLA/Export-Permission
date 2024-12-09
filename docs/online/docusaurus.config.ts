@@ -36,8 +36,8 @@ const config: Config = {
   //-------------------------------------------------------------------
 
 
-  tagline: 'Dinosaurs are cool',
-  favicon: 'img/favicon.ico',
+  tagline: 'Present complex nested permissions and group memberships in a report that is easy to read',
+  favicon: 'img/favicon-512-512.png',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',

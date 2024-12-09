@@ -388,18 +388,7 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
 
 } -description 'Build an updatable .cab help file based on the Markdown help files by using PlatyPS.'
 
-Task BuildOnlineHelp -depends BuildMAMLHelp {
-
-    $OnlineHelp = [IO.Path]::Combine('..', '..', 'docs', 'online')
-    $Location = Get-Location
-    Set-Location $OnlineHelp
-    Write-Host "`tnpm run build"
-    & npm run build
-    Set-Location $Location
-
-} -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
-
-Task BuildArt -depends BuildOnlineHelp {
+Task BuildArt -depends BuildMAMLHelp {
 
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
     $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
@@ -416,6 +405,17 @@ Task ConvertArt -depends BuildArt {
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 
 } -description 'Convert SVGs to PNG using Inkscape.'
+
+Task BuildOnlineHelp -depends BuildArt {
+
+    $OnlineHelp = [IO.Path]::Combine('..', '..', 'docs', 'online')
+    $Location = Get-Location
+    Set-Location $OnlineHelp
+    Write-Host "`tnpm run build"
+    & npm run build
+    Set-Location $Location
+
+} -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
 
 $pesterPreReqs = {
     $result = $true
