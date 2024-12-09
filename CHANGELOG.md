@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.428] - 2024-12-08
+### Changed
+- update comments and commit report mockups
+
 ## [0.0.427] - 2024-12-05
 ### Changed
 - avoid returning all AD users in CIM query for local users

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.427
+.VERSION 0.0.428
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-avoid returning all AD users in CIM query for local users
+update comments and commit report mockups
 
 .PRIVATEDATA
 
@@ -788,7 +788,7 @@ function ConvertTo-DirectoryEntry {
         'primaryGroupToken'
     )
     $DirectoryParams = @{ Cache = $Cache ; PropertiesToLoad = $PropertiesToLoad }
-    $SearchSplat = @{ PropertiesToLoad = $PropertiesToLoad }
+    $SearchSplat = @{}
     $CurrentDomain = $Cache.Value['ThisParentDomain']
     $SampleAce = $Cache.Value['AceByGUID'].Value[@($AceGuid)[0]]
     if (
@@ -4810,28 +4810,48 @@ function ConvertTo-PermissionList {
                     }
                     'item' {
                         ForEach ($Group in $PermissionGrouping) {
-                            $GroupID = $Group.Item.Path
-                            $Heading = New-HtmlHeading "Accounts with access to $GroupID" -Level 6
-                            $SubHeading = Get-FolderPermissionTableHeader -Group $Group -GroupID $GroupID -ShortestFolderPath $ShortestPath
+                            if ($null -ne $Group.Account) {
+                                [string[]]$PropNames = @('Access', 'Due to Membership In', 'Source of Access')
+                                $GroupID = $Group.Access.Item.Path
+                                $Heading = New-HtmlHeading "Access to $GroupID" -Level 6
+                                $SubHeading = 'This account has the below access to this item and its children, except children with inheritance disabled.'
+                                $ObjProps = [ordered]@{
+                                    'Access'            = 'Access'
+                                    'DuetoMembershipIn' = 'Due to Membership In'
+                                    'SourceofAccess'    = 'Source of Access'
+                                }
+                                [bool]$IsAccount = $false
+                            } else {
+                                [string[]]$PropNames = @('Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
+                                $GroupID = $Group.Item.Path
+                                $Heading = New-HtmlHeading "Accounts with access to $GroupID" -Level 6
+                                $SubHeading = Get-FolderPermissionTableHeader -Group $Group -GroupID $GroupID -ShortestFolderPath $ShortestPath
+                                $ObjProps = [ordered]@{
+                                    'Account'           = 'Account'
+                                    'Access'            = 'Access'
+                                    'DuetoMembershipIn' = 'Due to Membership In'
+                                    'SourceofAccess'    = 'Source of Access'
+                                    'Name'              = 'Name'
+                                }
+                                [bool]$IsAccount = $true
+                            }
                             $StartingPermissions = $Permission[$GroupID]
                             if ($StartingPermissions) {
                                 $ObjectsForJsonData = ForEach ($Obj in $StartingPermissions) {
-                                    $Props = [ordered]@{
-                                        Account           = $Obj.Account
-                                        Access            = $Obj.Access
-                                        DuetoMembershipIn = $Obj.'Due to Membership In'
-                                        SourceofAccess    = $Obj.'Source of Access'
-                                        Name              = $Obj.Name
+                                    $Props = [ordered]@{}
+                                    ForEach ($PropName in $ObjProps.Keys) {
+                                        $Props[$ObjProps[$PropName]] = $Obj.$PropName
                                     }
-                                    ForEach ($PropName in $AccountProperty) {
-                                        $Props[$PropName] = $Obj.$PropName
+                                    if ($IsAccount) {
+                                        ForEach ($PropName in $AccountProperty) {
+                                            $Props[$PropName] = $Obj.$PropName
+                                        }
                                     }
                                     [PSCustomObject]$Props
                                 }
                                 $TableId = "Perms_$($GroupID -replace '[^A-Za-z0-9\-_]', '-')"
                                 $DivId = $TableId.Replace('Perms', 'Div')
                                 $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable
-                                [string[]]$PropNames = @('Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                                 [PSCustomObject]@{
                                     PSTypeName = 'Permission.ItemPermissionList'
                                     Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
@@ -5019,6 +5039,56 @@ function ConvertTo-ScriptHtml {
     }
     return $ScriptHtmlBuilder.ToString()
 }
+function Expand-AccountPermissionItemAccessReference {
+    param (
+        $Reference,
+        [ref]$AceByGUID,
+        [ref]$AclByPath
+    )
+    if ($Reference) {
+        if ($Reference -is [System.Collections.IEnumerable]) {
+            $FirstRef = $Reference[0]
+        } else {
+            $FirstRef = $Reference
+        }
+        if ($FirstRef) {
+            if ($FirstRef.AceGUIDs -is [System.Collections.IEnumerable]) {
+                $FirstACEGuid = $FirstRef.AceGUIDs[0]
+            } else {
+                $FirstACEGuid = $FirstRef.AceGUIDs
+            }
+        }
+        if ($FirstACEGuid) {
+            $ACEList = $AceByGUID.Value[$FirstACEGuid]
+        }
+        if ($ACEList -is [System.Collections.IEnumerable]) {
+            $FirstACE = $ACEList[0]
+        } else {
+            $FirstACE = $ACEList
+        }
+        $ACEProps = $FirstACE.PSObject.Properties.GetEnumerator().Name
+    }
+    ForEach ($PermissionRef in $Reference) {
+        $Item = $AclByPath.Value[$PermissionRef.Path]
+        [PSCustomObject]@{
+            Access     = ForEach ($GuidList in $PermissionRef.AceGUIDs) {
+                ForEach ($Guid in $GuidList) {
+                    $ACE = $AceByGUID.Value[$Guid]
+                    $OutputProperties = @{
+                        Item = $Item
+                    }
+                    ForEach ($Prop in $ACEProps) {
+                        $OutputProperties[$Prop] = $ACE.$Prop
+                    }
+                    [PSCustomObject]$OutputProperties
+                }
+            }
+            Item       = $Item
+            ItemPath   = $PermissionRef.Path
+            PSTypeName = 'Permission.AccountPermissionItemAccess'
+        }
+    }
+}
 function Expand-AccountPermissionReference {
     param (
         $Reference,
@@ -5027,20 +5097,10 @@ function Expand-AccountPermissionReference {
         [ref]$ACLsByPath
     )
     ForEach ($Account in $Reference) {
-        $Access = ForEach ($PermissionRef in $Account.Access) {
-            [PSCustomObject]@{
-                Item       = $ACLsByPath.Value[$PermissionRef.Path]
-                PSTypeName = 'Permission.AccountPermissionItemAccess'
-                Access     = ForEach ($ACE in $ACEsByGUID.Value[$PermissionRef.AceGUIDs]) {
-                    $ACE
-                }
-            }
-        }
         [PSCustomObject]@{
-            Account     = $PrincipalsByResolvedID.Value[$Account.Account]
-            AccountName = $Account.Account
-            Access      = $Access
-            PSTypeName  = 'Permission.AccountPermission'
+            Account    = $PrincipalsByResolvedID.Value[$Account.Account]
+            Access     = Expand-AccountPermissionItemAccessReference -Reference $Account.Access -AceByGUID $ACEsByGUID -AclByPath $ACLsByPath
+            PSTypeName = 'Permission.AccountPermission'
         }
     }
 }
@@ -5053,9 +5113,10 @@ function Expand-FlatPermissionReference {
     )
     ForEach ($Item in $SortedPath) {
         $AceGUIDs = $AceGUIDsByPath.Value[$Item]
-        if (-not $AceGUIDs) { continue }
-        ForEach ($ACE in $ACEsByGUID.Value[$AceGUIDs]) {
-            Merge-AceAndPrincipal -ACE $ACE -Principal $PrincipalsByResolvedID.Value[$ACE.IdentityReferenceResolved] -PrincipalByResolvedID $PrincipalsByResolvedID
+        ForEach ($Guid in $AceGUIDs) {
+            ForEach ($ACE in $ACEsByGUID.Value[$Guid]) {
+                Merge-AceAndPrincipal -ACE $ACE -Principal $PrincipalsByResolvedID.Value[$ACE.IdentityReferenceResolved] -PrincipalByResolvedID $PrincipalsByResolvedID
+            }
         }
     }
 }
@@ -5191,7 +5252,7 @@ function Expand-TargetPermissionReference {
                 $TargetProperties['NetworkPaths'] = ForEach ($NetworkPath in $Target.NetworkPaths) {
                     [pscustomobject]@{
                         Access     = Expand-FlatPermissionReference -SortedPath $SortedPaths @ExpansionParameters
-                        Item       = $AclsByPath[$NetworkPath.Path]
+                        Item       = $AclsByPath.Value[$NetworkPath.Path]
                         PSTypeName = 'Permission.FlatPermission'
                     }
                 }
@@ -5329,7 +5390,7 @@ function Get-HtmlReportElements {
         $ReportInstanceId,
         [Hashtable]$AceByGUID,
         [int[]]$Detail = @(0..10),
-        [cultureinfo]$Culture = (Get-Culture),
+        [cultureinfo]$Culture = $Cache.Value['Culture'],
         [String]$GroupBy = 'item',
         [string[]]$SplitBy = 'target',
         [String]$Split,
@@ -5751,7 +5812,10 @@ function Group-TargetPermissionReference {
                 $TargetProperties['NetworkPaths'] = ForEach ($NetworkPath in $NetworkPaths) {
                     $ItemsForThisNetworkPath = [System.Collections.Generic.List[String]]::new()
                     $ItemsForThisNetworkPath.Add($NetworkPath)
-                    $ItemsForThisNetworkPath.AddRange([string[]]$Children[$NetworkPath])
+                    $Kids = [string[]]$Children[$NetworkPath]
+                    if ($Kids) {
+                        $ItemsForThisNetworkPath.AddRange($Kids)
+                    }
                     [PSCustomObject]@{
                         Path   = $NetworkPath
                         Access = Expand-FlatPermissionReference -SortedPath $ItemsForThisNetworkPath @CommonParams
@@ -5978,7 +6042,7 @@ function Resolve-GroupByParameter {
     ) {
         return @{
             Property = 'Access'
-            Script   = [scriptblock]::create("Select-PermissionTableProperty -InputObject `$args[0] -ShortNameById `$args[2] -IncludeFilterContents `$args[3] -ExcludeClassFilterContents `$args[4]")
+            Script   = [scriptblock]::create("Select-PermissionTableProperty -InputObject `$args[0] -ShortNameById `$args[2] -IncludeAccountFilterContents `$args[3] -ExcludeClassFilterContents `$args[4]")
         }
     } else {
         return @{
@@ -6103,10 +6167,13 @@ function Select-ItemTableProperty {
         [switch]$SkipFilterCheck
     )
     ForEach ($Object in $InputObject) {
+        $Item = $Object.Item
         if (-not $SkipFilterCheck) {
-            $ResolvedAccountName = $Object.Access.Account.ResolvedAccountName
-            if (-not $ResolvedAccountName) {
+            if ($null -ne $Object.Account) {
                 $ResolvedAccountName = $Object.Account.ResolvedAccountName
+                $Item = $Object.Access.Item
+            } else {
+                $ResolvedAccountName = $Object.Access.Account.ResolvedAccountName
             }
             $AccountNames = $ShortNameByID[$ResolvedAccountName]
             if (-not $AccountNames) { continue }
@@ -6114,8 +6181,8 @@ function Select-ItemTableProperty {
             if (-not $GroupString) { continue }
         }
         [PSCustomObject]@{
-            Folder      = $Object.Item.Path
-            Inheritance = $Culture.TextInfo.ToTitleCase(-not $Object.Item.AreAccessRulesProtected)
+            Folder      = $Item.Path
+            Inheritance = $Culture.TextInfo.ToTitleCase(-not $Item.AreAccessRulesProtected)
         }
     }
 }
@@ -6123,12 +6190,12 @@ function Select-PermissionTableProperty {
     param (
         $InputObject,
         [String]$GroupBy,
-        [ref]$ShortNameByID = @{},
-        [hashtable]$OutputHash = @{},
-        [ref]$ExcludeClassFilterContents = @{},
-        [ref]$IncludeAccountFilterContents = @{},
+        [ref]$ShortNameByID,
+        [ref]$ExcludeClassFilterContents,
+        [ref]$IncludeAccountFilterContents,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
+    $OutputHash = @{}
     $Type = [PSCustomObject]
     $IncludeFilterCount = $IncludeAccountFilterContents.Value.Keys.Count
     switch ($GroupBy) {
@@ -6172,15 +6239,25 @@ function Select-PermissionTableProperty {
         'item' {
             ForEach ($Object in $InputObject) {
                 $Accounts = @{}
+                $Account = $null
+                if ($null -ne $Object.Account) {
+                    $Account = $Object.Account
+                    $Item = $Object.Access.Item
+                } else {
+                    $Item = $Object.Item
+                }
                 ForEach ($AceList in $Object.Access) {
-                    $AccountName = $ShortNameByID.Value[$AceList.Account.ResolvedAccountName]
+                    if ($null -eq $Account) {
+                        $Account = $AceList.Account
+                    }
+                    $AccountName = $ShortNameByID.Value[$Account.ResolvedAccountName]
                     if ($AccountName) {
                         ForEach ($ACE in $AceList.Access) {
                             Add-CacheItem -Cache $Accounts -Key $AccountName -Value $ACE -Type $Type
                         }
                     }
                 }
-                $OutputHash[$Object.Item.Path] = ForEach ($AccountName in $Accounts.Keys) {
+                $OutputHash[$Item.Path] = ForEach ($AccountName in $Accounts.Keys) {
                     ForEach ($AceList in $Accounts[$AccountName]) {
                         ForEach ($ACE in $AceList) {
                             if ($ACE.IdentityReferenceResolved -eq $AccountName) {
@@ -6200,17 +6277,27 @@ function Select-PermissionTableProperty {
                                 }
                             }
                             if ($null -ne $GroupString) {
-                                $Props = [ordered]@{
-                                    'Account'              = $AccountName
-                                    'Access'               = $ACE.Access 
-                                    'Due to Membership In' = $GroupString
-                                    'Source of Access'     = $ACE.SourceOfAccess 
-                                    'Name'                 = $AceList.Account.Name
+                                if ($null -ne $Object.Account) {
+                                    $Props = [ordered]@{
+                                        'Item'                 = $ACE.Path
+                                        'Access'               = $ACE.Access 
+                                        'Due to Membership In' = $GroupString
+                                        'Source of Access'     = $ACE.SourceOfAccess 
+                                    }
+                                    [PSCustomObject]$Props
+                                } else {
+                                    $Props = [ordered]@{
+                                        'Account'              = $AccountName
+                                        'Access'               = $ACE.Access 
+                                        'Due to Membership In' = $GroupString
+                                        'Source of Access'     = $ACE.SourceOfAccess 
+                                        'Name'                 = $AceList.Account.Name
+                                    }
+                                    ForEach ($PropName in $AccountProperty) {
+                                        $Props[$PropName] = $AceList.Account.$PropName
+                                    }
+                                    [PSCustomObject]$Props
                                 }
-                                ForEach ($PropName in $AccountProperty) {
-                                    $Props[$PropName] = $AceList.Account.$PropName
-                                }
-                                [PSCustomObject]$Props
                             }
                         }
                     }
@@ -6362,7 +6449,7 @@ function ConvertTo-ItemBlock {
         $ItemPermissions,
         [Parameter(Mandatory)]
         [ref]$Cache,
-        $Culture = (Get-Culture)
+        $Culture = $Cache.Value['Culture']
     )
     Write-LogMsg -Cache $Cache -Text "`$ObjectsForTable = Select-ItemTableProperty -InputObject `$ItemPermissions -Culture '$Culture'"
     $ObjectsForTable = Select-ItemTableProperty -InputObject $ItemPermissions -Culture $Culture
@@ -6616,7 +6703,7 @@ function Format-Permission {
         [string[]]$FileFormat = @('csv', 'html', 'js', 'json', 'prtgxml', 'xml'),
         [ValidateSet('passthru', 'none', 'csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
         [String]$OutputFormat = 'passthru',
-        [cultureinfo]$Culture = (Get-Culture),
+        [cultureinfo]$Culture = $Cache.Value['Culture'],
         [Parameter(Mandatory)]
         [ref]$Cache,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description'),
@@ -6641,13 +6728,16 @@ function Format-Permission {
             $PermissionGroupingsWithChosenProperties = Invoke-Command -ScriptBlock $Grouping['Script'] -ArgumentList $Selection, $Culture, $ShortNameByID, $IgnoreDomain, $IncludeAccountFilterContents, $ExcludeClassFilterContents
             $PermissionsWithChosenProperties = Select-PermissionTableProperty -InputObject $Selection -GroupBy $GroupBy -AccountProperty $AccountProperty -ShortNameById $ShortNameByID -IncludeAccountFilterContents $IncludeAccountFilterContents -ExcludeClassFilterContents $ExcludeClassFilterContents
             $OutputProperties = @{
-                Account      = $Account.Account
-                Path         = $Permission.TargetPermissions.Path.FullName
-                NetworkPaths = $Permission.TargetPermissions.NetworkPaths.Item
+                Account = $Account.Account
+                Path    = $Account.Access.Item.Path
             }
             ForEach ($Format in $Formats) {
-                $OutputProperties["$Format`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format @ConvertSplat
-                $OutputProperties[$Format] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
+                $FormatString = $Format
+                if ($Format -eq 'js') {
+                    $FormatString = 'json'
+                }
+                $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format -HowToSplit $Permission.SplitBy @ConvertSplat
+                $OutputProperties[$FormatString] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
             }
             [PSCustomObject]$OutputProperties
         }
@@ -6668,8 +6758,12 @@ function Format-Permission {
                 NetworkPaths = $Permission.TargetPermissions.NetworkPaths.Item
             }
             ForEach ($Format in $Formats) {
-                $OutputProperties["$Format`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format @ConvertSplat
-                $OutputProperties[$Format] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
+                $FormatString = $Format
+                if ($Format -eq 'js') {
+                    $FormatString = 'json'
+                }
+                $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format -HowToSplit $Permission.SplitBy @ConvertSplat
+                $OutputProperties[$FormatString] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath @($Permission.TargetPermissions.NetworkPaths.Item.Path)[0] -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
             }
             [PSCustomObject]$OutputProperties
         }
@@ -6711,7 +6805,7 @@ function Format-Permission {
                         if ($Format -eq 'js') {
                             $FormatString = 'json'
                         }
-                        $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -HowToSplit $Permission.SplitBy -Format $Format @ConvertSplat
+                        $OutputProperties["$FormatString`Group"] = ConvertTo-PermissionGroup -Permission $PermissionGroupingsWithChosenProperties -Format $Format -HowToSplit $Permission.SplitBy @ConvertSplat
                         $OutputProperties[$FormatString] = ConvertTo-PermissionList -Permission $PermissionsWithChosenProperties -PermissionGrouping $Selection -ShortestPath $NetworkPath.Item.Path -HowToSplit $Permission.SplitBy -NetworkPath $NetworkPath.Item.Path -Analysis $Analysis -Format $Format @ConvertSplat
                     }
                     [PSCustomObject]$OutputProperties
@@ -7214,6 +7308,7 @@ function New-PermissionCache {
     $ThisHostname = HOSTNAME.EXE
     $WhoAmI = Get-PermissionWhoAmI -ThisHostname $ThisHostname
     $ProgressParentId = 0
+    $Culture = Get-Culture
     $LogType = 'Debug'
     $LogCacheMap = @{ 'Cache' = '$Cache' }
     $LogAnalysisMap = @{ 'Cache' = '$Cache' ; 'Analysis' = '$PermissionAnalysis' ; 'Permission' = '$Permissions' }
@@ -7256,6 +7351,7 @@ function New-PermissionCache {
             'AceGuidByPath'                = New-PermissionCacheRef -Key $String -Value $GuidList 
             'AclByPath'                    = New-PermissionCacheRef -Key $String -Value $PSCustomObject 
             'CimCache'                     = New-PermissionCacheRef -Key $String -Value $PSReference 
+            'Culture'                      = [ref]$Culture
             'DirectoryEntryByPath'         = New-PermissionCacheRef -Key $String -Value $Object 
             'DomainBySID'                  = New-PermissionCacheRef -Key $String -Value $Object 
             'DomainByNetbios'              = New-PermissionCacheRef -Key $String -Value $Object 
@@ -7322,7 +7418,7 @@ function Out-PermissionFile {
         $LogFileList,
         $ReportInstanceId,
         [int[]]$Detail = @(0..10),
-        [cultureinfo]$Culture = (Get-Culture),
+        [cultureinfo]$Culture = $Cache.Value['Culture'],
         [ValidateSet('csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
         [string[]]$FileFormat = @('csv', 'html', 'js', 'json', 'prtgxml', 'xml'),
         [ValidateSet('passthru', 'none', 'csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
@@ -7859,20 +7955,24 @@ function ConvertTo-BootstrapTableScript {
     $null = $ResultingJavaScript.AppendLine("      headerStyle: '$HeaderStyle',")
     $null = $ResultingJavaScript.AppendLine("      columns: $ColumnJson,")
     $null = $ResultingJavaScript.AppendLine("      data: $DataJson,")
-    $null = $ResultingJavaScript.AppendLine('      onClickRow: function (row, element, field) {')
-    $null = $ResultingJavaScript.AppendLine("          let modifiedString = 'Div_' + row.Folder.replace(/[^A-Za-z0-9\-_]/g, '-');")
-    $null = $ResultingJavaScript.AppendLine("          let uniqueHash = modifiedString + '_' + new Date().getTime();")
-    $null = $ResultingJavaScript.AppendLine("          let tempDiv = document.createElement('div');")
-    $null = $ResultingJavaScript.AppendLine('          tempDiv.id = uniqueHash;')
-    $null = $ResultingJavaScript.AppendLine('          let targetDiv = document.getElementById(modifiedString);')
-    $null = $ResultingJavaScript.AppendLine('          if (targetDiv) {')
-    $null = $ResultingJavaScript.AppendLine('              targetDiv.insertBefore(tempDiv, targetDiv.firstChild);')
-    $null = $ResultingJavaScript.AppendLine('              window.location.hash = uniqueHash;')
-    $null = $ResultingJavaScript.AppendLine('              setTimeout(function () {')
-    $null = $ResultingJavaScript.AppendLine('                  targetDiv.removeChild(tempDiv);')
-    $null = $ResultingJavaScript.AppendLine('              }, 1000);')
-    $null = $ResultingJavaScript.AppendLine('          } else {')
-    $null = $ResultingJavaScript.AppendLine("              console.error('Target div not found:', modifiedString);")
+    $null = $ResultingJavaScript.AppendLine('      onClickRow: function (row, $element, field) {')
+    $null = $ResultingJavaScript.AppendLine('          var fieldNames = Object.keys(row);')
+    $null = $ResultingJavaScript.AppendLine('          if (fieldNames) {')
+    $null = $ResultingJavaScript.AppendLine('              let firstField = fieldNames[0];')
+    $null = $ResultingJavaScript.AppendLine("              let modifiedString = 'Div_' + row[firstField].replace(/[^A-Za-z0-9\-_]/g, '-');")
+    $null = $ResultingJavaScript.AppendLine("              let uniqueHash = modifiedString + '_' + new Date().getTime();")
+    $null = $ResultingJavaScript.AppendLine("              let tempDiv = document.createElement('div');")
+    $null = $ResultingJavaScript.AppendLine('              tempDiv.id = uniqueHash;')
+    $null = $ResultingJavaScript.AppendLine('              let targetDiv = document.getElementById(modifiedString);')
+    $null = $ResultingJavaScript.AppendLine('              if (targetDiv) {')
+    $null = $ResultingJavaScript.AppendLine('                  targetDiv.insertBefore(tempDiv, targetDiv.firstChild);')
+    $null = $ResultingJavaScript.AppendLine('                  window.location.hash = uniqueHash;')
+    $null = $ResultingJavaScript.AppendLine('                  setTimeout(function () {')
+    $null = $ResultingJavaScript.AppendLine('                      targetDiv.removeChild(tempDiv);')
+    $null = $ResultingJavaScript.AppendLine('                  }, 1000);')
+    $null = $ResultingJavaScript.AppendLine('              } else {')
+    $null = $ResultingJavaScript.AppendLine("                  console.error('Target div not found:', modifiedString);")
+    $null = $ResultingJavaScript.AppendLine('              }')
     $null = $ResultingJavaScript.AppendLine('          }')
     $null = $ResultingJavaScript.AppendLine('      }')
     $null = $ResultingJavaScript.AppendLine('});')
@@ -10021,7 +10121,7 @@ end {
     Write-LogMsg -Text "`$Permissions = Expand-Permission" -Suffix " # for $AceCount ACEs in $AclCount ACLs" -Expand $Cmd, $Cached @Cached @CacheMap
     $Permissions = Expand-Permission @Cmd @Cached
     $ProgressUpdate = @{
-        'CurrentOperation' = 'Hide domain names and include/exclude accounts as specified'
+        'CurrentOperation' = 'Hide domain names and include/exclude accounts as specified in the report parameters'
         'PercentComplete'  = 50
         'Status'           = '50% (step 11 of 20) Select-UniqueAccountPermission'
     }
@@ -10032,7 +10132,7 @@ end {
         'IncludeAccount' = $IncludeAccount
     }
     $PrincipalCount = $PermissionCache['PrincipalByID'].Value.Keys.Count
-    Write-LogMsg -Text 'Select-PermissionPrincipal' -Suffix " # for $PrincipalCount Security Principals" -Expand $Cmd, $Cached @Cached @CacheMap
+    Write-LogMsg -Text 'Select-PermissionPrincipal' -Suffix " # for $PrincipalCount accounts" -Expand $Cmd, $Cached @Cached @CacheMap
     Select-PermissionPrincipal @Cmd @Cached
     $ProgressUpdate = @{
         'CurrentOperation' = 'Analyze the permissions against established best practices'

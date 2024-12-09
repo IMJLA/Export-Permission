@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.427
+.VERSION 0.0.428
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-avoid returning all AD users in CIM query for local users
+update comments and commit report mockups
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ avoid returning all AD users in CIM query for local users
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#
@@ -254,22 +255,23 @@ avoid returning all AD users in CIM query for local users
 param (
 
     <#
-    Path to the NTFS folder whose permissions to export
+    Path to the item whose permissions to export
 
     Currently supports NTFS folders
-    TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
+    ToDo: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
+    ToDo: support M365 targets (SP sites, Teams, etc)
     #>
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
     [System.IO.DirectoryInfo[]]$TargetPath,
 
-    # Regular expressions matching names of security principals to exclude from the HTML report
+    # Regular expressions matching names of accounts to exclude from the HTML report
     [string[]]$ExcludeAccount = 'SYSTEM',
 
     <#
-    Regular expressions matching names of security principals to include in the HTML report
+    Regular expressions matching names of accounts to include in the HTML report
 
-    Only security principals with names matching these regular expressions will be returned
+    If this parameter is specified, only accounts whose names match these regular expressions will be returned
     #>
     [string[]]$IncludeAccount,
 
@@ -305,7 +307,7 @@ param (
     [switch]$NoMembers,
 
     <#
-    How many levels of children to enumerate
+    How many levels of child items to enumerate
 
       Set to 0 to ignore all children
       Set to -1 (default) to recurse through all children
@@ -437,7 +439,7 @@ param (
     # Workaround for https://github.com/PowerShell/PowerShell/issues/20657
     [switch]$NoProgress,
 
-    # Properties of each Account to display on the report (left out: managedBy, operatingSystem)
+    # Properties of each account to display on the report (left out: managedBy, operatingSystem)
     [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 
 )
@@ -654,7 +656,7 @@ end {
     $Permissions = Expand-Permission @Cmd @Cached
 
     $ProgressUpdate = @{
-        'CurrentOperation' = 'Hide domain names and include/exclude accounts as specified'
+        'CurrentOperation' = 'Hide domain names and include/exclude accounts as specified in the report parameters'
         'PercentComplete'  = 50
         'Status'           = '50% (step 11 of 20) Select-UniqueAccountPermission'
     }
@@ -665,7 +667,7 @@ end {
         'IncludeAccount' = $IncludeAccount
     }
     $PrincipalCount = $PermissionCache['PrincipalByID'].Value.Keys.Count
-    Write-LogMsg -Text 'Select-PermissionPrincipal' -Suffix " # for $PrincipalCount Security Principals" -Expand $Cmd, $Cached @Cached @CacheMap
+    Write-LogMsg -Text 'Select-PermissionPrincipal' -Suffix " # for $PrincipalCount accounts" -Expand $Cmd, $Cached @Cached @CacheMap
     Select-PermissionPrincipal @Cmd @Cached
 
     $ProgressUpdate = @{

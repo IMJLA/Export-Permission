@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.427
+help version: 0.0.428
 locale: en-US
 script name: 
 online version:
@@ -311,7 +311,7 @@ Accept wildcard characters: False
 ```
 
 ### -AccountProperty
-Properties of each Account to display on the report (left out: managedBy, operatingSystem)
+Properties of each account to display on the report (left out: managedBy, operatingSystem)
 
 ```yaml
 Type: System.String[]
@@ -352,7 +352,7 @@ Accept wildcard characters: False
 ```
 
 ### -ExcludeAccount
-Regular expressions matching names of security principals to exclude from the HTML report
+Regular expressions matching names of accounts to exclude from the HTML report
 
 ```yaml
 Type: System.String[]
@@ -461,9 +461,9 @@ Accept wildcard characters: False
 ```
 
 ### -IncludeAccount
-Regular expressions matching names of security principals to include in the HTML report
+Regular expressions matching names of accounts to include in the HTML report
 
-Only security principals with names matching these regular expressions will be returned
+If this parameter is specified, only accounts whose names match these regular expressions will be returned
 
 ```yaml
 Type: System.String[]
@@ -625,7 +625,7 @@ Accept wildcard characters: False
 ```
 
 ### -RecurseDepth
-How many levels of children to enumerate
+How many levels of child items to enumerate
 
   Set to 0 to ignore all children
   Set to -1 (default) to recurse through all children
@@ -664,10 +664,11 @@ Accept wildcard characters: False
 ```
 
 ### -TargetPath
-Path to the NTFS folder whose permissions to export
+Path to the item whose permissions to export
 
 Currently supports NTFS folders
-TODO: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
+ToDo: support same targets as Get-Acl (AD, Registry, StorageSubSystem)
+ToDo: support M365 targets (SP sites, Teams, etc)
 
 ```yaml
 Type: System.IO.DirectoryInfo[]
