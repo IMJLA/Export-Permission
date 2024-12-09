@@ -4,7 +4,7 @@ param (
     $OutputDir = '.'
 )
 
-$OutputPath = "$OutputDir\favicon.svg"
+$OutputPath = "$OutputDir\logo.svg"
 
 function SvgAcct {
 

@@ -390,7 +390,7 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
 
 Task BuildArt -depends BuildMAMLHelp {
 
-    $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
+    $ScriptToRun = [IO.Path]::Combine('..', 'img', 'logo.ps1')
     $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
     Write-Host "`t. $ScriptToRun -OutputDir '$OutputDir'"
     . $ScriptToRun -OutputDir $OutputDir
@@ -400,7 +400,7 @@ Task BuildArt -depends BuildMAMLHelp {
 Task ConvertArt -depends BuildArt {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
-    $sourceSVG = [IO.Path]::Combine($Script:OutputDir, 'favicon.svg')
+    $sourceSVG = [IO.Path]::Combine($Script:OutputDir, 'logo.svg')
     Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 

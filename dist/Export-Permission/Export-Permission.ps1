@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.454
+.VERSION 0.0.457
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-custom favicon
+use custom imagery
 
 .PRIVATEDATA
 
@@ -39,6 +39,9 @@ custom favicon
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
+
+
 
 
 <#

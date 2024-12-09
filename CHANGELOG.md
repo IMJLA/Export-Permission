@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.457] - 2024-12-08
+### Changed
+- use custom imagery
+
+## [0.0.456] - 2024-12-08
+### Changed
+- use custom imagery for online docs
+
+## [0.0.455] - 2024-12-08
+### Changed
+- use custom imagery for online help
+
 ## [0.0.454] - 2024-12-08
 ### Changed
 - custom favicon
