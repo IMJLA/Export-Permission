@@ -1,4 +1,4 @@
-properties {
+Properties {
 
     # Whether or not this build is a new Major version
     [boolean]$IncrementMajorVersion = $false
@@ -148,51 +148,51 @@ FormatTaskName {
     Write-Host "$NewLine`Executing task $TaskName" -ForegroundColor Cyan
 }
 
-task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, DetectOperatingSystem, Publish
+Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, DetectOperatingSystem, Publish
 
-task FindLinter -precondition { $LintEnabled } {
+Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
-task FindBuildModule -precondition { $script:FindLinter } {
+Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
-task FindDocumentationModule {
+Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
-task DetectOperatingSystem {
+Task DetectOperatingSystem {
 
     Write-Host "`tGet-CimInstance -ClassName CIM_OperatingSystem"
     $script:OS = (Get-CimInstance -ClassName CIM_OperatingSystem).Caption
 
 } -description 'Detect the operating system to determine whether MakeCab.exe is available to produce updateable help.'
 
-task GetScriptFileInfo {
+Task GetScriptFileInfo {
 
     Write-Host "`tTest-ScriptFileInfo -LiteralPath '$MainScript'"
     $Script:OldScriptFileInfo = Test-ScriptFileInfo -LiteralPath $MainScript
 
 } -description 'Parse the ScriptFileInfo block at the beginning of the script.'
 
-task Lint -depends GetScriptFileInfo -precondition { $script:FindBuildModule } {
+Task Lint -depends GetScriptFileInfo -precondition { $script:FindBuildModule } {
 
     Write-Host "`tTest-PSBuildScriptAnalysis -Path '$SourceCodeDir' -SeverityThreshold '$LintSeverityThreshold' -SettingsPath '$LintSettingsFile'$NewLine"
     Test-PSBuildScriptAnalysis -Path $SourceCodeDir -SeverityThreshold $LintSeverityThreshold -SettingsPath $LintSettingsFile
 
 } -description 'Perform linting with PSScriptAnalyzer invoked by PowerShellBuild.'
 
-task DetermineNewVersionNumber -depends Lint {
+Task DetermineNewVersionNumber -depends Lint {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Find-NewVersion.ps1')
     Write-Host "`t. $ScriptToRun -OldVersion $($Script:OldScriptFileInfo.Version) -IncrementMajorVersion `$$IncrementMajorVersion -IncrementMinorVersion `$$IncrementMinorVersion"
@@ -200,7 +200,7 @@ task DetermineNewVersionNumber -depends Lint {
 
 } -description 'Determine the new version number.'
 
-task UpdateScriptVersion -depends DetermineNewVersionNumber {
+Task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
     Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
     Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
@@ -215,7 +215,7 @@ task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
 } -description 'Update PSScriptInfo with the new version.'
 
-task DeleteOldBuilds -depends UpdateScriptVersion {
+Task DeleteOldBuilds -depends UpdateScriptVersion {
 
     Write-Host "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
     Get-ChildItem -Directory -Path $BuildOutDir |
@@ -223,14 +223,14 @@ task DeleteOldBuilds -depends UpdateScriptVersion {
 
 } -description 'Rotate old builds out of the output directory.'
 
-task UpdateChangeLog -depends DeleteOldBuilds -Action {
+Task UpdateChangeLog -depends DeleteOldBuilds -action {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'Update-ChangeLog.ps1')
     . $ScriptToRun -NewLine $NewLine -Version $script:NewVersion -CommitMessage $CommitMessage
 
 } -description 'Add an entry to the the Change Log.'
 
-task CreateReleaseFolder -depends UpdateChangeLog {
+Task CreateReleaseFolder -depends UpdateChangeLog {
 
     $script:BuildOutputFolder = [IO.Path]::Combine(
         $BuildOutDir,
@@ -242,7 +242,7 @@ task CreateReleaseFolder -depends UpdateChangeLog {
 
 } -description 'Create a new folder for this release of the script.'
 
-task CreatePortableReleaseFolder -depends CreateReleaseFolder -precondition { [boolean]$PortableVersionGuid } {
+Task CreatePortableReleaseFolder -depends CreateReleaseFolder -precondition { [boolean]$PortableVersionGuid } {
 
     $script:BuildOutputFolderForPortableVersion = [IO.Path]::Combine(
         $BuildOutDir,
@@ -254,7 +254,7 @@ task CreatePortableReleaseFolder -depends CreateReleaseFolder -precondition { [b
 
 } -description 'Create a new folder for this release of the portable script.'
 
-task BuildRelease -depends CreatePortableReleaseFolder {
+Task BuildRelease -depends CreatePortableReleaseFolder {
 
     # Copy the source script to the output folder
     Write-Host "`tCopy-Item -Path '$MainScript' -Destination '$script:BuildOutputFolder'"
@@ -263,7 +263,7 @@ task BuildRelease -depends CreatePortableReleaseFolder {
 
 } -description 'Copy the updated script to the output folder.'
 
-task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$PortableVersionGuid } {
+Task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$PortableVersionGuid } {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'New-PortableScript.ps1')
     $ScriptResult = . $ScriptToRun -BuildOutputFolder $script:BuildOutputFolder -MainScript $MainScript
@@ -272,14 +272,14 @@ task BuildPortableRelease -depends BuildRelease -precondition { [boolean]$Portab
 
 } -description 'Build a monolithic PowerShell script based on the source script and its ScriptModule dependencies.'
 
-task CreateMarkdownHelpFolder -depends BuildPortableRelease {
+Task CreateMarkdownHelpFolder -depends BuildPortableRelease {
 
     Write-Host "`tNew-Item -Path '$MarkdownHelpDir' -ItemType Directory -ErrorAction SilentlyContinue"
     $null = New-Item -Path $MarkdownHelpDir -ItemType Directory -ErrorAction SilentlyContinue
 
 } -description 'Create a new folder for the Markdown help documentation.'
 
-task DeleteMarkdownHelp -depends CreateMarkdownHelpFolder -precondition { $script:PlatyPS } {
+Task DeleteMarkdownHelp -depends CreateMarkdownHelpFolder -precondition { $script:PlatyPS } {
 
     $MarkdownDir = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
     Write-Host "`tGet-ChildItem -Path '$MarkdownDir' -Recurse | Remove-Item"
@@ -287,7 +287,7 @@ task DeleteMarkdownHelp -depends CreateMarkdownHelpFolder -precondition { $scrip
 
 } -description 'Delete existing Markdown files to prepare for PlatyPS to build new ones.'
 
-task BuildMarkdownHelp -depends DeleteMarkdownHelp {
+Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 
     $MarkdownParams = @{
         AlphabeticParamsOrder = $true
@@ -312,7 +312,7 @@ task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 
 } -description 'Build Markdown files from the comment-based help by using PlatyPS.'
 
-task FixMarkdownHelp -depends BuildMarkdownHelp {
+Task FixMarkdownHelp -depends BuildMarkdownHelp {
 
     $Script:MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
     $ScriptToRun = [IO.Path]::Combine('.', 'Repair-MarkdownHelp.ps1')
@@ -320,7 +320,7 @@ task FixMarkdownHelp -depends BuildMarkdownHelp {
 
 } -description 'Fix issues with the Markdown files that were not handled by PlatyPS.'
 
-task BuildReadMe -depends FixMarkdownHelp {
+Task BuildReadMe -depends FixMarkdownHelp {
 
     $ReadMe = [IO.Path]::Combine('..', '..', 'README.md')
     Write-Host "`tCopy-Item -Path '$($Script:MarkdownPath)' -Destination '$ReadMe' -Force"
@@ -328,7 +328,22 @@ task BuildReadMe -depends FixMarkdownHelp {
 
 } -description 'Use the help for the script as the readme for the script.'
 
-task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
+Task DeleteOnlineHelp -depends BuildReadMe {
+    $OnlineHelpSourceMarkdown = [IO.Path]::Combine('..', '..', 'docs', 'online', 'docs')
+    Write-Host "`tGet-ChildItem -Path '$OnlineHelpSourceMarkdown' -Recurse | Remove-Item -Force -Confirm:`$false -Recurse"
+    Get-ChildItem -Path $OnlineHelpSourceMarkdown -Recurse | Remove-Item -Force -Confirm:$false -Recurse
+}
+
+Task CopyMarkdownAsSourceForOnlineHelp -depends DeleteOnlineHelp {
+    $OnlineHelpSourceMarkdown = [IO.Path]::Combine('..', '..', 'docs', 'online', 'docs')
+    $MarkdownSourceCode = [IO.Path]::Combine('..', '..', 'src', 'docs')
+    Write-Host "`tCopy-Item -Path '$MarkdownHelpDir\*' -Destination '$OnlineHelpSourceMarkdown' -Recurse"
+    Copy-Item -Path "$MarkdownHelpDir\*" -Destination $OnlineHelpSourceMarkdown -Recurse
+    Write-Host "`tCopy-Item -Path '$MarkdownSourceCode\*' -Destination '$OnlineHelpSourceMarkdown' -Recurse"
+    Copy-Item -Path "$MarkdownSourceCode\*" -Destination $OnlineHelpSourceMarkdown -Recurse
+}
+
+Task BuildMAMLHelp -depends CopyMarkdownAsSourceForOnlineHelp -precondition { $script:PlatyPS } {
 
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
@@ -337,7 +352,7 @@ task BuildMAMLHelp -depends BuildReadMe -precondition { $script:PlatyPS } {
 
 # Disabled this task for now, it does not work because New-ExternalHelp (invoked above by Build-PSBuildMAMLHelp) is not generating any MAML help files from the Markdown.
 #task BuildUpdatableHelp -depends BuildMAMLHelp {
-task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
+Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
 
     $helpLocales = (Get-ChildItem -Path $MarkdownHelpDir -Directory -Exclude 'UpdatableHelp').Name
 
@@ -369,11 +384,19 @@ task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
 
 } -description 'Build an updatable .cab help file based on the Markdown help files by using PlatyPS.'
 
-task BuildOnlineHelp -depends BuildMAMLHelp {
+Task BuildOnlineHelp -depends BuildMAMLHelp {
+
+    $OnlineHelp = [IO.Path]::Combine('..', '..', 'docs', 'online')
+    $Location = Get-Location
+    Set-Location $OnlineHelp
+    Pause
+    Write-Host "`tnpm run build"
+    & npm run build
+    Set-Location $Location
 
 } -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
 
-task BuildArt -depends BuildOnlineHelp {
+Task BuildArt -depends BuildOnlineHelp {
 
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'favicon.ps1')
     $Script:OutputDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
@@ -382,10 +405,10 @@ task BuildArt -depends BuildOnlineHelp {
 
 } -description 'Build SVG art using PSSVG.'
 
-task ConvertArt -depends BuildArt {
+Task ConvertArt -depends BuildArt {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
-    $sourceSVG = [IO.Path]::Combine($Script:OutputDir, "favicon.svg")
+    $sourceSVG = [IO.Path]::Combine($Script:OutputDir, 'favicon.svg')
     Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 
@@ -408,7 +431,7 @@ $pesterPreReqs = {
     return $result
 }
 
-task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
+Task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
     $PesterConfigParams = @{
         Run          = @{
@@ -440,7 +463,7 @@ task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
 
 } -description 'Perform unit tests using Pester.'
 
-task SourceControl -depends UnitTests {
+Task SourceControl -depends UnitTests {
 
     Write-Host "`tgit branch --show-current$NewLine"
     $CurrentBranch = git branch --show-current
@@ -457,7 +480,7 @@ task SourceControl -depends UnitTests {
 
 } -description 'git add, commit, and push'
 
-task Publish -depends SourceControl {
+Task Publish -depends SourceControl {
 
     Assert -conditionToCheck ($PublishPSRepositoryApiKey -or $PublishPSRepositoryCredential) -failureMessage "API key or credential not defined to authenticate with [$PublishPSRepository)] with."
 
@@ -492,7 +515,7 @@ task Publish -depends SourceControl {
 
 } -description 'Publish the script to the specified PowerShell repository (PSGallery).'
 
-task ? -description 'Lists the available tasks' {
+Task ? -description 'Lists the available tasks' {
     'Available tasks:'
     $psake.context.Peek().Tasks.Keys | Sort-Object
 }
