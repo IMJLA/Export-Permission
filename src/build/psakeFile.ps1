@@ -153,21 +153,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -396,7 +396,6 @@ Task BuildOnlineHelp -depends BuildMAMLHelp {
     Write-Host "`tnpm run build"
     & npm run build
     Set-Location $Location
-    Pause
 
 } -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
 

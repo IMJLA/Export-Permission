@@ -1,4 +1,4 @@
-# Permissions Report Mockup for -SplitBy 'item' -GroupBy 'none'/'item'/'target'
+# SplitBy Item & GroupBy None/Item/Target
 
 ## Item
 

@@ -1,4 +1,4 @@
-# Permissions Report Mockup for -SplitBy 'none' -GroupBy 'item'
+# SplitBy None & GroupBy Item
 
 ## Target Paths
 

@@ -1,4 +1,4 @@
-# Permissions Report Mockup for -SplitBy 'none' -GroupBy 'account'
+# SplitBy None & GroupBy Account
 
 ## Target Paths
 

@@ -1,4 +1,4 @@
-# Permissions Report Mockup for -SplitBy 'item' -GroupBy 'account'
+# SplitBy Item & GroupBy Account
 
 ## Item
 
