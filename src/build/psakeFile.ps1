@@ -391,7 +391,7 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
 Task BuildArt -depends BuildMAMLHelp {
 
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'logo.ps1')
-    $Script:BuildImageDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
+    $Script:BuildImageDir = [IO.Path]::Combine($OnlineHelpDir, 'build', 'img')
     Write-Host "`t. $ScriptToRun -OutputDir '$BuildImageDir'"
     . $ScriptToRun -OutputDir $BuildImageDir
 
