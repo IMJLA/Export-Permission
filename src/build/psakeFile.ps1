@@ -153,21 +153,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -434,7 +434,7 @@ $pesterPreReqs = {
     return $result
 }
 
-Task UnitTests -depends ConvertArt -precondition $pesterPreReqs {
+Task UnitTests -depends BuildOnlineHelp -precondition $pesterPreReqs {
 
     $PesterConfigParams = @{
         Run          = @{
