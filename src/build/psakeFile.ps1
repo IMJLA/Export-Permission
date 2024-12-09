@@ -337,10 +337,14 @@ Task DeleteOnlineHelp -depends BuildReadMe {
 Task CopyMarkdownAsSourceForOnlineHelp -depends DeleteOnlineHelp {
     $OnlineHelpSourceMarkdown = [IO.Path]::Combine('..', '..', 'docs', 'online', 'docs')
     $MarkdownSourceCode = [IO.Path]::Combine('..', '..', 'src', 'docs')
-    Write-Host "`tCopy-Item -Path '$MarkdownHelpDir\*' -Destination '$OnlineHelpSourceMarkdown' -Recurse"
-    Copy-Item -Path "$MarkdownHelpDir\*" -Destination $OnlineHelpSourceMarkdown -Recurse
-    Write-Host "`tCopy-Item -Path '$MarkdownSourceCode\*' -Destination '$OnlineHelpSourceMarkdown' -Recurse"
-    Copy-Item -Path "$MarkdownSourceCode\*" -Destination $OnlineHelpSourceMarkdown -Recurse
+    $helpLocales = (Get-ChildItem -Path $MarkdownHelpDir -Directory -Exclude 'UpdatableHelp').Name
+
+    ForEach ($Locale in $helpLocales) {
+        Write-Host "`tCopy-Item -Path '$MarkdownHelpDir\*' -Destination '$OnlineHelpSourceMarkdown' -Recurse"
+        Copy-Item -Path "$MarkdownHelpDir\*" -Destination $OnlineHelpSourceMarkdown -Recurse
+        Write-Host "`tCopy-Item -Path '$MarkdownSourceCode\*' -Destination '$OnlineHelpSourceMarkdown\$Locale' -Recurse"
+        Copy-Item -Path "$MarkdownSourceCode\*" -Destination "$OnlineHelpSourceMarkdown\$Locale" -Recurse
+    }
 }
 
 Task BuildMAMLHelp -depends CopyMarkdownAsSourceForOnlineHelp -precondition { $script:PlatyPS } {
@@ -389,10 +393,10 @@ Task BuildOnlineHelp -depends BuildMAMLHelp {
     $OnlineHelp = [IO.Path]::Combine('..', '..', 'docs', 'online')
     $Location = Get-Location
     Set-Location $OnlineHelp
-    Pause
     Write-Host "`tnpm run build"
     & npm run build
     Set-Location $Location
+    Pause
 
 } -description 'Build an Online help website based on the Markdown help files by using Docusaurus.'
 

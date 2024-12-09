@@ -284,9 +284,9 @@
             <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
             <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance</maml:para>
             <maml:para>In the ScriptBlock, any account properties are available for evaluation:</maml:para>
-            <maml:para>{$_.DomainNetbios -eq 'CONTOSO'} Accounts used in ACEs should be in the CONTOSO domain</maml:para>
-            <maml:para>{$_.Name -eq 'Group23'} Accounts used in ACEs should be named Group23</maml:para>
-            <maml:para>{$ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23'} Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
+            <maml:para>$_.DomainNetbios -eq 'CONTOSO' Accounts used in ACEs should be in the CONTOSO domain</maml:para>
+            <maml:para>$_.Name -eq 'Group23' Accounts used in ACEs should be named Group23</maml:para>
+            <maml:para>$ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23' Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
             <maml:para>The format of the ResolvedAccountName property is CONTOSO\Group1   where     CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)     and     Group1 is the samAccountName of the account</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>
@@ -340,9 +340,9 @@
           <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
           <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance</maml:para>
           <maml:para>In the ScriptBlock, any account properties are available for evaluation:</maml:para>
-          <maml:para>{$_.DomainNetbios -eq 'CONTOSO'} Accounts used in ACEs should be in the CONTOSO domain</maml:para>
-          <maml:para>{$_.Name -eq 'Group23'} Accounts used in ACEs should be named Group23</maml:para>
-          <maml:para>{$ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23'} Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
+          <maml:para>$_.DomainNetbios -eq 'CONTOSO' Accounts used in ACEs should be in the CONTOSO domain</maml:para>
+          <maml:para>$_.Name -eq 'Group23' Accounts used in ACEs should be named Group23</maml:para>
+          <maml:para>$ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23' Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
           <maml:para>The format of the ResolvedAccountName property is CONTOSO\Group1   where     CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)     and     Group1 is the samAccountName of the account</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Management.Automation.ScriptBlock</command:parameterValue>

@@ -2,10 +2,12 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
+// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+
 const config: Config = {
 
   //-------------------------------------------------------------------
-  // BEGIN REQUIRED FIELDS FOR DOCUSAURUS
+  // BEGIN REQUIRED FIELDS
 
   title: 'Export-Permission Docs',
 
@@ -16,13 +18,17 @@ const config: Config = {
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/Export-Permission/',
 
-  // END REQUIRED FIELDS FOR DOCUSAURUS
+  // END REQUIRED FIELDS
   //-------------------------------------------------------------------
+
+
 
 
   //-------------------------------------------------------------------
   // BEGIN REQUIRED FIELDS FOR DOCUSAURUS DEPLOYMENT TO GITHUB PAGES
 
+  // GitHub pages deployment config.
+  // If you aren't using GitHub pages, you don't need these.
   organizationName: 'IMJLA', // Usually your GitHub org/user name.
   projectName: 'Export-Permission', // Usually your repo name.
 
@@ -50,11 +56,8 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/IMJLA/Export-Permission/',
         },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -66,24 +69,13 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
-      title: 'My Site',
+      title: 'Export-Permission',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'Export-Permission Logo',
         src: 'img/logo.svg',
       },
       items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: 'Tutorial',
-        },
-        { to: '/blog', label: 'Blog', position: 'left' },
-        {
-          href: 'https://github.com/facebook/docusaurus',
-          label: 'GitHub',
-          position: 'right',
-        },
+        { to: 'docs/en-US/Export-Permission.ps1', label: 'Docs', position: 'left' }
       ],
     },
     footer: {
@@ -93,8 +85,8 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Tutorial',
-              to: '/docs/intro',
+              label: 'ReadMe',
+              to: '/docs/en-US/Export-Permission.ps1',
             },
           ],
         },
@@ -102,34 +94,13 @@ const config: Config = {
           title: 'Community',
           items: [
             {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'Twitter',
-              href: 'https://twitter.com/docusaurus',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
               label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
-            },
+              href: 'https://github.com/IMJLA/Export-Permission',
+            }
           ],
-        },
+        }
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Jeremy La Camera; Export-Permission.ps1 Online Help and Documentation Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

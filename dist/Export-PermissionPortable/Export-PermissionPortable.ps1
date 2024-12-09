@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.434
+.VERSION 0.0.452
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add docusaurus build steps
+docusaurus is becoming the enemmy
 
 .PRIVATEDATA
 
