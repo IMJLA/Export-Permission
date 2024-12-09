@@ -35,6 +35,7 @@ const config: Config = {
   // END REQUIRED FIELDS FOR DOCUSAURUS DEPLOYMENT TO GITHUB PAGES
   //-------------------------------------------------------------------
 
+  trailingSlash: false,
 
   tagline: 'Present complex nested permissions and group memberships in a report that is easy to read',
   favicon: 'img/logo.svg',

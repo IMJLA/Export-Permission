@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.463
+.VERSION 0.0.464
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-use svg for favicon
+add gh actions for publishing to gh pages
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ use svg for favicon
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

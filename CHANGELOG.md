@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.464] - 2024-12-09
+### Added
+- add gh actions for publishing to gh pages
+
 ## [0.0.463] - 2024-12-08
 ### Changed
 - use svg for favicon
