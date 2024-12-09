@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.434] - 2024-12-08
+### Added
+- add docusaurus build steps
+
 ## [0.0.433] - 2024-12-08
 ### Added
 - add docusaurus build steps

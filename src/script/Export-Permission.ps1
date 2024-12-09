@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.433
+.VERSION 0.0.434
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -39,6 +39,7 @@ add docusaurus build steps
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -332,9 +333,14 @@ param (
 
     In the ScriptBlock, any account properties are available for evaluation:
 
-    e.g. {$_.DomainNetbios -eq 'CONTOSO'} # Accounts used in ACEs should be in the CONTOSO domain
-    e.g. {$_.Name -eq 'Group23'} # Accounts used in ACEs should be named Group23
-    e.g. {$_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23'}
+    {$_.DomainNetbios -eq 'CONTOSO'}
+    Accounts used in ACEs should be in the CONTOSO domain
+
+    {$_.Name -eq 'Group23'}
+    Accounts used in ACEs should be named Group23
+
+    {$_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23'}
+    Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
     The format of the ResolvedAccountName property is CONTOSO\Group1
       where
