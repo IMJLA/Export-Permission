@@ -11,7 +11,37 @@
             "script": "try { . '${workspaceRoot}/src/build/build.ps1' -ErrorAction Stop } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
         },
         {
-            "name": "C:\\ RecurseDepth 0",
+            "name": "Recurse:0 SplitBy:Target GroupBy:Account",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -Interactive -GroupBy 'Account'; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+        },
+        {
+            "name": "Recurse:0 SplitBy:Target GroupBy:Item",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -Interactive -GroupBy 'Item'; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+        },
+        {
+            "name": "Recurse:0 SplitBy:Target GroupBy:NoneOrTarget",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -Interactive -GroupBy 'None'; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+        },
+        {
+            "name": "Recurse:1 SplitBy:Target GroupBy:Account",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -Interactive -GroupBy 'Account'; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+        },
+        {
+            "name": "Recurse:1 SplitBy:Target GroupBy:Item",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -Interactive -GroupBy 'Item'; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"
+        },
+        {
+            "name": "Recurse:1 SplitBy:Target GroupBy:NoneOrTarget",
             "type": "PowerShell",
             "request": "launch",
             "script": "try { $DebugPreference = 'Continue' ; $result = . '${workspaceRoot}/src/script/Export-Permission.ps1' -TargetPath 'C:\\Windows\\PLA\\System' -Interactive -GroupBy 'None'; . '${workspaceRoot}/src/build/Analyze-LogForPerformance.ps1' } catch { Write-Progress -Activity 'Any' -Completed ; Write-Host 'Exception: ' -ForegroundColor Red -NoNewLine ; Write-Host \"$($Error[0].InvocationInfo.PositionMessage)`n\" -ForegroundColor Blue -NoNewLine ; Write-Host \"$($Error[0].Exception.Message)\" -ForegroundColor Red ; Write-Debug -Debug (\"`n\" + $_.ScriptStackTrace) }"

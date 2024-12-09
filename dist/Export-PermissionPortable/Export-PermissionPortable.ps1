@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.428
+.VERSION 0.0.429
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comments and commit report mockups
+update report verbiage
 
 .PRIVATEDATA
 
@@ -5305,7 +5305,7 @@ function Get-DetailDivHeader {
         'Permissions'
     } else {
         switch ($GroupBy) {
-            'account' { 'Folders Included in Those Permissions'; break }
+            'account' { 'Access for Each Account'; break }
             'item' { 'Accounts Included in Those Permissions'; break }
             'target' { 'Target Paths'; break }
             'none' { 'Permissions'; break }
@@ -5390,7 +5390,6 @@ function Get-HtmlReportElements {
         $ReportInstanceId,
         [Hashtable]$AceByGUID,
         [int[]]$Detail = @(0..10),
-        [cultureinfo]$Culture = $Cache.Value['Culture'],
         [String]$GroupBy = 'item',
         [string[]]$SplitBy = 'target',
         [String]$Split,
@@ -5411,12 +5410,13 @@ function Get-HtmlReportElements {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
+    $Culture = $Cache.Value['Culture'].Value
     Write-LogMsg -Cache $Cache -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
     $ReportDescription = Get-ReportDescription -RecurseDepth $RecurseDepth
     $NetworkPathTable = Select-ItemTableProperty -InputObject $NetworkPath -Culture $Culture -SkipFilterCheck |
     ConvertTo-Html -Fragment |
     New-BootstrapTable
-    $NetworkPathDivHeader = 'Local paths were resolved to UNC paths, and UNC paths were resolved to all DFS folder targets'
+    $NetworkPathDivHeader = 'Local target paths were resolved to UNC paths, and UNC target paths were resolved to DFS folder targets'
     Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText '$NetworkPathDivHeader' -Content `$NetworkPathTable"
     $NetworkPathDiv = New-BootstrapDivWithHeading -HeadingText $NetworkPathDivHeader -Content $NetworkPathTable -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
     Write-LogMsg -Cache $Cache -Text "Get-SummaryDivHeader -GroupBy $GroupBy"
@@ -5515,7 +5515,7 @@ function Get-HtmlReportFooter {
         [uint64]$FormattedPermissionCount,
         [uint64]$TotalBytes,
         [String]$ReportInstanceId,
-        [string[]]$UnitsToResolve = @('day', 'hour', 'minute', 'second')
+        [string[]]$UnitsToResolve = @('day', 'hour', 'minute', 'second', 'millisecond')
     )
     $null = $StopWatch.Stop()
     $FinishTime = Get-Date
@@ -5642,7 +5642,7 @@ function Get-SummaryDivHeader {
         'Permissions'
     } else {
         switch ($GroupBy) {
-            'account' { 'Accounts With Permissions'; break }
+            'account' { 'Accounts with Access'; break }
             'item' { 'Items in Those Paths with Unique Permissions'; break }
             'target' { 'Target Paths'; break }
             'none' { 'Permissions'; break }
@@ -5666,15 +5666,15 @@ function Get-SummaryTableHeader {
         'item' {
             switch ($RecurseDepth ) {
                 0 {
-                    'Includes the target folder only (option to report on subfolders was declined)'
+                    'Includes the target path only (option to report on child items was declined)'
                     break
                 }
                 -1 {
-                    'Includes the target folder and all subfolders with unique permissions'
+                    'Includes the target path and all child items with unique permissions'
                     break
                 }
                 default {
-                    "Includes the target folder and $RecurseDepth levels of subfolders with unique permissions"
+                    "Includes the target path and $RecurseDepth levels of child items with unique permissions"
                     break
                 }
             }
@@ -6448,9 +6448,9 @@ function ConvertTo-ItemBlock {
     param (
         $ItemPermissions,
         [Parameter(Mandatory)]
-        [ref]$Cache,
-        $Culture = $Cache.Value['Culture']
+        [ref]$Cache
     )
+    $Culture = $Cache.Value['Culture'].Value
     Write-LogMsg -Cache $Cache -Text "`$ObjectsForTable = Select-ItemTableProperty -InputObject `$ItemPermissions -Culture '$Culture'"
     $ObjectsForTable = Select-ItemTableProperty -InputObject $ItemPermissions -Culture $Culture
     Write-LogMsg -Cache $Cache -Text "`$ObjectsForTable | ConvertTo-Html -Fragment | New-BootstrapTable"
@@ -6703,12 +6703,12 @@ function Format-Permission {
         [string[]]$FileFormat = @('csv', 'html', 'js', 'json', 'prtgxml', 'xml'),
         [ValidateSet('passthru', 'none', 'csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
         [String]$OutputFormat = 'passthru',
-        [cultureinfo]$Culture = $Cache.Value['Culture'],
         [Parameter(Mandatory)]
         [ref]$Cache,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description'),
         [PSCustomObject]$Analysis
     )
+    $Culture = $Cache.Value['Culture'].Value
     $Progress = Get-PermissionProgress -Activity 'Format-Permission' -Cache $Cache
     $FormattedResults = @{}
     $Formats = Resolve-FormatParameter -FileFormat $FileFormat -OutputFormat $OutputFormat
@@ -7418,7 +7418,6 @@ function Out-PermissionFile {
         $LogFileList,
         $ReportInstanceId,
         [int[]]$Detail = @(0..10),
-        [cultureinfo]$Culture = $Cache.Value['Culture'],
         [ValidateSet('csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
         [string[]]$FileFormat = @('csv', 'html', 'js', 'json', 'prtgxml', 'xml'),
         [ValidateSet('passthru', 'none', 'csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
@@ -7440,6 +7439,7 @@ function Out-PermissionFile {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
+    $Culture = $Cache.Value['Culture'].Value
     $AceByGUID = $Cache.Value['AceByGUID']
     $AclByPath = $Cache.Value['AclByPath']
     $PrincipalByID = $Cache.Value['PrincipalByID']

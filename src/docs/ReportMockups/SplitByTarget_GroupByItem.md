@@ -16,13 +16,15 @@ Local target paths were resolved to UNC paths, and UNC target paths were resolve
 
 ## Items in Those Paths with Unique Permissions
 
+Includes the target path and all child items with unique permissions
+
 | Path | Inheritance |
 |------|-------------|
 | \\\\TestPC\\C$\\Folder1 | True/False |
 
 ## Accounts Included in Those Permissions
 
-### Accounts with Access to \\\\TestPC\\C$\\Folder1
+### Accounts with access to \\\\TestPC\\C$\\Folder1
 
 Inherited permissions from the parent (C) are included. This folder can only be accessed by the accounts listed here:
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.429] - 2024-12-08
+### Changed
+- update report verbiage
+
 ## [0.0.428] - 2024-12-08
 ### Changed
 - update comments and commit report mockups
