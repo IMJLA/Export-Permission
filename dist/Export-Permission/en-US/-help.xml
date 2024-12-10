@@ -843,6 +843,11 @@
         </dev:remarks>
       </command:example>
     </command:examples>
-    <command:relatedLinks />
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>https://imjla.github.io/Export-Permission</maml:linkText>
+        <maml:uri>https://imjla.github.io/Export-Permission</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
   </command:command>
 </helpItems>

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.473
+.VERSION 0.0.474
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI https://imjla.github.io/Export-Permission/img/logo.svg
 
-.EXTERNALMODULEDEPENDENCIES 
+.EXTERNALMODULEDEPENDENCIES
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update docs
+relatedlinks works best as .LINK
 
 .PRIVATEDATA
 
-#> 
+#>
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -246,6 +246,8 @@ update docs
     Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
+.LINK
+    https://imjla.github.io/Export-Permission
 #>
 
 [OutputType([PSCustomObject])]

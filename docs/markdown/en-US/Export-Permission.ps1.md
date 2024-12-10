@@ -1,9 +1,9 @@
 ---
 external help file: -help.xml
-help version: 0.0.473
+help version: 0.0.474
 locale: en-US
 script name: 
-online version:
+online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
 script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 ---
@@ -738,4 +738,7 @@ It is convenient for that purpose but it is not recommended for compliance repor
 ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
 
 ## RELATED LINKS
+
+[https://imjla.github.io/Export-Permission](https://imjla.github.io/Export-Permission)
+
 
