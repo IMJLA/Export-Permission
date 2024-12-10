@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.469
+.VERSION 0.0.470
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update working directory
+specify path to package-lock.json
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update working directory
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

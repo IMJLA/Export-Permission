@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.469
+.VERSION 0.0.470
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update working directory
+specify path to package-lock.json
 
 .PRIVATEDATA
 
