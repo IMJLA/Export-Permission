@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.465
+.VERSION 0.0.468
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update gh actions workflow to reflect npm instead of yarn
+delete extra dir
 
 .PRIVATEDATA
 

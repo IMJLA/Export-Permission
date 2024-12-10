@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.468] - 2024-12-09
+### Removed
+- delete extra dir
+
+## [0.0.467] - 2024-12-09
+### Fixed
+- fix online help path
+
+## [0.0.466] - 2024-12-09
+### Fixed
+- fix online help folder structure
+
 ## [0.0.465] - 2024-12-09
 ### Changed
 - update gh actions workflow to reflect npm instead of yarn

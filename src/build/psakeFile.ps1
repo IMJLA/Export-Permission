@@ -125,21 +125,15 @@ Properties {
     # Credential to authenticate to PowerShell repository with
     $PublishPSRepositoryCredential = $null
 
-
-
-    # Docusaurus (Online help)
-
-    # Online help website will be created in this folder.
-    [System.IO.DirectoryInfo]$OnlineHelpDir = [IO.Path]::Combine('..', '..', 'docs', 'online')
-
-
-
     # Calculated Properties
 
     # File path of the source script .ps1 file
     $SearchPath = [IO.Path]::Combine($SourceCodeDir, '*.ps1')
     $FoundScript = Get-ChildItem -Path $SearchPath -Include *.ps1
     $MainScript = [IO.Path]::Combine($SourceCodeDir, $FoundScript.Name)
+
+    # Online help website will be created in this folder.
+    [System.IO.DirectoryInfo]$OnlineHelpDir = [IO.Path]::Combine('..', '..', 'docs', 'online', $FoundScript.BaseName)
 
 }
 
@@ -329,13 +323,13 @@ Task BuildReadMe -depends FixMarkdownHelp {
 } -description 'Use the help for the script as the readme for the script.'
 
 Task DeleteOnlineHelp -depends BuildReadMe {
-    $OnlineHelpSourceMarkdown = [IO.Path]::Combine('..', '..', 'docs', 'online', 'docs')
+    $OnlineHelpSourceMarkdown = [IO.Path]::Combine($OnlineHelpDir, 'docs')
     Write-Host "`tGet-ChildItem -Path '$OnlineHelpSourceMarkdown' -Recurse | Remove-Item -Force -Confirm:`$false -Recurse"
     Get-ChildItem -Path $OnlineHelpSourceMarkdown -Recurse | Remove-Item -Force -Confirm:$false -Recurse
 }
 
 Task CopyMarkdownAsSourceForOnlineHelp -depends DeleteOnlineHelp {
-    $OnlineHelpSourceMarkdown = [IO.Path]::Combine('..', '..', 'docs', 'online', 'docs')
+    $OnlineHelpSourceMarkdown = [IO.Path]::Combine($OnlineHelpDir, 'docs')
     $MarkdownSourceCode = [IO.Path]::Combine('..', '..', 'src', 'docs')
     $helpLocales = (Get-ChildItem -Path $MarkdownHelpDir -Directory -Exclude 'UpdatableHelp').Name
 
@@ -408,9 +402,8 @@ Task ConvertArt -depends BuildArt {
 
 Task BuildOnlineHelp -depends ConvertArt {
 
-    $OnlineHelp = [IO.Path]::Combine('..', '..', 'docs', 'online')
     $Location = Get-Location
-    Set-Location $OnlineHelp
+    Set-Location $OnlineHelpDir
     Write-Host "`tnpm run build"
     & npm run build
     Set-Location $Location
