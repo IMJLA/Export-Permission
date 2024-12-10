@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.472
+.VERSION 0.0.473
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -43,7 +43,7 @@ update docs
 
 <#
 .SYNOPSIS
-    Create CSV, HTML, and XML reports of permissions
+    Create CSV, HTML, JSON, and XML exports of permissions
 .DESCRIPTION
     Present complex nested permissions and group memberships in a report that is easy to read
     Provide additional information about each account such as Name, Department, Title
@@ -249,7 +249,7 @@ update docs
 #>
 
 [OutputType([PSCustomObject])]
-[CmdletBinding()]
+[CmdletBinding(HelpURI = 'https://imjla.github.io/Export-Permission')]
 
 param (
 

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.472
+.VERSION 0.0.473
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -74,7 +74,7 @@ Behavior:
 
 #>
 [OutputType([PSCustomObject])]
-[CmdletBinding()]
+[CmdletBinding(HelpURI = 'https://imjla.github.io/Export-Permission')]
 param (
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]

@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.472
+help version: 0.0.473
 locale: en-US
 script name: 
 online version:
@@ -11,7 +11,7 @@ script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 # Export-Permission.ps1
 
 ## SYNOPSIS
-Create CSV, HTML, and XML reports of permissions
+Create CSV, HTML, JSON, and XML exports of permissions
 
 ## SYNTAX
 

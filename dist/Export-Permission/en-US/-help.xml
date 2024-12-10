@@ -6,7 +6,7 @@
       <command:verb>Export</command:verb>
       <command:noun>Permission.ps1</command:noun>
       <maml:description>
-        <maml:para>Create CSV, HTML, and XML reports of permissions</maml:para>
+        <maml:para>Create CSV, HTML, JSON, and XML exports of permissions</maml:para>
       </maml:description>
     </command:details>
     <maml:description>
