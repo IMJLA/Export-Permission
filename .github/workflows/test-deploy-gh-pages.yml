@@ -3,7 +3,7 @@ name: Test deployment
 defaults:
   run:
     shell: bash
-    working-directory: ./docs/online
+    working-directory: ./docs/online/Export-Permission
 
 on:
   pull_request:

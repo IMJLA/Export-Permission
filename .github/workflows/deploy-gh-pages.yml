@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 defaults:
   run:
     shell: bash
-    working-directory: ./docs/online
+    working-directory: ./docs/online/Export-Permission
 
 on:
   push:

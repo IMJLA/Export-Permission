@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.469] - 2024-12-09
+### Changed
+- update working directory
+
 ## [0.0.468] - 2024-12-09
 ### Removed
 - delete extra dir
