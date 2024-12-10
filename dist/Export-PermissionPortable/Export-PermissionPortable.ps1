@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.464
+.VERSION 0.0.465
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add gh actions for publishing to gh pages
+update gh actions workflow to reflect npm instead of yarn
 
 .PRIVATEDATA
 
