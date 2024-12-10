@@ -9,7 +9,7 @@ const config: Config = {
   //-------------------------------------------------------------------
   // BEGIN REQUIRED FIELDS
 
-  title: 'Export-Permission Docs',
+  title: 'Export-Permission',
 
   // Set the production url of your site here
   url: 'https://imjla.github.io',

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.471
+.VERSION 0.0.472
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -16,7 +16,7 @@
 
 .PROJECTURI https://github.com/IMJLA/Export-Permission
 
-.ICONURI
+.ICONURI https://imjla.github.io/Export-Permission/img/logo.svg
 
 .EXTERNALMODULEDEPENDENCIES 
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update artifact path
+update docs
 
 .PRIVATEDATA
 
@@ -39,23 +39,6 @@ update artifact path
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <#
