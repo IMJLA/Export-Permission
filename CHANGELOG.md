@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.471] - 2024-12-09
+### Changed
+- update artifact path
+
 ## [0.0.470] - 2024-12-09
 ### Changed
 - specify path to package-lock.json
