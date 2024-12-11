@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.475
+.VERSION 0.0.476
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update default account exclusion param value for improved accuracy
+fix properties with spaces in them
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ update default account exclusion param value for improved accuracy
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#

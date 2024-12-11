@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.475
+.VERSION 0.0.476
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update default account exclusion param value for improved accuracy
+fix properties with spaces in them
 
 .PRIVATEDATA
 
@@ -4821,6 +4821,7 @@ function ConvertTo-PermissionList {
                                     'DuetoMembershipIn' = 'Due to Membership In'
                                     'SourceofAccess'    = 'Source of Access'
                                 }
+                                $ObjProps = 'Access', 'Due to Membership In', 'Source of Access'
                                 [bool]$IsAccount = $false
                             } else {
                                 [string[]]$PropNames = @('Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
@@ -4834,6 +4835,7 @@ function ConvertTo-PermissionList {
                                     'SourceofAccess'    = 'Source of Access'
                                     'Name'              = 'Name'
                                 }
+                                $ObjProps = 'Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name'
                                 [bool]$IsAccount = $true
                             }
                             $StartingPermissions = $Permission[$GroupID]
@@ -4841,7 +4843,7 @@ function ConvertTo-PermissionList {
                                 $ObjectsForJsonData = ForEach ($Obj in $StartingPermissions) {
                                     $Props = [ordered]@{}
                                     ForEach ($PropName in $ObjProps.Keys) {
-                                        $Props[$ObjProps[$PropName]] = $Obj.$PropName
+                                        $Props[$PropName] = $Obj.$($ObjProps[$PropName])
                                     }
                                     if ($IsAccount) {
                                         ForEach ($PropName in $AccountProperty) {
@@ -6270,7 +6272,7 @@ function Select-PermissionTableProperty {
                                             $IncludeAccountFilterContents.Value[$AccountName]
                                         )
                                     ) {
-                                        $GroupString = $ACE.IdentityReferenceResolved 
+                                        $GroupString = $ACE.IdentityReferenceResolved
                                     }
                                 }
                             }
@@ -6278,17 +6280,17 @@ function Select-PermissionTableProperty {
                                 if ($null -ne $Object.Account) {
                                     $Props = [ordered]@{
                                         'Item'                 = $ACE.Path
-                                        'Access'               = $ACE.Access 
+                                        'Access'               = $ACE.Access
                                         'Due to Membership In' = $GroupString
-                                        'Source of Access'     = $ACE.SourceOfAccess 
+                                        'Source of Access'     = $ACE.SourceOfAccess
                                     }
                                     [PSCustomObject]$Props
                                 } else {
                                     $Props = [ordered]@{
                                         'Account'              = $AccountName
-                                        'Access'               = $ACE.Access 
+                                        'Access'               = $ACE.Access
                                         'Due to Membership In' = $GroupString
-                                        'Source of Access'     = $ACE.SourceOfAccess 
+                                        'Source of Access'     = $ACE.SourceOfAccess
                                         'Name'                 = $AceList.Account.Name
                                     }
                                     ForEach ($PropName in $AccountProperty) {

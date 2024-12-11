@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.476] - 2024-12-11
+### Fixed
+- fix properties with spaces in them
+
 ## [0.0.475] - 2024-12-10
 ### Changed
 - update default account exclusion param value for improved accuracy
