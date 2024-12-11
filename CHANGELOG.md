@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.475] - 2024-12-10
+### Changed
+- update default account exclusion param value for improved accuracy
+
 ## [0.0.474] - 2024-12-10
 ### Changed
 - relatedlinks works best as .LINK

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.474
+.VERSION 0.0.475
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI https://imjla.github.io/Export-Permission/img/logo.svg
 
-.EXTERNALMODULEDEPENDENCIES
+.EXTERNALMODULEDEPENDENCIES 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-relatedlinks works best as .LINK
+update default account exclusion param value for improved accuracy
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -46,7 +46,7 @@ relatedlinks works best as .LINK
     Create CSV, HTML, JSON, and XML exports of permissions
 .DESCRIPTION
     Present complex nested permissions and group memberships in a report that is easy to read
-    Provide additional information about each account such as Name, Department, Title
+    Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
     Multithreaded with caching for fast results
     Works as a scheduled task
     Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
@@ -59,9 +59,10 @@ relatedlinks works best as .LINK
     - Active Directory domain trusts
     - Unresolved SIDs for deleted accounts
     - Group memberships via the Primary Group as well as the memberOf property
+    - ACL Owners (shown in the report as having Full Control originating from Ownership)
 
     Does not support these scenarios:
-    - ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)
+    - Unsupported SDDL Components: The System Access Control List (SACL) and the Primary Group are not reported.
     - File permissions (ToDo enhancement; for now only folder permissions are reported)
     - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
@@ -73,11 +74,11 @@ relatedlinks works best as .LINK
     - Gets all permissions for the resolved paths
     - Gets non-inherited permissions for subfolders (if specified)
     - Exports the permissions to a .csv file
-    - Uses ADSI to get information about the accounts and groups listed in the permissions
+    - Uses CIM and ADSI to get information about the accounts and groups listed in the permissions
     - Exports information about the accounts and groups to a .csv file
     - Uses ADSI to recursively retrieve group members
       - Retrieves group members using both the memberOf and primaryGroupId attributes
-      - Members of nested groups are retrieved as members of the group listed in the permissions.
+      - Members of nested groups are retrieved and returned as members of the group listed in the permissions.
           - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
     - Exports information about all accounts with access to a .csv file
     - Exports information about all accounts with access to a report generated as a .html file
@@ -267,7 +268,7 @@ param (
     [System.IO.DirectoryInfo[]]$TargetPath,
 
     # Regular expressions matching names of accounts to exclude from the HTML report
-    [string[]]$ExcludeAccount = 'SYSTEM',
+    [string[]]$ExcludeAccount = '\\SYSTEM$',
 
     <#
     Regular expressions matching names of accounts to include in the HTML report

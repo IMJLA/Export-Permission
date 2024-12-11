@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.474
+help version: 0.0.475
 locale: en-US
 script name: 
 online version: https://imjla.github.io/Export-Permission
@@ -27,7 +27,7 @@ Export-Permission.ps1 [-TargetPath] <DirectoryInfo[]> [[-ExcludeAccount] <String
 
 ## DESCRIPTION
 Present complex nested permissions and group memberships in a report that is easy to read
-Provide additional information about each account such as Name, Department, Title
+Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
 Multithreaded with caching for fast results
 Works as a scheduled task
 Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
@@ -40,9 +40,10 @@ Supports:
 - Active Directory domain trusts
 - Unresolved SIDs for deleted accounts
 - Group memberships via the Primary Group as well as the memberOf property
+- ACL Owners (shown in the report as having Full Control originating from Ownership)
 
 Does not support these scenarios:
-- ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)
+- Unsupported SDDL Components: The System Access Control List (SACL) and the Primary Group are not reported.
 - File permissions (ToDo enhancement; for now only folder permissions are reported)
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
@@ -54,11 +55,11 @@ Behavior:
 - Gets all permissions for the resolved paths
 - Gets non-inherited permissions for subfolders (if specified)
 - Exports the permissions to a .csv file
-- Uses ADSI to get information about the accounts and groups listed in the permissions
+- Uses CIM and ADSI to get information about the accounts and groups listed in the permissions
 - Exports information about the accounts and groups to a .csv file
 - Uses ADSI to recursively retrieve group members
   - Retrieves group members using both the memberOf and primaryGroupId attributes
-  - Members of nested groups are retrieved as members of the group listed in the permissions.
+  - Members of nested groups are retrieved and returned as members of the group listed in the permissions.
       - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
 - Exports information about all accounts with access to a .csv file
 - Exports information about all accounts with access to a report generated as a .html file
@@ -363,7 +364,7 @@ Aliases:
 
 Required: False
 Position: 2
-Default value: SYSTEM
+Default value: \\SYSTEM$
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

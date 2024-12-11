@@ -10,7 +10,7 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read Provide additional information about each account such as Name, Department, Title Multithreaded with caching for fast results Works as a scheduled task Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
+      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property Multithreaded with caching for fast results Works as a scheduled task Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
       <maml:para>Supports: - Local folder paths</maml:para>
       <maml:para>- UNC folder paths</maml:para>
       <maml:para>- DFS folder paths</maml:para>
@@ -18,18 +18,19 @@
       <maml:para>- Active Directory domain trusts</maml:para>
       <maml:para>- Unresolved SIDs for deleted accounts</maml:para>
       <maml:para>- Group memberships via the Primary Group as well as the memberOf property</maml:para>
+      <maml:para>- ACL Owners (shown in the report as having Full Control originating from Ownership)</maml:para>
       <maml:para></maml:para>
-      <maml:para>Does not support these scenarios: - ACL Owners or Groups (ToDo enhancement; for now only the DACL is reported)</maml:para>
+      <maml:para>Does not support these scenarios: - Unsupported SDDL Components: The System Access Control List (SACL) and the Primary Group are not reported.</maml:para>
       <maml:para>- File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
       <maml:para>- Share permissions (ToDo enhancement; for now only NTFS permissions are reported)</maml:para>
       <maml:para></maml:para>
       <maml:para>Behavior: - Resolves each path in the TargetPath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets all permissions for the resolved paths</maml:para>
       <maml:para>- Gets non-inherited permissions for subfolders (if specified)</maml:para>
       <maml:para>- Exports the permissions to a .csv file</maml:para>
-      <maml:para>- Uses ADSI to get information about the accounts and groups listed in the permissions</maml:para>
+      <maml:para>- Uses CIM and ADSI to get information about the accounts and groups listed in the permissions</maml:para>
       <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
       <maml:para>- Uses ADSI to recursively retrieve group members</maml:para>
-      <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - Members of nested groups are retrieved as members of the group listed in the permissions.       - Their hierarchy of nested group memberships is not retrieved (for performance reasons). - Exports information about all accounts with access to a .csv file</maml:para>
+      <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.       - Their hierarchy of nested group memberships is not retrieved (for performance reasons). - Exports information about all accounts with access to a .csv file</maml:para>
       <maml:para>- Exports information about all accounts with access to a report generated as a .html file</maml:para>
       <maml:para>- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
     </maml:description>
@@ -187,7 +188,7 @@
             <maml:name>System.String[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>SYSTEM</dev:defaultValue>
+          <dev:defaultValue>\\SYSTEM$</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="20" aliases="none">
           <maml:name>AccountProperty</maml:name>
@@ -386,7 +387,7 @@
           <maml:name>System.String[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>SYSTEM</dev:defaultValue>
+        <dev:defaultValue>\\SYSTEM$</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
         <maml:name>ExcludeClass</maml:name>
