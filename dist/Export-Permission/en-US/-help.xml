@@ -26,13 +26,11 @@
       <maml:para></maml:para>
       <maml:para>Behavior: - Resolves each path in the TargetPath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets all permissions for the resolved paths</maml:para>
       <maml:para>- Gets non-inherited permissions for subfolders (if specified)</maml:para>
-      <maml:para>- Exports the permissions to a .csv file</maml:para>
       <maml:para>- Uses CIM and ADSI to get information about the accounts and groups listed in the permissions</maml:para>
       <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
       <maml:para>- Uses ADSI to recursively retrieve group members</maml:para>
-      <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.       - Their hierarchy of nested group memberships is not retrieved (for performance reasons). - Exports information about all accounts with access to a .csv file</maml:para>
-      <maml:para>- Exports information about all accounts with access to a report generated as a .html file</maml:para>
-      <maml:para>- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor</maml:para>
+      <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.       - Their hierarchy of nested group memberships is not retrieved (for performance reasons). - Exports permissions to files of the specified File Formats, using the specified report Detail levels</maml:para>
+      <maml:para>- Outputs permissions to the pipeline in the specified Output Format and using the highest specified report Detail level</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>

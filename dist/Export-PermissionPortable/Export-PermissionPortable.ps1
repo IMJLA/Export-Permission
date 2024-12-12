@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.476
+.VERSION 0.0.477
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix properties with spaces in them
+update description
 
 .PRIVATEDATA
 
@@ -62,16 +62,14 @@ Behavior:
   - Mapped network drives become their UNC paths
 - Gets all permissions for the resolved paths
 - Gets non-inherited permissions for subfolders (if specified)
-- Exports the permissions to a .csv file
 - Uses CIM and ADSI to get information about the accounts and groups listed in the permissions
 - Exports information about the accounts and groups to a .csv file
 - Uses ADSI to recursively retrieve group members
   - Retrieves group members using both the memberOf and primaryGroupId attributes
   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.
       - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
-- Exports information about all accounts with access to a .csv file
-- Exports information about all accounts with access to a report generated as a .html file
-- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor 
+- Exports permissions to files of the specified File Formats, using the specified report Detail levels
+- Outputs permissions to the pipeline in the specified Output Format and using the highest specified report Detail level 
 
 #>
 [OutputType([PSCustomObject])]
@@ -4816,39 +4814,22 @@ function ConvertTo-PermissionList {
                                 $GroupID = $Group.Access.Item.Path
                                 $Heading = New-HtmlHeading "Access to $GroupID" -Level 6
                                 $SubHeading = 'This account has the below access to this item and its children, except children with inheritance disabled.'
-                                $ObjProps = [ordered]@{
-                                    'Access'            = 'Access'
-                                    'DuetoMembershipIn' = 'Due to Membership In'
-                                    'SourceofAccess'    = 'Source of Access'
-                                }
-                                $ObjProps = 'Access', 'Due to Membership In', 'Source of Access'
-                                [bool]$IsAccount = $false
                             } else {
                                 [string[]]$PropNames = @('Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                                 $GroupID = $Group.Item.Path
                                 $Heading = New-HtmlHeading "Accounts with access to $GroupID" -Level 6
                                 $SubHeading = Get-FolderPermissionTableHeader -Group $Group -GroupID $GroupID -ShortestFolderPath $ShortestPath
-                                $ObjProps = [ordered]@{
-                                    'Account'           = 'Account'
-                                    'Access'            = 'Access'
-                                    'DuetoMembershipIn' = 'Due to Membership In'
-                                    'SourceofAccess'    = 'Source of Access'
-                                    'Name'              = 'Name'
-                                }
-                                $ObjProps = 'Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name'
-                                [bool]$IsAccount = $true
                             }
                             $StartingPermissions = $Permission[$GroupID]
                             if ($StartingPermissions) {
+                                $ObjProps = [ordered]@{}
+                                ForEach ($Prop in $PropNames) {
+                                    $ObjProps[$Prop.Replace(' ', '')] = $Prop
+                                }
                                 $ObjectsForJsonData = ForEach ($Obj in $StartingPermissions) {
                                     $Props = [ordered]@{}
                                     ForEach ($PropName in $ObjProps.Keys) {
                                         $Props[$PropName] = $Obj.$($ObjProps[$PropName])
-                                    }
-                                    if ($IsAccount) {
-                                        ForEach ($PropName in $AccountProperty) {
-                                            $Props[$PropName] = $Obj.$PropName
-                                        }
                                     }
                                     [PSCustomObject]$Props
                                 }

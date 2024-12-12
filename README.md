@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.476
+help version: 0.0.477
 locale: en-US
 script name: 
 online version: https://imjla.github.io/Export-Permission
@@ -54,16 +54,14 @@ Behavior:
   - Mapped network drives become their UNC paths
 - Gets all permissions for the resolved paths
 - Gets non-inherited permissions for subfolders (if specified)
-- Exports the permissions to a .csv file
 - Uses CIM and ADSI to get information about the accounts and groups listed in the permissions
 - Exports information about the accounts and groups to a .csv file
 - Uses ADSI to recursively retrieve group members
   - Retrieves group members using both the memberOf and primaryGroupId attributes
   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.
       - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
-- Exports information about all accounts with access to a .csv file
-- Exports information about all accounts with access to a report generated as a .html file
-- Outputs an XML-formatted list of common misconfigurations for use in Paessler PRTG Network Monitor as a custom XML sensor
+- Exports permissions to files of the specified File Formats, using the specified report Detail levels
+- Outputs permissions to the pipeline in the specified Output Format and using the highest specified report Detail level
 
 ## EXAMPLES
 

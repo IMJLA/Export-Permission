@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.477] - 2024-12-12
+### Changed
+- update description
+
 ## [0.0.476] - 2024-12-11
 ### Fixed
 - fix properties with spaces in them
