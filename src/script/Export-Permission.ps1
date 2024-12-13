@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.487
+.VERSION 0.0.488
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-a man has no title
+a link has no title seems to work!
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ a man has no title
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -249,9 +250,9 @@ a man has no title
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .LINK
-    Online version: https://imjla.github.io/Export-Permission
+    https://imjla.github.io/Export-Permission
 .LINK
-    https://github.com/IMJLA/Export-Permission/issues
+    https://github.com/IMJLA/Export-Permission
 #>
 
 [OutputType([PSCustomObject])]

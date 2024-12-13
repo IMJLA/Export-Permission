@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.488] - 2024-12-13
+### Changed
+- a link has no title seems to work!
+
 ## [0.0.487] - 2024-12-13
 ### Changed
 - a man has no title

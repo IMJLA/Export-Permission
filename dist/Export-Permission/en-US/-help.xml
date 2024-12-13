@@ -847,12 +847,12 @@
     </command:examples>
     <command:relatedLinks>
       <maml:navigationLink>
-        <maml:linkText>Online version: https://imjla.github.io/Export-Permission</maml:linkText>
-        <maml:uri></maml:uri>
+        <maml:linkText>https://imjla.github.io/Export-Permission</maml:linkText>
+        <maml:uri>https://imjla.github.io/Export-Permission</maml:uri>
       </maml:navigationLink>
       <maml:navigationLink>
-        <maml:linkText>https://github.com/IMJLA/Export-Permission/issues</maml:linkText>
-        <maml:uri>https://github.com/IMJLA/Export-Permission/issues</maml:uri>
+        <maml:linkText>https://github.com/IMJLA/Export-Permission</maml:linkText>
+        <maml:uri>https://github.com/IMJLA/Export-Permission</maml:uri>
       </maml:navigationLink>
     </command:relatedLinks>
   </command:command>
