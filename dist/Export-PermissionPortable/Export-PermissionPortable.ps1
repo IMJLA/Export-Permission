@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.477
+.VERSION 0.0.478
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update description
+improve docs
 
 .PRIVATEDATA
 
@@ -35,23 +35,26 @@ update description
 
 .DESCRIPTION 
  Present complex nested permissions and group memberships in a report that is easy to read
+
 Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
-Multithreaded with caching for fast results
+
+Multithread with in-process caching for fast results
+
 Works as a scheduled task
+
 Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 
 Supports:
-- Local folder paths
-- UNC folder paths
-- DFS folder paths
-- Mapped network drives
 - Active Directory domain trusts
 - Unresolved SIDs for deleted accounts
-- Group memberships via the Primary Group as well as the memberOf property
+- Service SID resolution
+- Group memberships via an account's Primary Group as well as its memberOf property
 - ACL Owners (shown in the report as having Full Control originating from Ownership)
 
 Does not support these scenarios:
-- Unsupported SDDL Components: The System Access Control List (SACL) and the Primary Group are not reported.
+- Unsupported SDDL Components:
+    - The System Access Control List (SACL) containing ACL Auditors is not reported.
+    - The Primary Group is not reported.
 - File permissions (ToDo enhancement; for now only folder permissions are reported)
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
@@ -60,10 +63,10 @@ Behavior:
   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
   - DFS paths become all of their UNC folder targets, including disabled ones
   - Mapped network drives become their UNC paths
-- Gets all permissions for the resolved paths
-- Gets non-inherited permissions for subfolders (if specified)
+- Gets children of the resolved paths to the specified RecurseDepth
+- Gets all permissions for the parent paths
+- Gets non-inherited permissions for the discovered children
 - Uses CIM and ADSI to get information about the accounts and groups listed in the permissions
-- Exports information about the accounts and groups to a .csv file
 - Uses ADSI to recursively retrieve group members
   - Retrieves group members using both the memberOf and primaryGroupId attributes
   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.

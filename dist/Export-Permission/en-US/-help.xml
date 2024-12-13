@@ -10,24 +10,24 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property Multithreaded with caching for fast results Works as a scheduled task Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
-      <maml:para>Supports: - Local folder paths</maml:para>
-      <maml:para>- UNC folder paths</maml:para>
-      <maml:para>- DFS folder paths</maml:para>
-      <maml:para>- Mapped network drives</maml:para>
-      <maml:para>- Active Directory domain trusts</maml:para>
+      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read</maml:para>
+      <maml:para>Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property</maml:para>
+      <maml:para>Multithread with in-process caching for fast results</maml:para>
+      <maml:para>Works as a scheduled task</maml:para>
+      <maml:para>Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
+      <maml:para>Supports: - Active Directory domain trusts</maml:para>
       <maml:para>- Unresolved SIDs for deleted accounts</maml:para>
-      <maml:para>- Group memberships via the Primary Group as well as the memberOf property</maml:para>
+      <maml:para>- Service SID resolution</maml:para>
+      <maml:para>- Group memberships via an account's Primary Group as well as its memberOf property</maml:para>
       <maml:para>- ACL Owners (shown in the report as having Full Control originating from Ownership)</maml:para>
       <maml:para></maml:para>
-      <maml:para>Does not support these scenarios: - Unsupported SDDL Components: The System Access Control List (SACL) and the Primary Group are not reported.</maml:para>
-      <maml:para>- File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
+      <maml:para>Does not support these scenarios: - Unsupported SDDL Components:     - The System Access Control List (SACL) containing ACL Auditors is not reported.     - The Primary Group is not reported. - File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
       <maml:para>- Share permissions (ToDo enhancement; for now only NTFS permissions are reported)</maml:para>
       <maml:para></maml:para>
-      <maml:para>Behavior: - Resolves each path in the TargetPath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets all permissions for the resolved paths</maml:para>
-      <maml:para>- Gets non-inherited permissions for subfolders (if specified)</maml:para>
+      <maml:para>Behavior: - Resolves each path in the TargetPath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets children of the resolved paths to the specified RecurseDepth</maml:para>
+      <maml:para>- Gets all permissions for the parent paths</maml:para>
+      <maml:para>- Gets non-inherited permissions for the discovered children</maml:para>
       <maml:para>- Uses CIM and ADSI to get information about the accounts and groups listed in the permissions</maml:para>
-      <maml:para>- Exports information about the accounts and groups to a .csv file</maml:para>
       <maml:para>- Uses ADSI to recursively retrieve group members</maml:para>
       <maml:para>  - Retrieves group members using both the memberOf and primaryGroupId attributes   - Members of nested groups are retrieved and returned as members of the group listed in the permissions.       - Their hierarchy of nested group memberships is not retrieved (for performance reasons). - Exports permissions to files of the specified File Formats, using the specified report Detail levels</maml:para>
       <maml:para>- Outputs permissions to the pipeline in the specified Output Format and using the highest specified report Detail level</maml:para>
@@ -39,7 +39,9 @@
           <maml:name>TargetPath</maml:name>
           <maml:description>
             <maml:para>Path to the item whose permissions to export</maml:para>
-            <maml:para>Currently supports NTFS folders ToDo: support same targets as Get-Acl (AD, Registry, StorageSubSystem) ToDo: support M365 targets (SP sites, Teams, etc)</maml:para>
+            <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
+            <maml:para>Does Not Support (ToDo): - same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
+            <maml:para>- M365 targets (SP sites, Teams, etc)</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
           <dev:type>
@@ -596,7 +598,9 @@
         <maml:name>TargetPath</maml:name>
         <maml:description>
           <maml:para>Path to the item whose permissions to export</maml:para>
-          <maml:para>Currently supports NTFS folders ToDo: support same targets as Get-Acl (AD, Registry, StorageSubSystem) ToDo: support M365 targets (SP sites, Teams, etc)</maml:para>
+          <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
+          <maml:para>Does Not Support (ToDo): - same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
+          <maml:para>- M365 targets (SP sites, Teams, etc)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
         <dev:type>
@@ -664,7 +668,6 @@
         <maml:para>This code has limited or no tests</maml:para>
         <maml:para>It was designed for presenting reports to non-technical management or administrative staff</maml:para>
         <maml:para>It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses</maml:para>
-        <maml:para>ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>
@@ -844,8 +847,12 @@
     </command:examples>
     <command:relatedLinks>
       <maml:navigationLink>
-        <maml:linkText>https://imjla.github.io/Export-Permission</maml:linkText>
-        <maml:uri>https://imjla.github.io/Export-Permission</maml:uri>
+        <maml:linkText>Online Version: https://imjla.github.io/Export-Permission</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:linkText>
+        <maml:uri></maml:uri>
       </maml:navigationLink>
     </command:relatedLinks>
   </command:command>
