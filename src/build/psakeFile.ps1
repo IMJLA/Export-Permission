@@ -345,6 +345,8 @@ Task BuildMAMLHelp -depends CopyMarkdownAsSourceForOnlineHelp -precondition { $s
 
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
+    # Unknown issue in New-ExternalHelp is causing the file to be named incorrectly.  This is a workaround to avoid a file named '-help.xml'.
+    Get-ChildItem -Path $script:BuildOutputFolder -Recurse -Filter '*.xml' | Rename-Item -NewName "$($FoundScript.Name)-help.xml"
 
 } -description 'Build MAML help from the Markdown files by using PlatyPS invoked by PowerShellBuild.'
 

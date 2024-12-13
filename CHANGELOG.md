@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.492] - 2024-12-13
+### Fixed
+- bugfix external help file name
+
 ## [0.0.491] - 2024-12-13
 ### Added
 - add powershell syntax highlighting to markdown help...let's see what happens
