@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.486
+help version: 0.0.487
 locale: en-US
 script name: 
 online version:
@@ -748,6 +748,6 @@ It is convenient for that purpose but it is not recommended for compliance repor
 
 [Online version: https://imjla.github.io/Export-Permission]()
 
-[ToDo bugs and enhancements : https://github.com/IMJLA/Export-Permission/issues]()
+[https://github.com/IMJLA/Export-Permission/issues](https://github.com/IMJLA/Export-Permission/issues)
 
 

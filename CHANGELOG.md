@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.487] - 2024-12-13
+### Changed
+- a man has no title
+
 ## [0.0.486] - 2024-12-13
 ### Changed
 - how bout a colon preceded by a space

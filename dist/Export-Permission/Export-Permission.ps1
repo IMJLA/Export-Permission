@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.486
+.VERSION 0.0.487
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-how bout a colon preceded by a space
+a man has no title
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ how bout a colon preceded by a space
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
@@ -250,7 +251,7 @@ how bout a colon preceded by a space
 .LINK
     Online version: https://imjla.github.io/Export-Permission
 .LINK
-    ToDo bugs and enhancements : https://github.com/IMJLA/Export-Permission/issues
+    https://github.com/IMJLA/Export-Permission/issues
 #>
 
 [OutputType([PSCustomObject])]
