@@ -147,21 +147,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -345,8 +345,8 @@ Task BuildMAMLHelp -depends CopyMarkdownAsSourceForOnlineHelp -precondition { $s
 
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
-    # Unknown issue in New-ExternalHelp is causing the file to be named incorrectly.  This is a workaround to avoid a file named '-help.xml'.
-    Get-ChildItem -Path $script:BuildOutputFolder -Recurse -Filter '*.xml' | Rename-Item -NewName "$($FoundScript.Name)-help.xml"
+    ### Unknown issue in New-ExternalHelp is causing the file to be named incorrectly.  This is a workaround to avoid a file named '-help.xml'.
+    ##Get-ChildItem -Path $script:BuildOutputFolder -Recurse -Filter '*.xml' | Rename-Item -NewName "$($FoundScript.Name)-help.xml"
 
 } -description 'Build MAML help from the Markdown files by using PlatyPS invoked by PowerShellBuild.'
 

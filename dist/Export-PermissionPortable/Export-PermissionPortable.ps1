@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.492
+.VERSION 0.0.493
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix external help file name
+maybe the bug is in platyps rather than new-externalhelp...testing
 
 .PRIVATEDATA
 

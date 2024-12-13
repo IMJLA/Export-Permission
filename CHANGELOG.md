@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.493] - 2024-12-13
+### Changed
+- maybe the bug is in platyps rather than new-externalhelp...testing
+
 ## [0.0.492] - 2024-12-13
 ### Fixed
 - bugfix external help file name

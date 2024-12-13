@@ -14,6 +14,9 @@ $Markdown = Get-Content -LiteralPath $Path -Raw
 $NewMarkdown = $Markdown -replace 'Module Name:', "script name: $ScriptName"
 $NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $ScriptGuid"
 
+# Workaround a bug in New-MarkdownHelp with the ExternalHelpFile
+$NewMarkdown = $NewMarkdown -replace 'external help file: -help.xml', "external help file: $($ScriptName.Split('.')[0])-help.xml"
+
 # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS
 $ParamToRemove = '-ProgressAction'
 $Pattern = "### $ParamToRemove\r?\n[\S\s\r\n]*?(?=#{2,3}?)"
