@@ -847,8 +847,8 @@
     </command:examples>
     <command:relatedLinks>
       <maml:navigationLink>
-        <maml:linkText>Online Version: https://imjla.github.io/Export-Permission</maml:linkText>
-        <maml:uri></maml:uri>
+        <maml:linkText>https://imjla.github.io/Export-Permission</maml:linkText>
+        <maml:uri>https://imjla.github.io/Export-Permission</maml:uri>
       </maml:navigationLink>
       <maml:navigationLink>
         <maml:linkText>ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues</maml:linkText>

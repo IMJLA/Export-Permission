@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.481] - 2024-12-13
+### Changed
+- handle error condition during buld
+
+## [0.0.480] - 2024-12-13
+### Changed
+- update docs with fixed online help link
+
+## [0.0.479] - 2024-12-13
+### Fixed
+- fix link to online help
+
 ## [0.0.478] - 2024-12-13
 ### Changed
 - improve docs

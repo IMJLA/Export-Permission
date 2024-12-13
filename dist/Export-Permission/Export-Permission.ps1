@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.478
+.VERSION 0.0.481
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-improve docs
+handle error condition during buld
 
 .PRIVATEDATA
 
@@ -39,6 +39,8 @@ improve docs
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
+
 
 
 <#
@@ -246,7 +248,7 @@ improve docs
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .LINK
-    Online Version: https://imjla.github.io/Export-Permission
+    https://imjla.github.io/Export-Permission
 .LINK
     ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
 #>
