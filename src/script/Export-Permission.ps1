@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.481
+.VERSION 0.0.482
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI https://imjla.github.io/Export-Permission/img/logo.svg
 
-.EXTERNALMODULEDEPENDENCIES
+.EXTERNALMODULEDEPENDENCIES 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-handle error condition during buld
+remove slash from link title
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -39,6 +39,7 @@ handle error condition during buld
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 <#
 .SYNOPSIS
@@ -245,9 +246,9 @@ handle error condition during buld
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .LINK
-    https://imjla.github.io/Export-Permission
+    Online version: https://imjla.github.io/Export-Permission
 .LINK
-    ToDo bugs/enhancements: https://github.com/IMJLA/Export-Permission/issues
+    ToDo bugs and enhancements: https://github.com/IMJLA/Export-Permission/issues
 #>
 
 [OutputType([PSCustomObject])]

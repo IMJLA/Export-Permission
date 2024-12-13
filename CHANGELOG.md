@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.482] - 2024-12-13
+### Removed
+- remove slash from link title
+
 ## [0.0.481] - 2024-12-13
 ### Changed
 - handle error condition during buld
