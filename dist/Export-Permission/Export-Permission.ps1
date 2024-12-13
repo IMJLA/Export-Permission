@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.489
+.VERSION 0.0.490
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix source code tests to support multiple help uris
+bugfix markdown repair during build process
 
 .PRIVATEDATA
 
@@ -39,11 +39,6 @@ bugfix source code tests to support multiple help uris
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
-
-
-
-
 
 
 <#

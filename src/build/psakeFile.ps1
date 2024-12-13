@@ -310,7 +310,7 @@ Task FixMarkdownHelp -depends BuildMarkdownHelp {
 
     $Script:MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
     $ScriptToRun = [IO.Path]::Combine('.', 'Repair-MarkdownHelp.ps1')
-    . $ScriptToRun -Path $Script:MarkdownPath -ScriptName $MainScript.Name -ScriptGuid $Script:NewScriptFileInfo.Guid
+    . $ScriptToRun -Path $Script:MarkdownPath -ScriptName $FoundScript.Name -ScriptGuid $Script:NewScriptFileInfo.Guid
 
 } -description 'Fix issues with the Markdown files that were not handled by PlatyPS.'
 
