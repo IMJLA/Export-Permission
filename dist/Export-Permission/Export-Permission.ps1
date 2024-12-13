@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.490
+.VERSION 0.0.491
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix markdown repair during build process
+add powershell syntax highlighting to markdown help...let's see what happens
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ bugfix markdown repair during build process
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 <#

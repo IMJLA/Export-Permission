@@ -21,5 +21,8 @@ $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
 $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 
+# Add PowerShell syntax highlighting
+$NewMarkdown = $NewMarkdown -replace '\x60\x60\x60\r*\n(?!\r*\n)', "``````powershell`n"
+
 Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$Path'"
 $NewMarkdown | Set-Content -LiteralPath $Path

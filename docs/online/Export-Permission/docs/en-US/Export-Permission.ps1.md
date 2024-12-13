@@ -1,6 +1,6 @@
 ---
 external help file: -help.xml
-help version: 0.0.490
+help version: 0.0.491
 locale: en-US
 script name: Export-Permission.ps1
 online version: https://imjla.github.io/Export-Permission
@@ -15,7 +15,7 @@ Create CSV, HTML, JSON, and XML exports of permissions
 
 ## SYNTAX
 
-```
+```powershell
 Export-Permission.ps1 [-TargetPath] <DirectoryInfo[]> [[-ExcludeAccount] <String[]>]
  [[-IncludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>]
  [[-OutputDir] <String>] [-NoMembers] [[-RecurseDepth] <Int32>] [[-Title] <String>]
@@ -69,14 +69,14 @@ Behavior:
 ## EXAMPLES
 
 ### EXAMPLE 1
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
 ### EXAMPLE 2
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
 ```
 
@@ -89,7 +89,7 @@ The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator neede
 The RegEx escape character is \ so the regular expression needed for the parameter is 'BUILTIN\\\\Administrator'
 
 ### EXAMPLE 3
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
     'BUILTIN\\Administrators',
     'BUILTIN\\Administrator',
@@ -109,7 +109,7 @@ Exclude from the HTML report:
 Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 
 ### EXAMPLE 4
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')
 ```
 
@@ -118,7 +118,7 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)
 
 ### EXAMPLE 5
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')
 ```
 
@@ -129,7 +129,7 @@ Do not spend time retrieving group members
 Include groups on the report, but exclude computers (rather than the default setting which would exclude computers and groups)
 
 ### EXAMPLE 6
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
 ```
 
@@ -138,7 +138,7 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 Remove the CONTOSO domain prefix from associated accounts and groups
 
 ### EXAMPLE 7
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
 ```
 
@@ -151,7 +151,7 @@ Across the two domains, accounts with the same samAccountNames will be considere
 Across the two domains, groups with the same Names will be considered equivalent
 
 ### EXAMPLE 8
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
 ```
 
@@ -160,14 +160,14 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 Redirect logs and output files to C:\Logs instead of the default location in AppData
 
 ### EXAMPLE 9
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 
 ### EXAMPLE 10
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2
 ```
 
@@ -176,7 +176,7 @@ Generate reports on the NTFS permissions for the folder C:\Test
 Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 
 ### EXAMPLE 11
-```
+```powershell
 Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
 ```
 
@@ -185,7 +185,7 @@ Generate reports on the NTFS permissions for the folder C:\Test and all subfolde
 Change the title of the HTML report to 'New Custom Report Title'
 
 ### EXAMPLE 12
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
 ```
 
@@ -194,7 +194,7 @@ The target path is a DFS folder with folder targets
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
 ### EXAMPLE 13
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
 ```
 
@@ -203,7 +203,7 @@ The target path is a DFS subfolder with folder targets
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
 ### EXAMPLE 14
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
 ```
 
@@ -212,7 +212,7 @@ The target path is a subfolder of a DFS subfolder with folder targets
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
 ### EXAMPLE 15
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'
 ```
 
@@ -225,7 +225,7 @@ TODO: param validation?
 or otherwise handle error.
 
 ### EXAMPLE 16
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
 ```
 
@@ -238,7 +238,7 @@ TODO: param validation?
 or otherwise handle error.
 
 ### EXAMPLE 17
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
 ```
 
@@ -251,7 +251,7 @@ Generate reports on the NTFS permissions for the folder on the DFS namespace ser
 Add a warning that they are permissions from the DFS namespace server and could be confusing
 
 ### EXAMPLE 18
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
 ```
 
@@ -264,7 +264,7 @@ Generate reports on the NTFS permissions for the folder on the DFS namespace ser
 Add a warning that they are permissions from the DFS namespace server and could be confusing
 
 ### EXAMPLE 19
-```
+```powershell
 Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
 ```
 
