@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.488
+.VERSION 0.0.489
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-a link has no title seems to work!
+bugfix source code tests to support multiple help uris
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ a link has no title seems to work!
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 

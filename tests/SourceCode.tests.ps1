@@ -95,7 +95,7 @@ Describe "PowerShell module manifest file '<_.Name>'" -ForEach $ModuleManifests 
         $PowershellDataFile = Import-PowerShellDataFile -Path $_.FullName -ErrorAction SilentlyContinue
     }
 
-    Context "- Key-Value Pairs" {
+    Context '- Key-Value Pairs' {
 
         It ' Specify valid key-value pairs' {
             $PowershellDataFile | Should -Not -BeNullOrEmpty
@@ -139,11 +139,11 @@ Describe "PowerShell module manifest file '<_.Name>'" -ForEach $ModuleManifests 
 }
 
 Describe "PowerShell module file '<_.Name>'" -ForEach $ModuleFiles {
-    It " Can be imported without any errors" {
+    It ' Can be imported without any errors' {
         { Import-Module -Name $_.FullName -Force -ErrorAction Stop } | Should -Not -Throw
     }
 
-    Context "- Functions" {
+    Context '- Functions' {
         BeforeDiscovery {
             $FunctionTestCases = $ScriptFiles | ForEach-Object {
                 # TestCases are splatted to the script so we need hashtables
@@ -159,23 +159,23 @@ Describe "PowerShell module file '<_.Name>'" -ForEach $ModuleFiles {
 
 Describe "PowerShell source code file '<_.Name>'" -ForEach $AllPowerShellCodeFiles {
 
-    It " Can be tokenized by the PowerShell parser without any errors" {
+    It ' Can be tokenized by the PowerShell parser without any errors' {
         $Errors = $null
         $null = [System.Management.Automation.PSParser]::Tokenize($_.RawContent, [ref]$Errors)
         $Errors.Count | Should -Be 0
     }
 
-    It " Runs without throwing errors (or is not a .ps1)" {
+    It ' Runs without throwing errors (or is not a .ps1)' {
         if ($_.Extension -eq '.ps1') {
             { . $_.FullName } | Should -Not -Throw
         }
     }
 
-    It " Uses spaces instead of tabs" {
+    It ' Uses spaces instead of tabs' {
         $_.RawContent -match '\t' | Should -Be $false
     }
 
-    It " Is not UTF16-encoded" {
+    It ' Is not UTF16-encoded' {
         Test-FileUnicode -FileInfo $_.FullName | Should -Be $false
     }
 
@@ -195,10 +195,10 @@ Describe "help for '<_.Name>'" -ForEach $MainScript {
         }
 
         if ($commandHelp) {
-            Write-Information "success getting command help"
+            Write-Information 'success getting command help'
             #Write-Information "$($commandHelp | fl * | out-string)"
         } else {
-            Write-Information "failure getting command help"
+            Write-Information 'failure getting command help'
             #Write-Information "First 2 lines of file: $((Get-Content -LiteralPath $TempFile | Select-Object -First 2))"
             #Write-Information "Get-Help -Name '$TempFile'"
         }
@@ -234,53 +234,55 @@ Describe "help for '<_.Name>'" -ForEach $MainScript {
     }
 
     # Should be a description for every function
-    It " Has a description" -ForEach @{'commandHelp' = $commandHelp } {
+    It ' Has a description' -ForEach @{'commandHelp' = $commandHelp } {
         $commandHelp.Description | Should -Not -BeNullOrEmpty
     }
 
     # Should be at least one example
-    It " Has example code" -ForEach @{'commandHelp' = $commandHelp } {
+    It ' Has example code' -ForEach @{'commandHelp' = $commandHelp } {
         ($commandHelp.Examples.Example | Select-Object -First 1).Code | Should -Not -BeNullOrEmpty
     }
 
     # Should be at least one example description
-    It " Has example help" -ForEach @{'commandHelp' = $commandHelp } {
+    It ' Has example help' -ForEach @{'commandHelp' = $commandHelp } {
         ($commandHelp.Examples.Example.Remarks | Select-Object -First 1).Text | Should -Not -BeNullOrEmpty
     }
 
-    It " Has a valid link URL '<commandHelp.relatedLinks.navigationLink.uri>'" -ForEach @{'commandHelp' = $commandHelp } {
-        (Invoke-WebRequest -Uri $commandHelp.relatedLinks.navigationLink.uri -UseBasicParsing).StatusCode | Should -Be '200'
+    It " Has valid link URLs '<commandHelp.relatedLinks.navigationLink.uri>'" -ForEach @{'commandHelp' = $commandHelp } {
+        $commandHelp.relatedLinks.navigationLink.uri | ForEach-Object {
+            (Invoke-WebRequest -Uri $_ -UseBasicParsing).StatusCode | Should -Be '200'
+        }
     }
 
     Context "- Help for parameter '<_.commandParameter.Name>'" -ForEach $commandParameterTestCases {
 
         BeforeEach {
-            $parameterHelp = $commandHelp.parameters.parameter | Where-Object Name -eq $commandParameter.Name
+            $parameterHelp = $commandHelp.parameters.parameter | Where-Object Name -EQ $commandParameter.Name
             $parameterHelpType = if ($parameterHelp.ParameterValue) { $parameterHelp.ParameterValue.Trim() }
         }
 
         # Should be a description for every parameter
-        It "has a description" -ForEach @{'parameterHelp' = $parameterHelp } {
+        It 'has a description' -ForEach @{'parameterHelp' = $parameterHelp } {
             $parameterHelp.Description.Text | Should -Not -BeNullOrEmpty
         }
 
         # Required value in Help should match IsMandatory property of parameter
-        It "has the correct [mandatory] value" -ForEach @{'parameterHelp' = $parameterHelp } {
+        It 'has the correct [mandatory] value' -ForEach @{'parameterHelp' = $parameterHelp } {
             $codeMandatory = $commandParameter.IsMandatory.toString()
             $parameterHelp.Required | Should -Be $codeMandatory
         }
 
         # Parameter type in help should match code
-        It "has the correct parameter type" -ForEach @{'parameterHelpType' = $parameterHelpType } {
+        It 'has the correct parameter type' -ForEach @{'parameterHelpType' = $parameterHelpType } {
             $parameterHelpType | Should -Be $commandParameter.ParameterType.Name
         }
 
     }
 
-    Context "- Extraneous Parameters in Help" {
+    Context '- Extraneous Parameters in Help' {
 
         # Shouldn't find extra parameters in help.
-        It " Parameter found in the Help docs also exists in the code: <helpParameter.Name>" -ForEach $helpParameterTestCases {
+        It ' Parameter found in the Help docs also exists in the code: <helpParameter.Name>' -ForEach $helpParameterTestCases {
             $helpParameter.Name -in $commandParameters.Name | Should -Be $true
         }
 
@@ -290,13 +292,13 @@ Describe "help for '<_.Name>'" -ForEach $MainScript {
 
 }
 
-Describe "change log" {
+Describe 'change log' {
 
     Context '- Version' {
         BeforeDiscovery {
             $changelogPath = "$PSScriptRoot\..\CHANGELOG.md"
             Get-Content $changelogPath | ForEach-Object {
-                if ($_ -match "^##\s\[(?<Version>(\d+\.){1,3}\d+)\]") {
+                if ($_ -match '^##\s\[(?<Version>(\d+\.){1,3}\d+)\]') {
                     $changelogVersion = $matches.Version
                     break
                 }
@@ -304,7 +306,7 @@ Describe "change log" {
         }
 
         It "has a valid version '<changelogVersion>'" {
-            $changelogVersion               | Should -Not -BeNullOrEmpty
+            $changelogVersion | Should -Not -BeNullOrEmpty
             $changelogVersion -as [Version] | Should -Not -BeNullOrEmpty
         }
 
@@ -331,7 +333,7 @@ Describe 'source control' -Skip {
     Context "- Git tag version '$gitTagVersion'" {
 
         It 'is a valid version' {
-            $gitTagVersion               | Should -Not -BeNullOrEmpty
+            $gitTagVersion | Should -Not -BeNullOrEmpty
             $gitTagVersion -as [Version] | Should -Not -BeNullOrEmpty
         }
 

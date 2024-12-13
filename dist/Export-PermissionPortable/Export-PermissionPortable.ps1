@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.488
+.VERSION 0.0.489
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-a link has no title seems to work!
+bugfix source code tests to support multiple help uris
 
 .PRIVATEDATA
 
