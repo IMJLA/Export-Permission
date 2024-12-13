@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.484] - 2024-12-13
+### Changed
+- try markdown syntax
+
 ## [0.0.483] - 2024-12-13
 ### Removed
 - remove colon delimeter

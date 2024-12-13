@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.483
+.VERSION 0.0.484
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove colon delimeter
+try markdown syntax
 
 .PRIVATEDATA
 
@@ -39,7 +39,6 @@ remove colon delimeter
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
-
 
 
 <#
@@ -249,7 +248,7 @@ remove colon delimeter
 .LINK
     Online version: https://imjla.github.io/Export-Permission
 .LINK
-    ToDo bugs and enhancements https://github.com/IMJLA/Export-Permission/issues
+    [ToDo bugs and enhancements](https://github.com/IMJLA/Export-Permission/issues)
 #>
 
 [OutputType([PSCustomObject])]
