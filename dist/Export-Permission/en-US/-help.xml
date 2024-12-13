@@ -851,8 +851,8 @@
         <maml:uri></maml:uri>
       </maml:navigationLink>
       <maml:navigationLink>
-        <maml:linkText>[ToDo bugs and enhancements</maml:linkText>
-        <maml:uri>https://github.com/IMJLA/Export-Permission/issues)](</maml:uri>
+        <maml:linkText>ToDo bugs and enhancements : https://github.com/IMJLA/Export-Permission/issues</maml:linkText>
+        <maml:uri></maml:uri>
       </maml:navigationLink>
     </command:relatedLinks>
   </command:command>
