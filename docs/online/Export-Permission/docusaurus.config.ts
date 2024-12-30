@@ -75,7 +75,7 @@ const config: Config = {
         src: 'img/logo.svg',
       },
       items: [
-        { to: 'docs/en-US/Export-Permission', label: 'Docs', position: 'left' }
+        { to: 'docs/en-US/Export-Permission.ps1', label: 'Docs', position: 'left' }
       ],
     },
     footer: {
@@ -86,7 +86,7 @@ const config: Config = {
           items: [
             {
               label: 'ReadMe',
-              to: '/docs/en-US/Export-Permission',
+              to: '/docs/en-US/Export-Permission.ps1',
             },
           ],
         },

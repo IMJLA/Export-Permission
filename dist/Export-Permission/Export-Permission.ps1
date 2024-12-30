@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.534
+.VERSION 0.0.535
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-reuse var containing path to markdown file
+restore file naming
 
 .PRIVATEDATA
 
@@ -39,6 +39,7 @@ reuse var containing path to markdown file
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 
 
