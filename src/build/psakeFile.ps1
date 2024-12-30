@@ -345,14 +345,11 @@ Task BuildMAMLHelp -depends CopyMarkdownAsSourceForOnlineHelp -precondition { $s
 
     Write-Host "`tBuild-PSBuildMAMLHelp -Path '$MarkdownHelpDir' -DestinationPath '$script:BuildOutputFolder'"
     Build-PSBuildMAMLHelp -Path $MarkdownHelpDir -DestinationPath $script:BuildOutputFolder
-    ### Unknown issue in New-ExternalHelp is causing the file to be named incorrectly.  This is a workaround to avoid a file named '-help.xml'.
-    ##Get-ChildItem -Path $script:BuildOutputFolder -Recurse -Filter '*.xml' | Rename-Item -NewName "$($FoundScript.Name)-help.xml"
 
 } -description 'Build MAML help from the Markdown files by using PlatyPS invoked by PowerShellBuild.'
 
 # Disabled this task for now, it does not work because New-ExternalHelp (invoked above by Build-PSBuildMAMLHelp) is not generating any MAML help files from the Markdown.
-#task BuildUpdatableHelp -depends BuildMAMLHelp {
-Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
+Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } -depends BuildMAMLHelp {
 
     $helpLocales = (Get-ChildItem -Path $MarkdownHelpDir -Directory -Exclude 'UpdatableHelp').Name
 
@@ -371,20 +368,20 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } {
     # Generate updatable help files.  Note: this will currently update the version number in the module's MD
     # file in the metadata.
     foreach ($locale in $helpLocales) {
-        Write-Information "'$([IO.Path]::Combine($MarkdownHelpDir, $locale, "$($MainScript.Name).md"))'"
         $cabParams = @{
             CabFilesFolder  = [IO.Path]::Combine($script:BuildOutputFolder, $locale)
-            LandingPagePath = [IO.Path]::Combine($MarkdownHelpDir, $locale, "$($MainScript.Name).md")
+            LandingPagePath = [IO.Path]::Combine($MarkdownHelpDir, $locale, "$($FoundScript.Name).md")
             OutputFolder    = $UpdatableHelpDir
             Verbose         = $VerbosePreference
             ErrorAction     = 'Continue'
         }
-        New-ExternalHelpCab @cabParams 2> $null
+        Write-Host "`tNew-ExternalHelpCab -CabFilesFolder '$($cabParams.CabFilesFolder)' -LandingPagePath '$($cabParams.LandingPagePath)' -OutputFolder '$($cabParams.OutputFolder)'"
+        $null = New-ExternalHelpCab @cabParams
     }
 
 } -description 'Build an updatable .cab help file based on the Markdown help files by using PlatyPS.'
 
-Task BuildArt -depends BuildMAMLHelp {
+Task BuildArt -depends BuildUpdatableHelp {
 
     $ScriptToRun = [IO.Path]::Combine('..', 'img', 'logo.ps1')
     $Script:BuildImageDir = [IO.Path]::Combine($OnlineHelpDir, 'build', 'img')

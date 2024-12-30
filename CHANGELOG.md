@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.509] - 2024-12-29
+### Changed
+- ignore node modules dir
+
+## [0.0.508] - 2024-12-29
+### Changed
+- only replace the second ---
+
+## [0.0.507] - 2024-12-29
+### Changed
+- ` should be -
+
+## [0.0.506] - 2024-12-29
+### Added
+- implement fix to build process (workaround for new-markdownhelp)
+
+## [0.0.505] - 2024-12-29
+### Changed
+- debug new-externalhelpcab
+
+## [0.0.504] - 2024-12-29
+### Changed
+- debug new-externalhelp
+
+## [0.0.503] - 2024-12-13
+### Changed
+- debug
+
+## [0.0.502] - 2024-12-13
+### Changed
+- debug
+
+## [0.0.501] - 2024-12-13
+### Changed
+- test platyps bugfix for script guid
+
+## [0.0.500] - 2024-12-13
+### Changed
+- troubleshoot module guid in new-externalhelpcab
+
+## [0.0.499] - 2024-12-13
+### Changed
+- test platyps bugfix
+
+## [0.0.498] - 2024-12-13
+### Added
+- add debug pause
+
+## [0.0.497] - 2024-12-13
+### Added
+- add debug output
+
+## [0.0.496] - 2024-12-13
+### Changed
+- troubleshoot new-externalhelpcab
+
+## [0.0.495] - 2024-12-13
+### Fixed
+- bugfix md name
+
+## [0.0.494] - 2024-12-13
+### Changed
+- we have maml let's attempt updateable help
+
 ## [0.0.493] - 2024-12-13
 ### Changed
 - maybe the bug is in platyps rather than new-externalhelp...testing

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.493
+.VERSION 0.0.509
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-maybe the bug is in platyps rather than new-externalhelp...testing
+ignore node modules dir
 
 .PRIVATEDATA
 
