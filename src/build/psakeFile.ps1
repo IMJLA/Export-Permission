@@ -147,21 +147,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -303,7 +303,7 @@ Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         'Verbose'               = $VerbosePreference
     }
 
-    $CommentBasedHelp = Get-Help -name $script:ReleasedScript.FullName
+    $CommentBasedHelp = Get-Help -Name $script:ReleasedScript.FullName
     if ($CommentBasedHelp.relatedLinks.navigationLink.uri) {
         $OnlineHelpUri = @($CommentBasedHelp.relatedLinks.navigationLink.uri)[0]
         $MarkdownParams['OnlineVersionUrl'] = $OnlineHelpUri
@@ -396,11 +396,14 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } -depends B
 
 Task BuildArt -depends BuildUpdatableHelp {
 
-    $ScriptToRun = [IO.Path]::Combine('..', 'img', 'logo.ps1')
     $Script:BuildImageDir = [IO.Path]::Combine($OnlineHelpDir, 'build', 'img')
     $null = New-Item -ItemType Directory -Path $Script:BuildImageDir -ErrorAction SilentlyContinue
-    Write-Host "`t. $ScriptToRun -OutputDir '$BuildImageDir'"
-    . $ScriptToRun -OutputDir $BuildImageDir
+    $ImageScriptDir = [IO.Path]::Combine('..', 'img')
+    ForEach ($ScriptToRun in (Get-ChildItem -Path $ImageScriptDir -Filter '*.ps1')) {
+        $ThisPath = [IO.Path]::Combine($ImageScriptDir, $ScriptToRun.Name)
+        Write-Host "`t. $ThisPath -OutputDir '$BuildImageDir'"
+        . $ThisPath -OutputDir $BuildImageDir
+    }
 
 } -description 'Build SVG art using PSSVG.'
 

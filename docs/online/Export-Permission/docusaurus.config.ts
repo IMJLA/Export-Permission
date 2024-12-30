@@ -67,8 +67,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/social-card.svg',
     navbar: {
       title: 'Export-Permission',
       logo: {
@@ -76,7 +75,7 @@ const config: Config = {
         src: 'img/logo.svg',
       },
       items: [
-        { to: 'docs/en-US/Export-Permission.ps1', label: 'Docs', position: 'left' }
+        { to: 'docs/en-US/Export-Permission', label: 'Docs', position: 'left' }
       ],
     },
     footer: {
@@ -87,7 +86,7 @@ const config: Config = {
           items: [
             {
               label: 'ReadMe',
-              to: '/docs/en-US/Export-Permission.ps1',
+              to: '/docs/en-US/Export-Permission',
             },
           ],
         },
@@ -101,7 +100,7 @@ const config: Config = {
           ],
         }
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Jeremy La Camera; Export-Permission.ps1 Online Help and Documentation Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Jeremy La Camera; Export-Permission Online Help and Documentation Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

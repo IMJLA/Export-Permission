@@ -1,10 +1,11 @@
 #requires -Module PSSVG
 
 param (
-    $OutputDir = '.'
+    $OutputDir = '.',
+    [string]$ProjectName = 'Export-Permission',
+    [string]$ProjectSynopsisLine1 = 'Create CSV, HTML, JSON, and XML',
+    [string]$ProjectSynopsisLine2 = 'exports of permissions'
 )
-
-$OutputPath = "$OutputDir\favicon.svg"
 
 function SvgAcct {
 
@@ -32,14 +33,14 @@ function SvgAcct {
     $bold = $strokeWidth * 2
     $headCx = $X + $strokeWidth + $torsoRadius
     $headCy = $Y + $strokeWidth + $headRadius
-    SVG.circle -Cx $headCx -Cy $headCy -r $headRadius -Fill none -Stroke black -StrokeWidth $strokeWidth
+    SVG.circle -Cx $headCx -Cy $headCy -R $headRadius -Fill none -Stroke black -StrokeWidth $strokeWidth
     #torso
     $torsoCy = $headCy + $headRadius + $torsoRadius
     $clipRadius = $torsoRadius + $Scale
     $torsoClipPath = SVG.path -D "M $headCx $torsoCy l $clipRadius -$clipRadius 0 -$Scale -$(2 * $clipRadius) 0 0 $($Scale + $clipRadius) z"
     $clipPathID = [guid]::NewGuid().Guid.ToString()
     SVG.clipPath -Content $torsoClipPath -Id $clipPathID
-    SVG.circle -Cx $headCx -Cy $torsoCy -r $torsoRadius -Fill none -Stroke black -StrokeWidth $strokeWidth -ClipPath "url(#$clipPathID)"
+    SVG.circle -Cx $headCx -Cy $torsoCy -R $torsoRadius -Fill none -Stroke black -StrokeWidth $strokeWidth -ClipPath "url(#$clipPathID)"
 
     #action
     if ($Permit) {
@@ -55,7 +56,7 @@ function SvgAcct {
         # Do Not Enter sign (replaced the Stop sign)
         $denyCx = $headCx + $headRadius - $strokeWidth
         $denyCy = $torsoCy - $headRadius * .2
-        SVG.circle -Cx $denyCx -Cy $denyCy -r $headRadius -Fill red -Stroke red
+        SVG.circle -Cx $denyCx -Cy $denyCy -R $headRadius -Fill red -Stroke red
         SVG.rect -X ($denyCX - $headRadius + $strokeWidth) -Y ($denyCy - $strokeWidth) -Width ($headRadius * 1.6) -Height ($headRadius * .4) -Fill white
     }
 
@@ -130,7 +131,7 @@ function SvgLockedFolder {
     SVG.path -D "M $lockX $lockY l 0 -$lockHeight l $lockWidth 0 0 $lockHeight C $lockRightX $bodyControlY $lockX $bodyControlY $lockX $lockY" @BlackRoundStroke @WhiteFill
 
     #Lock Keyhole
-    SVG.circle -Cx $keyholeCx -Cy $keyholeCY -r $scale @BlackRoundStroke @NoFill
+    SVG.circle -Cx $keyholeCx -Cy $keyholeCY -R $scale @BlackRoundStroke @NoFill
     SVG.path -D "M $keyholeCx $($keyholeCY + $scale) l 0 $(1.5*$scale)" @BlackRoundStroke @NoFill
 }
 
@@ -152,10 +153,10 @@ function SvgPage {
 
     )
 
-    $rectX = $X + $scale
-    $rectY = $X + $scale
-    $foldWidth = 6 * $scale
-    $pageWidth = 46 * $scale
+    $rectX = $X + $Scale
+    $rectY = $Y + $Scale
+    $foldWidth = 6 * $Scale
+    $pageWidth = 46 * $Scale
     $remainingWidth = $pageWidth - $foldWidth - $Radius
     $clipX = $X + $Scale * 0.5
     $clipY = $Y + $pageWidth - $Scale * 0.5
@@ -176,15 +177,23 @@ function SvgPage {
     SVG.rect -ClipPath 'url(#foldedPageCorner)' -Id flap -X ($rectX - $Radius) -Y ($rectY - $Radius) -Rx $Radius -Ry $Radius -Width ($foldWidth + $radius) -Height ($foldWidth + $Radius) -Stroke black -StrokeWidth $scale -Fill white #-StrokeDasharray 0, $Hidden, $Visible, $Hidden -PathLength $Perimeter -StrokeDashoffset $Offset
 
     # Fold
-    SVG.Path -D "M $rectX $($rectY + $foldWidth + $scale) l 0 -$scale $foldWidth -$foldWidth $remainingWidth 0" -Fill none -Stroke black -StrokeWidth $scale
+    SVG.path -D "M $rectX $($rectY + $foldWidth + $scale) l 0 -$scale $foldWidth -$foldWidth $remainingWidth 0" -Fill none -Stroke black -StrokeWidth $scale
 
 }
 
-$null = svg -OutputPath $OutputPath -viewBox 48, 48 -Content @(
-    SvgPage
-    SvgLockedFolder -X 13 -Y 2
-    SvgAcct -Permit -X 3 -Y 23
-    SvgAcct -X 28 -Y 23
+# Create the SVG file for the social card, based on the logo
+$OutputPath = Join-Path -Path $OutputDir -ChildPath 'social-card.svg'
+$null = svg -OutputPath $OutputPath -ViewBox 188, 96 -Content @(
+    SvgPage -X 12 -Y 36
+    SvgLockedFolder -X 25 -Y 38
+    SvgAcct -Permit -X 15 -Y 59
+    SvgAcct -X 40 -Y 59
+    SVG.text -X 50% -Y 25% -Text $ProjectName -FontSize 12 -DominantBaseline 'middle' -TextAnchor 'middle' -Fill 'black'
+    SVG.text -X 61% -Y 61% -FontSize 6 -DominantBaseline 'middle' -TextAnchor 'middle' -Fill 'black' -Content @(
+        SVG.tspan -Content $ProjectSynopsisLine1 -Dy '-1.2em'
+        SVG.tspan -Content $ProjectSynopsisLine2 -X 61% -Dy '1.2em'
+    )
+
 )
 
 ##Uncomment for convenient testing
