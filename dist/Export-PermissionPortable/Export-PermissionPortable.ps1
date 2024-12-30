@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.510
+.VERSION 0.0.511
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix gitignore
+ignore node_modules dir
 
 .PRIVATEDATA
 

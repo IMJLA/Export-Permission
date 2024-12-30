@@ -1,6 +1,6 @@
 ---
 external help file: Export-Permission-help.xml
-help version: 0.0.510
+help version: 0.0.511
 locale: en-US
 script name: Export-Permission.ps1
 online version: https://imjla.github.io/Export-Permission
