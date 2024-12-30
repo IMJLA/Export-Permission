@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.517
+.VERSION 0.0.518
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-allow external help file link to be generated manually by new-markdownhelp
+markdown cleanup
 
 .PRIVATEDATA
 

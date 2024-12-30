@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.518] - 2024-12-30
+### Changed
+- markdown cleanup
+
 ## [0.0.517] - 2024-12-30
 ### Changed
 - allow external help file link to be generated manually by new-markdownhelp

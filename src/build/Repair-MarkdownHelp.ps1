@@ -8,24 +8,22 @@ param (
 
 )
 
-# Workaround a bug in New-MarkdownHelp with the Command ParameterSet
+# Workaround a bug in New-MarkdownHelp with the Command ParameterSet, the Module Name, and as a result the External Help File
 # ToDo: Report that bug
 $Markdown = Get-Content -LiteralPath $Path -Raw
-#$NewMarkdown = $Markdown -replace 'Module Name:', "script name: $ScriptName"
-#$NewMarkdown = $NewMarkdown -replace 'Module Guid:', "script guid: $ScriptGuid"
 
-# Workaround a bug in New-MarkdownHelp with the ExternalHelpFile
+# Module name is blank for a script because it has no manifest to get it from. Remove this invalid field.
+$NewMarkdown = $Markdown -replace 'Module Name:`r`n', "`r`n"
+
+# The blank module name results in a malformed external help file name. Fix this by using the script name.
 # Cannot specify this using the New-MarkdownHelp cmdlet's -Metadata parameter due to the following error:
-#$NewMarkdown = $NewMarkdown -replace 'external help file: -help.xml', "external help file: $($ScriptName.Split('.')[0])-help.xml"
-
-# Workaround a shortcoming of New-MarkdownHelp (YAML at the top of the .md file for the Script does not contain the Download Help Link)
-#$Metadata = Get-MarkdownMetadata -Path $Path
-#$NewMarkdown = $NewMarkdown.Replace("---`r`n`r`n", "download help link: $($Metadata['online version'])Help`r`n---`r`n")
+# Error: 12/30/2024 10:37:45 AM: At C:\Users\Owner\Documents\PowerShell\Modules\platyPS\0.14.2\platyPS.psm1:238 char:140 + … -ExcludeDontShow:$ExcludeDontShow.IsPresent | processMamlObjectToFile + ~~~~~~~~~~~~~~~~~~~~~~~ [<<==>>] Exception: Item has already been added. Key in dictionary: 'external help file' Key being added: 'external help file'
+$NewMarkdown = $NewMarkdown -replace 'external help file: -help.xml', "external help file: $($ScriptName.Split('.')[0])-help.xml"
 
 # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS
 $ParamToRemove = '-ProgressAction'
 $Pattern = "### $ParamToRemove\r?\n[\S\s\r\n]*?(?=#{2,3}?)"
-$NewMarkdown = [regex]::replace($Markdown, $Pattern, '')
+$NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 $Pattern = [regex]::Escape('[-ProgressAction <ActionPreference>] ')
 $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 
