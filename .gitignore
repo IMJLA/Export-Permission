@@ -1,5 +1,2 @@
 # Ignore the out dir because it contains Pester test results which contain PII such as fully-qualiified file paths
 out/
-
-# Ignore the node_modules dir because it contains a lot of files that are not needed in the repo (Node.JS will repopulate as needed)
-docs/online/node_modules
