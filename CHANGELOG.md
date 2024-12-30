@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.510] - 2024-12-29
+### Fixed
+- fix gitignore
+
 ## [0.0.509] - 2024-12-29
 ### Changed
 - ignore node modules dir
