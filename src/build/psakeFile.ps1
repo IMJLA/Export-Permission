@@ -283,22 +283,31 @@ Task DeleteMarkdownHelp -depends CreateMarkdownHelpFolder -precondition { $scrip
 
 Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
 
+    $HelpMetadata = @{
+        'help version'       = $Script:NewScriptFileInfo.Version
+        'locale'             = $HelpDefaultLocale
+        'script name'        = $FoundScript.Name
+        'script guid'        = $Script:NewScriptFileInfo.Guid
+        'download help link' = 'N/A'
+    }
+
     $MarkdownParams = @{
-        AlphabeticParamsOrder = $true
-        Command               = $MainScript
-        ErrorAction           = 'SilentlyContinue' # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
-        Force                 = $true
-        Metadata              = @{
-            'help version' = $Script:NewScriptFileInfo.Version
-            locale         = $HelpDefaultLocale
-            'script guid'  = $Script:NewScriptFileInfo.Guid
-            #'download help link' = 'N/A'
-        }
-        # TODO: Using GitHub pages as a container for PowerShell Updatable Help https://gist.github.com/TheFreeman193/fde11aee6998ad4c40a314667c2a3005
-        # OnlineVersionUrl = $GitHubPagesLinkForThisModule
-        OutputFolder          = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
-        UseFullTypeName       = $true
-        Verbose               = $VerbosePreference
+        'AlphabeticParamsOrder' = $true
+        'Command'               = $MainScript
+        'ErrorAction'           = 'SilentlyContinue' # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
+        'Force'                 = $true
+        'Metadata'              = $HelpMetadata
+        'OnlineVersionUrl'      = 'N/A'
+        'OutputFolder'          = [IO.Path]::Combine($MarkdownHelpDir, $HelpDefaultLocale)
+        'UseFullTypeName'       = $true
+        'Verbose'               = $VerbosePreference
+    }
+
+    $CommentBasedHelp = Get-Help -Name $script:ReleasedScript.FullName
+    if ($CommentBasedHelp.relatedLinks.navigationLink.uri) {
+        $OnlineHelpUri = @($CommentBasedHelp.relatedLinks.navigationLink.uri)[0]
+        $MarkdownParams['OnlineVersionUrl'] = $OnlineHelpUri
+        $HelpMetadata['download help link'] = "$OnlineHelpUri`Help"
     }
 
     Write-Host "`tNew-MarkdownHelp -Command '$MainScript' -OutputFolder '$($MarkdownParams['OutputFolder'])'..."

@@ -1,13 +1,15 @@
 ---
-external help file: Export-Permission-help.xml
-help version: 0.0.511
+download help link: https://imjla.github.io/Export-PermissionHelp
+external help file: -help.xml
+help version: 0.0.517
 locale: en-US
-script name: Export-Permission.ps1
+Module Name:
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
 script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
-download help link: https://imjla.github.io/Export-PermissionHelp
+script name: Export-Permission.ps1
 ---
+
 # Export-Permission.ps1
 
 ## SYNOPSIS

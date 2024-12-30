@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.511
+.VERSION 0.0.517
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-ignore node_modules dir
+allow external help file link to be generated manually by new-markdownhelp
 
 .PRIVATEDATA
 
@@ -39,6 +39,12 @@ ignore node_modules dir
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
+
+
+
+
+
 
 
 

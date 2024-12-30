@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.517] - 2024-12-30
+### Changed
+- allow external help file link to be generated manually by new-markdownhelp
+
+## [0.0.516] - 2024-12-30
+### Changed
+- take advantage of new-markdownhelp features
+
+## [0.0.515] - 2024-12-30
+### Changed
+- avoid dict lookup
+
+## [0.0.514] - 2024-12-30
+### Changed
+- debug
+
+## [0.0.513] - 2024-12-30
+### Changed
+- debug
+
+## [0.0.512] - 2024-12-30
+### Changed
+- use available New-MarkdownHelp features instead of making manual changes to the markdown later
+
 ## [0.0.511] - 2024-12-29
 ### Changed
 - ignore node_modules dir
