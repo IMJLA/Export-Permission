@@ -294,7 +294,7 @@ Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
     $MarkdownParams = @{
         'AlphabeticParamsOrder' = $true
         'Command'               = $MainScript
-        'ErrorAction'           = 'SilentlyContinue' # ErrorAction set to SilentlyContinue so this command will not overwrite an existing MD file.
+        'ErrorAction'           = 'SilentlyContinue'
         'Force'                 = $true
         'Metadata'              = $HelpMetadata
         'OnlineVersionUrl'      = 'N/A'
@@ -320,6 +320,7 @@ Task FixMarkdownHelp -depends BuildMarkdownHelp {
     $Script:MarkdownPath = [IO.Path]::Combine( $MarkdownHelpDir, $HelpDefaultLocale, $script:MarkdownHelp.Name )
     $ScriptToRun = [IO.Path]::Combine('.', 'Repair-MarkdownHelp.ps1')
     . $ScriptToRun -Path $Script:MarkdownPath -ScriptName $FoundScript.Name -ScriptGuid $Script:NewScriptFileInfo.Guid
+    $Script:MarkdownPath = $Script:MarkdownPath.Replace('.ps1', '')
 
 } -description 'Fix issues with the Markdown files that were not handled by PlatyPS.'
 
@@ -383,7 +384,7 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } -depends B
     foreach ($locale in $helpLocales) {
         $cabParams = @{
             CabFilesFolder  = [IO.Path]::Combine($script:BuildOutputFolder, $locale)
-            LandingPagePath = [IO.Path]::Combine($MarkdownHelpDir, $locale, "$($FoundScript.Name).md")
+            LandingPagePath = $Script:MarkdownPath
             OutputFolder    = $UpdatableHelpDir
             Verbose         = $VerbosePreference
             ErrorAction     = 'Continue'

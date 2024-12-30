@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.534] - 2024-12-30
+### Changed
+- reuse var containing path to markdown file
+
+## [0.0.533] - 2024-12-30
+### Removed
+- remove ps1 from md file name
+
+## [0.0.532] - 2024-12-30
+### Fixed
+- fix readme step
+
+## [0.0.531] - 2024-12-30
+### Fixed
+- fix file renaming
+
+## [0.0.530] - 2024-12-30
+### Changed
+- troubleshoot
+
+## [0.0.529] - 2024-12-30
+### Fixed
+- fix file renaming
+
+## [0.0.528] - 2024-12-30
+### Added
+- add file rename step to repair-markdownhelp
+
+## [0.0.527] - 2024-12-30
+### Changed
+- troubleshoot markdown file naming
+
 ## [0.0.526] - 2024-12-30
 ### Changed
 - build art in correct dir

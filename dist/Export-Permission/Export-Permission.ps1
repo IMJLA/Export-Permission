@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.526
+.VERSION 0.0.534
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-build art in correct dir
+reuse var containing path to markdown file
 
 .PRIVATEDATA
 
@@ -39,6 +39,14 @@ build art in correct dir
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
+
+
+
+
+
+
+
 
 
 

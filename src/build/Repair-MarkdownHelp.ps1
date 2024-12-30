@@ -30,5 +30,8 @@ $NewMarkdown = [regex]::replace($NewMarkdown, $Pattern, '')
 # Add PowerShell syntax highlighting
 $NewMarkdown = $NewMarkdown -replace '\x60\x60\x60\r*\n(?!\r*\n)', "``````powershell`n"
 
-Write-Host "`t`$NewMarkdown | Set-Content -LiteralPath '$Path'"
-$NewMarkdown | Set-Content -LiteralPath $Path
+# Rename the file
+$NewPath = "$Path".Replace('.ps1', '')
+Write-Host "`t`$NewMarkdown | Set-Content -Path '$NewPath'"
+$NewMarkdown | Set-Content -Path $NewPath
+$Path | Remove-Item -Force -Confirm:$false
