@@ -1,9 +1,8 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.519
+help version: 0.0.520
 locale: en-US
-
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
 script guid: fd2d03cf-4d29-4843-bb1c-0fba86b0220a
