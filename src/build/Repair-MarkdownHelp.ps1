@@ -13,7 +13,7 @@ param (
 $Markdown = Get-Content -LiteralPath $Path -Raw
 
 # Module name is blank for a script because it has no manifest to get it from. Remove this invalid field.
-$NewMarkdown = $Markdown -replace 'Module Name:`r`n', "`r`n"
+$NewMarkdown = $Markdown.Replace("Module Name:`r`n", "`r`n")
 
 # The blank module name results in a malformed external help file name. Fix this by using the script name.
 # Cannot specify this using the New-MarkdownHelp cmdlet's -Metadata parameter due to the following error:
