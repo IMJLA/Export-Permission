@@ -396,14 +396,14 @@ Task BuildUpdatableHelp -precondition { $script:OS -match 'Windows' } -depends B
 
 Task BuildArt -depends BuildUpdatableHelp {
 
-    $Script:BuildImageDir = [IO.Path]::Combine($OnlineHelpDir, 'build', 'img')
-    $null = New-Item -ItemType Directory -Path $Script:BuildImageDir -ErrorAction SilentlyContinue
+    $Script:StaticImageDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
+    $null = New-Item -ItemType Directory -Path $Script:StaticImageDir -ErrorAction SilentlyContinue
     $ImageScriptDir = [IO.Path]::Combine('..', 'img')
+
     ForEach ($ScriptToRun in (Get-ChildItem -Path $ImageScriptDir -Filter '*.ps1')) {
         $ThisPath = [IO.Path]::Combine($ImageScriptDir, $ScriptToRun.Name)
-        Write-Host "`t. $ThisPath -OutputDir '$BuildImageDir'"
-        . $ThisPath -OutputDir $BuildImageDir
-        Pause
+        Write-Host "`t. $ThisPath -OutputDir '$StaticImageDir'"
+        . $ThisPath -OutputDir $StaticImageDir
     }
 
 } -description 'Build SVG art using PSSVG.'
@@ -411,7 +411,7 @@ Task BuildArt -depends BuildUpdatableHelp {
 Task ConvertArt -depends BuildArt {
 
     $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
-    $sourceSVG = [IO.Path]::Combine($Script:BuildImageDir, 'logo.svg')
+    $sourceSVG = [IO.Path]::Combine($Script:StaticImageDir, 'logo.svg')
     Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
     . $ScriptToRun -Path $sourceSVG -ExportWidth 512
 
