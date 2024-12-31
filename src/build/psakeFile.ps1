@@ -147,21 +147,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -205,7 +205,16 @@ Task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
 } -description 'Update PSScriptInfo with the new version.'
 
-Task DeleteOldBuilds -depends UpdateScriptVersion {
+Task RepairScriptFile -depends UpdateScriptVersion {
+
+    # Workaround a bug in Update-ScriptFileInfo which adds a blank line to the script every time it runs.
+    $ScriptToRun = [IO.Path]::Combine('.', 'Repair-ScriptFile.ps1')
+    Write-Host "`t. $ScriptToRun -Path '$MainScript'"
+    . $ScriptToRun -Path $MainScript
+
+}
+
+Task DeleteOldBuilds -depends RepairScriptFile {
 
     Write-Host "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
     Get-ChildItem -Directory -Path $BuildOutDir |
@@ -299,7 +308,7 @@ Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         'Verbose'               = $VerbosePreference
     }
 
-    $CommentBasedHelp = Get-Help -name $script:ReleasedScript.FullName
+    $CommentBasedHelp = Get-Help -Name $script:ReleasedScript.FullName
     if ($CommentBasedHelp.relatedLinks.navigationLink.uri) {
         $OnlineHelpUri = @($CommentBasedHelp.relatedLinks.navigationLink.uri)[0]
         $MarkdownParams['OnlineVersionUrl'] = $OnlineHelpUri

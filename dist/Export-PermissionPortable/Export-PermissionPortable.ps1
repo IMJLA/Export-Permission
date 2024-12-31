@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.543
+.VERSION 0.0.544
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-workaround bug
+remove extra spaces from script file
 
 .PRIVATEDATA
 
