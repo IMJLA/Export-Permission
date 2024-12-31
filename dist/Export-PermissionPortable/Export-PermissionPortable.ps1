@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.557
+.VERSION 0.0.558
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -96,9 +96,9 @@ param (
     [string]$PrtgProtocol,
     [uint16]$PrtgPort,
     [string]$PrtgToken,
-    [ValidateSet('account', 'item', 'none', 'target')]
-    [string[]]$SplitBy = 'target',
-    [ValidateSet('account', 'item', 'none', 'target')]
+    [ValidateSet('account', 'item', 'none', 'source')]
+    [string[]]$SplitBy = 'source',
+    [ValidateSet('account', 'item', 'none', 'source')]
     [string]$GroupBy = 'item',
     [ValidateSet('csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
     [string[]]$FileFormat = 'js',
@@ -5363,7 +5363,7 @@ function Get-HtmlReportElements {
         [string[]]$ExcludeAccount,
         [string[]]$ExcludeClass = @('group', 'computer'),
         $IgnoreDomain,
-        [string[]]$TargetPath,
+        [string[]]$SourcePath,
         $NetworkPath,
         [switch]$NoMembers,
         $OutputDir,
@@ -5385,7 +5385,7 @@ function Get-HtmlReportElements {
         $Analysis,
         [string[]]$FileFormat,
         [String]$OutputFormat,
-        [uint64]$TargetCount,
+        [uint64]$SourceCount,
         [uint64]$ParentCount,
         [uint64]$ChildCount,
         [uint64]$ItemCount,
@@ -5403,7 +5403,7 @@ function Get-HtmlReportElements {
     $NetworkPathTable = Select-ItemTableProperty -InputObject $NetworkPath -Culture $Culture -SkipFilterCheck |
     ConvertTo-Html -Fragment |
     New-BootstrapTable
-    $NetworkPathDivHeader = 'Local target paths were resolved to UNC paths, and UNC target paths were resolved to DFS folder targets'
+    $NetworkPathDivHeader = 'Local source paths were resolved to UNC paths, and UNC source paths were resolved to DFS folder targets'
     Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText '$NetworkPathDivHeader' -Content `$NetworkPathTable"
     $NetworkPathDiv = New-BootstrapDivWithHeading -HeadingText $NetworkPathDivHeader -Content $NetworkPathTable -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
     Write-LogMsg -Cache $Cache -Text "Get-SummaryDivHeader -GroupBy $GroupBy"
@@ -5412,14 +5412,14 @@ function Get-HtmlReportElements {
     $SummaryTableHeader = Get-SummaryTableHeader -RecurseDepth $RecurseDepth -GroupBy $GroupBy
     Write-LogMsg -Cache $Cache -Text "Get-DetailDivHeader -GroupBy $GroupBy"
     $DetailDivHeader = Get-DetailDivHeader -GroupBy $GroupBy -Split $Split
-    Write-LogMsg -Cache $Cache -Text "New-HtmlHeading 'Target Paths' -Level 5"
-    $TargetHeading = New-HtmlHeading 'Target Paths' -Level 5
-    $TargetPathString = $TargetPath -join '<br />'
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapAlert -Class Dark -Text '$TargetPathString'"
-    $TargetAlert = New-BootstrapAlert -Class Dark -Text $TargetPathString -AdditionalClasses ' small'
+    Write-LogMsg -Cache $Cache -Text "New-HtmlHeading 'Source Paths' -Level 5"
+    $SourceHeading = New-HtmlHeading 'Source Paths' -Level 5
+    $SourcePathString = $SourcePath -join '<br />'
+    Write-LogMsg -Cache $Cache -Text "New-BootstrapAlert -Class Dark -Text '$SourcePathString'"
+    $SourceAlert = New-BootstrapAlert -Class Dark -Text $SourcePathString -AdditionalClasses ' small'
     $ReportParameters = @{
         Title       = $Title
-        Description = "$TargetHeading $TargetAlert $ReportDescription"
+        Description = "$SourceHeading $SourceAlert $ReportDescription"
     }
     $ExcludedNames = ConvertTo-NameExclusionDiv -ExcludeAccount $ExcludeAccount -Cache $Cache
     $ExcludedClasses = ConvertTo-ClassExclusionDiv -ExcludeClass $ExcludeClass -Cache $Cache
@@ -5463,7 +5463,7 @@ function Get-HtmlReportElements {
         'StopWatch'                = $StopWatch
         'ThisFqdn'                 = $ThisFqdn
         'WhoAmI'                   = $WhoAmI
-        'TargetCount'              = $TargetCount
+        'SourceCount'              = $SourceCount
         'ParentCount'              = $ParentCount
         'ChildCount'               = $ChildCount
         'FqdnCount'                = $FqdnCount
@@ -5943,13 +5943,13 @@ function Resolve-Acl {
 }
 function Resolve-Folder {
     param (
-        [String]$TargetPath,
+        [String]$SourcePath,
         [Parameter(Mandatory)]
         [ref]$Cache
     )
     $RegEx = '^(?<DriveLetter>\w):'
     $ComputerName = $Cache.Value['ThisHostname'].Value
-    if ($TargetPath -match $RegEx) {
+    if ($SourcePath -match $RegEx) {
         $CimParams = @{
             Cache       = $Cache
             ClassName   = 'Win32_MappedLogicalDisk'
@@ -5962,7 +5962,7 @@ function Resolve-Folder {
         if ($MatchingNetworkDrive) {
             $UNC = $MatchingNetworkDrive.ProviderName
         } else {
-            $UNC = $TargetPath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
+            $UNC = $SourcePath -replace $RegEx, "\\$(hostname)\$($Matches.DriveLetter)$"
         }
         if ($UNC) {
             $Server = $UNC.split('\')[2]
@@ -5971,13 +5971,13 @@ function Resolve-Folder {
             $UNC -replace "^\\\\$Server\\", "\\$FQDN\"
         }
     } else {
-        Write-LogMsg -Text "Get-NetDfsEnum -FolderPath '$TargetPath'" -Cache $Cache
-        $AllDfs = Get-NetDfsEnum -FolderPath $TargetPath -ErrorAction SilentlyContinue
+        Write-LogMsg -Text "Get-NetDfsEnum -FolderPath '$SourcePath'" -Cache $Cache
+        $AllDfs = Get-NetDfsEnum -FolderPath $SourcePath -ErrorAction SilentlyContinue
         if ($AllDfs) {
             $MatchingDfsEntryPaths = $AllDfs |
             Group-Object -Property DfsEntryPath |
             Where-Object -FilterScript {
-                $TargetPath -match [regex]::Escape($_.Name)
+                $SourcePath -match [regex]::Escape($_.Name)
             }
             $RemainingDfsEntryPaths = $MatchingDfsEntryPaths |
             Where-Object -FilterScript {
@@ -5994,9 +5994,9 @@ function Resolve-Folder {
                 $_.FullOriginalQueryPath -replace [regex]::Escape($_.DfsEntryPath), $_.DfsTarget
             }
         } else {
-            $Server = $TargetPath.split('\')[2]
+            $Server = $SourcePath.split('\')[2]
             $FQDN = ConvertTo-PermissionFqdn -ComputerName $Server -Cache $Cache
-            $TargetPath -replace "^\\\\$Server\\", "\\$FQDN\"
+            $SourcePath -replace "^\\\\$Server\\", "\\$FQDN\"
         }
     }
 }
@@ -6487,7 +6487,7 @@ function Expand-Permission {
     $ACEsByGUID = $Cache.Value['AceByGUID']
     $PrincipalsByResolvedID = $Cache.Value['PrincipalByID']
     $ACLsByPath = $Cache.Value['AclByPath']
-    $TargetPath = $Cache.Value['ParentByTargetPath']
+    $TargetPath = $Cache.Value['ParentBySourcePath']
     $CommonParams = @{
         ACEsByGUID             = $ACEsByGUID
         PrincipalsByResolvedID = $PrincipalsByResolvedID
@@ -6538,14 +6538,14 @@ function Expand-Permission {
         SplitBy            = $HowToSplit
     }
 }
-function Expand-PermissionTarget {
+function Expand-PermissionSource {
     param (
         [int]$RecurseDepth,
         [Parameter(Mandatory)]
         [ref]$Cache
     )
     $Progress = Get-PermissionProgress -Activity 'Expand-PermissionTarget' -Cache $Cache
-    $Targets = ForEach ($Target in $Cache.Value['ParentByTargetPath'].Value.Values ) {
+    $Targets = ForEach ($Target in $Cache.Value['ParentBySourcePath'].Value.Values ) {
         $Target
     }
     $TargetCount = $Targets.Count
@@ -6662,7 +6662,7 @@ function Find-ServerFqdn {
     $ProgressStopWatch.Start()
     $LastRemainder = [int]::MaxValue
     $i = 0
-    ForEach ($Parent in $Cache.Value['ParentByTargetPath'].Value.Values) {
+    ForEach ($Parent in $Cache.Value['ParentBySourcePath'].Value.Values) {
         ForEach ($ThisPath in $Parent) {
             $NewRemainder = $ProgressStopWatch.ElapsedTicks % 5000
             if ($NewRemainder -lt $LastRemainder) {
@@ -6824,7 +6824,7 @@ function Format-TimeSpan {
 function Get-AccessControlList {
     [CmdletBinding()]
     param (
-        [Hashtable]$TargetPath,
+        [Hashtable]$SourcePath,
         [hashtable]$WarningCache = [Hashtable]::Synchronized(@{}),
         [Parameter(Mandatory)]
         [ref]$Cache
@@ -6848,16 +6848,16 @@ function Get-AccessControlList {
         WarningCache = $WarningCache
     }
     $TargetIndex = 0
-    $ParentCount = $TargetPath.Keys.Count
+    $ParentCount = $SourcePath.Keys.Count
     $ThreadCount = $Cache.Value['ThreadCount'].Value
     if ($ThreadCount -eq 1) {
-        ForEach ($Parent in $TargetPath.Keys) {
+        ForEach ($Parent in $SourcePath.Keys) {
             [int]$PercentComplete = $TargetIndex / $ParentCount * 100
             $TargetIndex++
             Write-Progress @ChildProgress -Status "$PercentComplete% (parent $TargetIndex of $ParentCount) Get access control lists" -CurrentOperation $Parent -PercentComplete $PercentComplete
             Write-Progress @GrandChildProgress -Status '0% (parent) Get-DirectorySecurity -IncludeInherited' -CurrentOperation $Parent -PercentComplete 0
             Get-DirectorySecurity -LiteralPath $Parent -IncludeInherited @GetDirectorySecurity
-            $Children = $TargetPath[$Parent]
+            $Children = $SourcePath[$Parent]
             $ChildCount = $Children.Count
             [int]$ProgressInterval = [math]::max(($ChildCount / 100), 1)
             $IntervalCounter = 0
@@ -6876,12 +6876,12 @@ function Get-AccessControlList {
         }
         Write-Progress @ChildProgress -Completed
     } else {
-        ForEach ($Parent in $TargetPath.Keys) {
+        ForEach ($Parent in $SourcePath.Keys) {
             [int]$PercentComplete = $TargetIndex / $ParentCount * 100
             $TargetIndex++
             Write-Progress @ChildProgress -Status "$PercentComplete% (parent $TargetIndex of $ParentCount) Get access control lists" -CurrentOperation $Parent -PercentComplete $PercentComplete
             Get-DirectorySecurity -LiteralPath $Parent -IncludeInherited @GetDirectorySecurity
-            $Children = $TargetPath[$Parent]
+            $Children = $SourcePath[$Parent]
             $SplitThread = @{
                 Command        = 'Get-DirectorySecurity'
                 InputObject    = $Children
@@ -6906,13 +6906,13 @@ function Get-AccessControlList {
     }
     $ParentIndex = 0
     if ($ThreadCount -eq 1) {
-        ForEach ($Parent in $TargetPath.Keys) {
+        ForEach ($Parent in $SourcePath.Keys) {
             [int]$PercentComplete = $ParentIndex / $ParentCount * 100
             $ParentIndex++
             Write-Progress @ChildProgress -Status "$PercentComplete% (parent $ParentIndex of $ParentCount) Find non-inherited ACL Owners" -CurrentOperation $Parent -PercentComplete $PercentComplete
             Write-Progress @GrandChildProgress -Status '0% (parent) Get-OwnerAce' -CurrentOperation $Parent -PercentComplete $PercentComplete
             Get-OwnerAce -Item $Parent @GetOwnerAce
-            $Children = $TargetPath[$Parent]
+            $Children = $SourcePath[$Parent]
             $ChildCount = $Children.Count
             [int]$ProgressInterval = [math]::max(($ChildCount / 100), 1)
             $IntervalCounter = 0
@@ -6931,12 +6931,12 @@ function Get-AccessControlList {
         }
         Write-Progress @ChildProgress -Completed
     } else {
-        ForEach ($Parent in $TargetPath.Keys) {
+        ForEach ($Parent in $SourcePath.Keys) {
             [int]$PercentComplete = $ParentIndex / $ParentCount * 100
             $ParentIndex++
             Write-Progress @ChildProgress -Status "$PercentComplete% (parent $ParentIndex of $ParentCount) Find non-inherited ACL Owners" -CurrentOperation $Parent -PercentComplete $PercentComplete
             Get-OwnerAce -Item $Parent @GetOwnerAce
-            $Children = $TargetPath[$Parent]
+            $Children = $SourcePath[$Parent]
             $SplitThread = @{
                 Command        = 'Get-OwnerAce'
                 InputObject    = $Children
@@ -7301,7 +7301,7 @@ function New-PermissionCache {
     $LogCimMap = @{ 'Cache' = '$Cache' ; 'CimSession' = '$CimSession' }
     $LogFormattedMap = @{ 'FormattedPermission' = '$FormattedPermissions' ; 'Analysis' = '$PermissionAnalysis' }
     $LogDirEntryMap = @{ 'Cache' = '$Cache' ; 'DirectoryEntry' = '$DirectoryEntry' ; 'AceGuid' = '$AceGuids' }
-    $LogTargetPathMap = @{ 'Cache' = '$Cache' ; 'TargetPath' = '$Items' }
+    $LogSourcePathMap = @{ 'Cache' = '$Cache' ; 'TargetPath' = '$Items' }
     $LogEmptyMap = @{}
     $ParamStringMap = Get-ParamStringMap
     $LogBuffer = [System.Collections.Concurrent.ConcurrentQueue[System.Collections.Specialized.OrderedDictionary]]::new()
@@ -7350,7 +7350,7 @@ function New-PermissionCache {
             'LogEmptyMap'                  = [ref]$LogEmptyMap
             'LogCacheMap'                  = [ref]$LogCacheMap
             'LogAnalysisMap'               = [ref]$LogAnalysisMap
-            'LogTargetPathMap'             = [ref]$LogTargetPathMap
+            'LogSourcePathMap'             = [ref]$LogSourcePathMap
             'LogFormattedMap'              = [ref]$LogFormattedMap
             'LogStopWatchMap'              = [ref]$LogStopWatchMap
             'LogCimMap'                    = [ref]$LogCimMap
@@ -7358,7 +7358,7 @@ function New-PermissionCache {
             'LogWellKnownMap'              = [ref]$LogWellKnownMap
             'LogType'                      = [ref]$LogType
             'ParamStringMap'               = [ref]$ParamStringMap
-            'ParentByTargetPath'           = New-PermissionCacheRef -Key $DirectoryInfo -Value $StringArray 
+            'ParentBySourcePath'           = New-PermissionCacheRef -Key $DirectoryInfo -Value $StringArray 
             'PrincipalByID'                = New-PermissionCacheRef -Key $String -Value $PSCustomObject 
             'ProgressParentId'             = [ref]$ProgressParentId
             'ShortNameByID'                = New-PermissionCacheRef -Key $String -Value $String  
@@ -7391,7 +7391,7 @@ function Out-PermissionFile {
         [string[]]$ExcludeAccount,
         [string[]]$ExcludeClass = @('group', 'computer'),
         $IgnoreDomain,
-        [string[]]$TargetPath,
+        [string[]]$SourcePath,
         [switch]$NoMembers,
         $OutputDir,
         $StopWatch,
@@ -7411,7 +7411,7 @@ function Out-PermissionFile {
         [ValidateSet('none', 'all', 'target', 'item', 'account')]
         [string[]]$SplitBy = 'target',
         [PSCustomObject]$Analysis,
-        [uint64]$TargetCount,
+        [uint64]$SourceCount,
         [uint64]$ParentCount,
         [uint64]$ChildCount,
         [uint64]$ItemCount,
@@ -7427,7 +7427,7 @@ function Out-PermissionFile {
     $AceByGUID = $Cache.Value['AceByGUID']
     $AclByPath = $Cache.Value['AclByPath']
     $PrincipalByID = $Cache.Value['PrincipalByID']
-    $Parent = $Cache.Value['ParentByTargetPath']
+    $Parent = $Cache.Value['ParentBySourcePath']
     $Formats = Resolve-FormatParameter -FileFormat $FileFormat -OutputFormat $OutputFormat
     $DetailStrings = @(
         'Item paths',
@@ -7445,10 +7445,10 @@ function Out-PermissionFile {
     $UnsplitDetail = $Detail | Where-Object -FilterScript { $_ -le 5 -or $_ -in 8, 9 }
     $SplitDetail = $Detail | Where-Object -FilterScript { $_ -gt 5 -and $_ -notin 8, 9 }
     $DetailScripts = @(
-        { $TargetPath },
+        { $SourcePath },
         { ForEach ($Key in $Parent.Value.Keys) {
                 [PSCustomObject]@{
-                    OriginalTargetPath  = $Key
+                    OriginalSourcePath  = $Key
                     ResolvedNetworkPath = $Parent.Value[$Key]
                 }
             }
@@ -7656,7 +7656,7 @@ function Out-PermissionFile {
                 $Permissions = $Subfile.$FormatString
                 $ReportObjects = @{}
                 [Hashtable]$Params = $PSBoundParameters
-                $Params['TargetPath'] = $File.Path
+                $Params['SourcePath'] = $File.Path
                 $Params['NetworkPath'] = $File.NetworkPaths
                 $Params['Split'] = $Split
                 $Params['FileName'] = $FileName
@@ -7759,16 +7759,16 @@ function Resolve-AccessControlList {
     }
     Write-Progress @Progress -Completed
 }
-function Resolve-PermissionTarget {
+function Resolve-PermissionSource {
     param (
-        [System.IO.DirectoryInfo[]]$TargetPath,
+        [System.IO.DirectoryInfo[]]$SourcePath,
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    $Parents = $Cache.Value['ParentByTargetPath']
-    ForEach ($ThisTargetPath in $TargetPath) {
-        Write-LogMsg -Text "Resolve-Folder -TargetPath '$ThisTargetPath' -Cache `$Cache" -Cache $Cache
-        $Parents.Value[$ThisTargetPath] = Resolve-Folder -TargetPath $ThisTargetPath -Cache $Cache
+    $Parents = $Cache.Value['ParentBySourcePath']
+    ForEach ($ThisSourcePath in $SourcePath) {
+        Write-LogMsg -Text "Resolve-Folder -SourcePath '$ThisSourcePath' -Cache `$Cache" -Cache $Cache
+        $Parents.Value[$ThisSourcePath] = Resolve-Folder -SourcePath $ThisSourcePath -Cache $Cache
     }
 }
 function Select-PermissionPrincipal {
@@ -10003,23 +10003,23 @@ process {
     $Cmd = @{
         'SourcePath' = $SourcePath
     }
-    $TargetCount = $SourcePath.Count
-    Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $Cached @Cached @CacheMap
-    Resolve-PermissionTarget @Cmd @Cached
+    $SourceCount = $SourcePath.Count
+    Write-LogMsg -Text 'Resolve-PermissionSource' -Suffix " # for $SourceCount source paths" -Expand $Cmd, $Cached @Cached @CacheMap
+    Resolve-PermissionSource @Cmd @Cached
 }
 end {
     $ProgressUpdate = @{
         'CurrentOperation' = 'Expand parent paths into the paths of their children'
         'PercentComplete'  = 10
-        'Status'           = '10% (step 3 of 20) Expand-PermissionTarget'
+        'Status'           = '10% (step 3 of 20) Expand-PermissionSource'
     }
     Write-Progress @Progress @ProgressUpdate
     $ParentCount = $PermissionCache['ParentBySourcePath'].Value.Values.Count
     $Cmd = @{
         'RecurseDepth' = $RecurseDepth
     }
-    Write-LogMsg -Text '$Items = Expand-PermissionTarget' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Cached @Cached @CacheMap
-    $Items = Expand-PermissionTarget @Cmd @Cached
+    Write-LogMsg -Text '$Items = Expand-PermissionSource' -Suffix " # for $ParentCount Parents" -Expand $Cmd, $Cached @Cached @CacheMap
+    $Items = Expand-PermissionSource @Cmd @Cached
     $ProgressUpdate = @{
         'CurrentOperation' = 'Get the FQDN of this computer, each trusted domain, and each server in the paths'
         'PercentComplete'  = 15
@@ -10159,7 +10159,7 @@ end {
         'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $OutputDir ; 'OutputFormat' = $OutputFormat ;
         'NoMembers' = $NoMembers ; 'RecurseDepth' = $RecurseDepth ; 'SplitBy' = $SplitBy ; 'Title' = $Title ;
         'LogFileList' = $TranscriptFile, $LogFile ; 'StopWatch' = $StopWatch ; 'ReportInstanceId' = $ReportInstanceId ;
-        'TargetCount' = $TargetCount ; 'ParentCount' = $ParentCount ; 'ChildCount' = $ChildCount ; 'FqdnCount' = $FqdnCount ;
+        'SourceCount' = $SourceCount ; 'ParentCount' = $ParentCount ; 'ChildCount' = $ChildCount ; 'FqdnCount' = $FqdnCount ;
         'AclCount' = $AclCount ; 'AceCount' = $AceCount ; 'IdCount' = $IdCount ; 'PrincipalCount' = $PrincipalCount ; 'ItemCount' = $ItemCount
     }
     Write-LogMsg -Text 'Out-PermissionFile' -Suffix " # for $IdCount Access Control Entries" -Expand $Cmd, $Cached @Cached @StopWatchMap

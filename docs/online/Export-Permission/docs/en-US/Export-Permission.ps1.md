@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.557
+help version: 0.0.558
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -190,7 +190,7 @@ Change the title of the HTML report to 'New Custom Report Title'
 Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
 ```
 
-The target path is a DFS folder with folder targets
+The source path is a DFS folder with folder targets
 
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
@@ -199,7 +199,7 @@ Generate reports on the NTFS permissions for the DFS folder targets associated w
 Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
 ```
 
-The target path is a DFS subfolder with folder targets
+The source path is a DFS subfolder with folder targets
 
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
@@ -208,7 +208,7 @@ Generate reports on the NTFS permissions for the DFS folder targets associated w
 Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
 ```
 
-The target path is a subfolder of a DFS subfolder with folder targets
+The source path is a subfolder of a DFS subfolder with folder targets
 
 Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 
@@ -219,7 +219,7 @@ Export-Permission.ps1 -SourcePath '\\ad.contoso.com\'
 
 This is an edge case that is not currently supported
 
-The target path is the root of an AD domain
+The source path is the root of an AD domain
 
 Generate reports on the NTFS permissions for the root of an AD domain. 
 TODO: param validation?
@@ -232,7 +232,7 @@ Export-Permission.ps1 -SourcePath '\\computer.ad.contoso.com\'
 
 This is an edge case that is not currently supported
 
-The target path is the root of a SMB server
+The source path is the root of a SMB server
 
 Generate reports on the NTFS permissions for the root of a SMB server. 
 TODO: param validation?
@@ -245,7 +245,7 @@ Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace'
 
 This is an edge case that is not currently supported
 
-The target path is a DFS namespace
+The source path is a DFS namespace
 
 Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
 
@@ -258,7 +258,7 @@ Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithou
 
 This is an edge case that is not currently supported.
 
-The target path is a DFS folder without a folder target
+The source path is a DFS folder without a folder target
 
 Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
 
@@ -271,7 +271,7 @@ Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithou
 
 This is an edge case that is not currently supported.
 
-The target path is a DFS subfolder without a folder target.
+The source path is a DFS subfolder without a folder target.
 
 Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
 
@@ -327,17 +327,20 @@ Accept wildcard characters: False
 
 ### -Detail
 Level of detail to export to file
-- 0   Item paths
-- 1   Resolved item paths (server names resolved, DFS targets resolved)
-- 2   Expanded resolved item paths (parent paths expanded into children)
-- 3   Access lists
-- 4   Access rules (server names resolved, inheritance flags resolved)
-- 5   Accounts with access
-- 6   Expanded access rules (expanded with account info)
-- 7   Formatted permissions
-- 8   Best Practice issues
-- 9   Custom sensor output for Paessler PRTG Network Monitor
-- 10  Permission Report
+
+| Value | Behavior |
+|-------|----------|
+| 0     | Source paths |
+| 1     | Resolved source paths (server names resolved, DFS targets resolved) |
+| 2     | Expanded resolved source paths (parent paths expanded into children) |
+| 3     | Access lists |
+| 4     | Access rules (server names resolved, inheritance flags resolved) |
+| 5     | Accounts with access |
+| 6     | Expanded access rules (expanded with account info) |
+| 7     | Formatted permissions |
+| 8     | Best Practice issues |
+| 9     | Custom sensor output for Paessler PRTG Network Monitor |
+| 10    | Permission Report |
 
 ```yaml
 Type: System.Int32[]
@@ -405,23 +408,24 @@ Accept wildcard characters: False
 ```
 
 ### -GroupBy
-How to group the permissions in the output stream and within each exported file
+How to group the permissions in the output stream and within each exported file.
+Interacts with the SplitBy parameter:
 
-| SplitBy | GroupBy | Description |
-|---------|---------|-------------|
-| none    | none    | Flat Permissions all in 1 file |
-| none    | account | Account Permissions all in 1 file |
-| none    | item    | Item Permissions all in 1 file |
+| SplitBy | GroupBy | Behavior |
+|---------|---------|----------|
+| none    | none    | 1 file with all permissions in a flat list |
+| none    | account | 1 file with all permissions grouped by account |
+| none    | item    | 1 file with all permissions grouped by item |
 | account | none    | 1 file per account; in each file, sort ACEs by item path |
 | account | account | (same as -SplitBy account -GroupBy none) |
 | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path |
 | item    | none    | 1 file per item; in each file, sort ACEs by account name |
 | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name |
 | item    | item    | (same as -SplitBy item -GroupBy none) |
-| target  | none    | 1 file per source path; in each file, sort ACEs by target path |
-| target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name |
-| target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path |
-| target  | target  | (same as -SplitBy target -GroupBy none) |
+| source  | none    | 1 file per source path; in each file, sort ACEs by source path |
+| source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name |
+| source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path |
+| source  | source  | (same as -SplitBy source -GroupBy none) |
 
 ```yaml
 Type: System.String
@@ -663,8 +667,8 @@ Supports:
     - Mapped network drives
 
 Does Not Support (ToDo):
-- same targets as Get-Acl (AD, Registry, StorageSubSystem)
-- M365 targets (SP sites, Teams, etc)
+- same sources as Get-Acl (AD, Registry, StorageSubSystem)
+- M365 sources (SP sites, Teams, etc)
 
 ```yaml
 Type: System.IO.DirectoryInfo[]
@@ -680,11 +684,13 @@ Accept wildcard characters: False
 
 ### -SplitBy
 How to split up the exported files:
-- none    generate 1 report file with all permissions
-- target  generate 1 report file per target (default)
-- item    generate 1 report file per item
-- account generate 1 report file per account
-- all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
+
+| Value   | Behavior |
+|---------|----------|
+| none    | generate 1 report file with all permissions |
+| source  | generate 1 report file per source path (default) |
+| item    | generate 1 report file per item |
+| account | generate 1 report file per account |
 
 ```yaml
 Type: System.String[]
@@ -693,7 +699,7 @@ Aliases:
 
 Required: False
 Position: 15
-Default value: Target
+Default value: Source
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

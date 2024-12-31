@@ -40,8 +40,8 @@
           <maml:description>
             <maml:para>Path to the item whose permissions to export</maml:para>
             <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
-            <maml:para>Does Not Support (ToDo): - same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
-            <maml:para>- M365 targets (SP sites, Teams, etc)</maml:para>
+            <maml:para>Does Not Support (ToDo): - same sources as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
+            <maml:para>- M365 sources (SP sites, Teams, etc)</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
           <dev:type>
@@ -118,24 +118,21 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
           <maml:name>SplitBy</maml:name>
           <maml:description>
-            <maml:para>How to split up the exported files: - none    generate 1 report file with all permissions</maml:para>
-            <maml:para>- target  generate 1 report file per target (default)</maml:para>
-            <maml:para>- item    generate 1 report file per item</maml:para>
-            <maml:para>- account generate 1 report file per account</maml:para>
-            <maml:para>- all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.</maml:para>
+            <maml:para>How to split up the exported files:</maml:para>
+            <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | source  | generate 1 report file per source path (default) | | item    | generate 1 report file per item | | account | generate 1 report file per account |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
             <maml:name>System.String[]</maml:name>
             <maml:uri />
           </dev:type>
-          <dev:defaultValue>Target</dev:defaultValue>
+          <dev:defaultValue>Source</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
           <maml:name>GroupBy</maml:name>
           <maml:description>
-            <maml:para>How to group the permissions in the output stream and within each exported file</maml:para>
-            <maml:para>| SplitBy | GroupBy | Description | |---------|---------|-------------| | none    | none    | Flat Permissions all in 1 file | | none    | account | Account Permissions all in 1 file | | none    | item    | Item Permissions all in 1 file | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | target  | none    | 1 file per source path; in each file, sort ACEs by target path | | target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | target  | target  | (same as -SplitBy target -GroupBy none) |</maml:para>
+            <maml:para>How to group the permissions in the output stream and within each exported file. Interacts with the SplitBy parameter:</maml:para>
+            <maml:para>| SplitBy | GroupBy | Behavior | |---------|---------|----------| | none    | none    | 1 file with all permissions in a flat list | | none    | account | 1 file with all permissions grouped by account | | none    | item    | 1 file with all permissions grouped by item | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | source  | none    | 1 file per source path; in each file, sort ACEs by source path | | source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | source  | source  | (same as -SplitBy source -GroupBy none) |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -171,17 +168,8 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
           <maml:name>Detail</maml:name>
           <maml:description>
-            <maml:para>Level of detail to export to file - 0   Item paths</maml:para>
-            <maml:para>- 1   Resolved item paths (server names resolved, DFS targets resolved)</maml:para>
-            <maml:para>- 2   Expanded resolved item paths (parent paths expanded into children)</maml:para>
-            <maml:para>- 3   Access lists</maml:para>
-            <maml:para>- 4   Access rules (server names resolved, inheritance flags resolved)</maml:para>
-            <maml:para>- 5   Accounts with access</maml:para>
-            <maml:para>- 6   Expanded access rules (expanded with account info)</maml:para>
-            <maml:para>- 7   Formatted permissions</maml:para>
-            <maml:para>- 8   Best Practice issues</maml:para>
-            <maml:para>- 9   Custom sensor output for Paessler PRTG Network Monitor</maml:para>
-            <maml:para>- 10  Permission Report</maml:para>
+            <maml:para>Level of detail to export to file</maml:para>
+            <maml:para>| Value | Behavior | |-------|----------| | 0     | Source paths | | 1     | Resolved source paths (server names resolved, DFS targets resolved) | | 2     | Expanded resolved source paths (parent paths expanded into children) | | 3     | Access lists | | 4     | Access rules (server names resolved, inheritance flags resolved) | | 5     | Accounts with access | | 6     | Expanded access rules (expanded with account info) | | 7     | Formatted permissions | | 8     | Best Practice issues | | 9     | Custom sensor output for Paessler PRTG Network Monitor | | 10    | Permission Report |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Int32[]</command:parameterValue>
           <dev:type>
@@ -395,17 +383,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
         <maml:name>Detail</maml:name>
         <maml:description>
-          <maml:para>Level of detail to export to file - 0   Item paths</maml:para>
-          <maml:para>- 1   Resolved item paths (server names resolved, DFS targets resolved)</maml:para>
-          <maml:para>- 2   Expanded resolved item paths (parent paths expanded into children)</maml:para>
-          <maml:para>- 3   Access lists</maml:para>
-          <maml:para>- 4   Access rules (server names resolved, inheritance flags resolved)</maml:para>
-          <maml:para>- 5   Accounts with access</maml:para>
-          <maml:para>- 6   Expanded access rules (expanded with account info)</maml:para>
-          <maml:para>- 7   Formatted permissions</maml:para>
-          <maml:para>- 8   Best Practice issues</maml:para>
-          <maml:para>- 9   Custom sensor output for Paessler PRTG Network Monitor</maml:para>
-          <maml:para>- 10  Permission Report</maml:para>
+          <maml:para>Level of detail to export to file</maml:para>
+          <maml:para>| Value | Behavior | |-------|----------| | 0     | Source paths | | 1     | Resolved source paths (server names resolved, DFS targets resolved) | | 2     | Expanded resolved source paths (parent paths expanded into children) | | 3     | Access lists | | 4     | Access rules (server names resolved, inheritance flags resolved) | | 5     | Accounts with access | | 6     | Expanded access rules (expanded with account info) | | 7     | Formatted permissions | | 8     | Best Practice issues | | 9     | Custom sensor output for Paessler PRTG Network Monitor | | 10    | Permission Report |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Int32[]</command:parameterValue>
         <dev:type>
@@ -457,8 +436,8 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
         <maml:name>GroupBy</maml:name>
         <maml:description>
-          <maml:para>How to group the permissions in the output stream and within each exported file</maml:para>
-          <maml:para>| SplitBy | GroupBy | Description | |---------|---------|-------------| | none    | none    | Flat Permissions all in 1 file | | none    | account | Account Permissions all in 1 file | | none    | item    | Item Permissions all in 1 file | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | target  | none    | 1 file per source path; in each file, sort ACEs by target path | | target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | target  | target  | (same as -SplitBy target -GroupBy none) |</maml:para>
+          <maml:para>How to group the permissions in the output stream and within each exported file. Interacts with the SplitBy parameter:</maml:para>
+          <maml:para>| SplitBy | GroupBy | Behavior | |---------|---------|----------| | none    | none    | 1 file with all permissions in a flat list | | none    | account | 1 file with all permissions grouped by account | | none    | item    | 1 file with all permissions grouped by item | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | source  | none    | 1 file per source path; in each file, sort ACEs by source path | | source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | source  | source  | (same as -SplitBy source -GroupBy none) |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -640,8 +619,8 @@
         <maml:description>
           <maml:para>Path to the item whose permissions to export</maml:para>
           <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
-          <maml:para>Does Not Support (ToDo): - same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
-          <maml:para>- M365 targets (SP sites, Teams, etc)</maml:para>
+          <maml:para>Does Not Support (ToDo): - same sources as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
+          <maml:para>- M365 sources (SP sites, Teams, etc)</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
         <dev:type>
@@ -653,18 +632,15 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
         <maml:name>SplitBy</maml:name>
         <maml:description>
-          <maml:para>How to split up the exported files: - none    generate 1 report file with all permissions</maml:para>
-          <maml:para>- target  generate 1 report file per target (default)</maml:para>
-          <maml:para>- item    generate 1 report file per item</maml:para>
-          <maml:para>- account generate 1 report file per account</maml:para>
-          <maml:para>- all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.</maml:para>
+          <maml:para>How to split up the exported files:</maml:para>
+          <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | source  | generate 1 report file per source path (default) | | item    | generate 1 report file per item | | account | generate 1 report file per account |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
           <maml:name>System.String[]</maml:name>
           <maml:uri />
         </dev:type>
-        <dev:defaultValue>Target</dev:defaultValue>
+        <dev:defaultValue>Source</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>ThreadCount</maml:name>
@@ -834,7 +810,7 @@
         <maml:title>-------------------------- EXAMPLE 12 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'</dev:code>
         <dev:remarks>
-          <maml:para>The target path is a DFS folder with folder targets</maml:para>
+          <maml:para>The source path is a DFS folder with folder targets</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
         </dev:remarks>
       </command:example>
@@ -842,7 +818,7 @@
         <maml:title>-------------------------- EXAMPLE 13 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'</dev:code>
         <dev:remarks>
-          <maml:para>The target path is a DFS subfolder with folder targets</maml:para>
+          <maml:para>The source path is a DFS subfolder with folder targets</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
         </dev:remarks>
       </command:example>
@@ -850,7 +826,7 @@
         <maml:title>-------------------------- EXAMPLE 14 --------------------------</maml:title>
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'</dev:code>
         <dev:remarks>
-          <maml:para>The target path is a subfolder of a DFS subfolder with folder targets</maml:para>
+          <maml:para>The source path is a subfolder of a DFS subfolder with folder targets</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
         </dev:remarks>
       </command:example>
@@ -859,7 +835,7 @@
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
-          <maml:para>The target path is the root of an AD domain</maml:para>
+          <maml:para>The source path is the root of an AD domain</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the root of an AD domain.  TODO: param validation? or otherwise handle error.</maml:para>
         </dev:remarks>
       </command:example>
@@ -868,7 +844,7 @@
         <dev:code>Export-Permission.ps1 -SourcePath '\\computer.ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
-          <maml:para>The target path is the root of a SMB server</maml:para>
+          <maml:para>The source path is the root of a SMB server</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the root of a SMB server.  TODO: param validation? or otherwise handle error.</maml:para>
         </dev:remarks>
       </command:example>
@@ -877,7 +853,7 @@
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
-          <maml:para>The target path is a DFS namespace</maml:para>
+          <maml:para>The source path is a DFS namespace</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path</maml:para>
           <maml:para>Add a warning that they are permissions from the DFS namespace server and could be confusing</maml:para>
         </dev:remarks>
@@ -887,7 +863,7 @@
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported.</maml:para>
-          <maml:para>The target path is a DFS folder without a folder target</maml:para>
+          <maml:para>The source path is a DFS folder without a folder target</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path</maml:para>
           <maml:para>Add a warning that they are permissions from the DFS namespace server and could be confusing</maml:para>
         </dev:remarks>
@@ -897,7 +873,7 @@
         <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported.</maml:para>
-          <maml:para>The target path is a DFS subfolder without a folder target.</maml:para>
+          <maml:para>The source path is a DFS subfolder without a folder target.</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path</maml:para>
           <maml:para>Add a warning that they are permissions from the DFS namespace server and could be confusing</maml:para>
         </dev:remarks>

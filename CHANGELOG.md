@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.558] - 2024-12-30
+### Changed
+- continue param rename
+
 ## [0.0.557] - 2024-12-30
 ### Changed
 - continue param rename
