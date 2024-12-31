@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.554
+.VERSION 0.0.555
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -287,9 +287,12 @@ param (
     Accounts whose objectClass property is in this list are excluded from the HTML report
 
     Note on the 'group' class:
-      By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.
-      Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).
-      So the 'group' class is excluded here by default.
+
+    By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.
+
+    Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).
+
+    So the 'group' class is excluded here by default.
     #>
     [string[]]$ExcludeClass = @('group', 'computer'),
 
@@ -297,8 +300,8 @@ param (
     Domain(s) to ignore (they will be removed from the username)
 
     Can be used:
-      to ensure accounts only appear once on the report when they have matching SamAccountNames in multiple domains.
-      when the domain is often the same and doesn't need to be displayed
+    - to ensure accounts only appear once on the report when they have matching SamAccountNames in multiple domains.
+    - when the domain is often the same and doesn't need to be displayed
     #>
     [string[]]$IgnoreDomain,
 
@@ -309,17 +312,18 @@ param (
     Do not get group members (only report the groups themselves)
 
     Note: By default, the -ExcludeClass parameter will exclude groups from the report.
-      If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
-      Remove the 'group' class from ExcludeClass in order to see groups on the report.
+
+    If using -NoGroupMembers, you most likely want to modify the value of -ExcludeClass.
+
+    Remove the 'group' class from ExcludeClass in order to see groups on the report.
     #>
     [switch]$NoMembers,
 
     <#
     How many levels of child items to enumerate
-
-      Set to 0 to ignore all children
-      Set to -1 (default) to recurse through all children
-      Set to any whole number to enumerate that many levels of children
+    - Set to 0 to ignore all children
+    - Set to -1 (default) to recurse through all children
+    - Set to any whole number to enumerate that many levels of children
     #>
     [int]$RecurseDepth = -1,
 
@@ -352,8 +356,10 @@ param (
 
     <#
     Number of asynchronous threads to use
+
     Recommended starting with the # of logical CPUs:
-    (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum
+
+    { (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum }
     #>
     [uint16]$ThreadCount = 1,
 
@@ -390,11 +396,11 @@ param (
 
     <#
     How to split up the exported files:
-        none    generate 1 report file with all permissions
-        target  generate 1 report file per target (default)
-        item    generate 1 report file per item
-        account generate 1 report file per account
-        all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
+    - none    generate 1 report file with all permissions
+    - target  generate 1 report file per target (default)
+    - item    generate 1 report file per item
+    - account generate 1 report file per account
+    - all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
     #>
     [ValidateSet('account', 'item', 'none', 'target')]
     [string[]]$SplitBy = 'target',
