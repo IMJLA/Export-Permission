@@ -663,10 +663,9 @@
     <command:examples>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test
-Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</dev:code>
+        <dev:code>Export-Permission.ps1 -TargetPath C:\Test</dev:code>
         <dev:remarks>
-          <maml:para></maml:para>
+          <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>

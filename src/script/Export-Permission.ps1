@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.542
+.VERSION 0.0.543
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -20,17 +20,16 @@
 
 .EXTERNALMODULEDEPENDENCIES 
 
-.REQUIREDSCRIPTS 
+.REQUIREDSCRIPTS
 
-.EXTERNALSCRIPTDEPENDENCIES 
+.EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-troubleshoot spacing
+workaround bug
 
 .PRIVATEDATA
 
-
-#>
+#> 
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -40,6 +39,7 @@ troubleshoot spacing
 #Requires -Module PsNtfs
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
+
 
 <#
 
@@ -91,6 +91,7 @@ troubleshoot spacing
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
+
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'

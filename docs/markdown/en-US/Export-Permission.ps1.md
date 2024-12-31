@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.542
+help version: 0.0.543
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -65,8 +65,9 @@ Behavior:
 ### EXAMPLE 1
 ```powershell
 Export-Permission.ps1 -TargetPath C:\Test
-Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 ```
+
+Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
 ### EXAMPLE 2
 ```powershell

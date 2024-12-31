@@ -196,8 +196,11 @@ Task DetermineNewVersionNumber -depends Lint {
 
 Task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
-    Write-Host "`tUpdate-PSScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
-    Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
+    Pause
+    Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
+    Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
+    #BUG: As of PSResourceGet version 1.0.4, Update-PSScriptFileInfo removes double-line breaks from the comment-based help, which is a problem for markdown syntax highlighting.
+    #Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
     Pause
 
 } -description 'Update PSScriptInfo with the new version.'
