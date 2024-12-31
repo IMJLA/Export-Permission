@@ -199,14 +199,6 @@ Task UpdateScriptVersion -depends DetermineNewVersionNumber {
     Write-Host "`Update-PSScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
     Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
 
-    # Supposedly will be resolved in 3.0.15 but right now there is a bug in Update-ScriptFileInfo that adds blank lines after the PSScriptInfo block
-    # This RegEx was going to be used to help remove those lines but for now I am just awaiting the new version
-    # https://github.com/PowerShell/PowerShellGet/issues/347 (deleted now)
-    # https://github.com/PowerShell/PowerShellGet/issues/316 (deleted now, potentially related according to one person on GitHub)
-    # https://github.com/PowerShell/PSResourceGet/issues/347 (supposedly resolved...guess I need to check and see if it still happens)
-    # https://github.com/PowerShell/PSResourceGet/pull/708 supposedly the resolution
-    # $RegEx = '#>[\s\S]*<#\n\.SYNOPSIS'
-
 } -description 'Update PSScriptInfo with the new version.'
 
 Task DeleteOldBuilds -depends UpdateScriptVersion {

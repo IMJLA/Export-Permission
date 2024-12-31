@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.538] - 2024-12-30
+### Changed
+- file cleanup
+
 ## [0.0.537] - 2024-12-30
 ### Changed
 - simplify cmd call
