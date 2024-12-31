@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.547
+.VERSION 0.0.548
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -18,18 +18,18 @@
 
 .ICONURI https://imjla.github.io/Export-Permission/img/logo.svg
 
-.EXTERNALMODULEDEPENDENCIES
+.EXTERNALMODULEDEPENDENCIES 
 
 .REQUIREDSCRIPTS
 
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix spacing in comment-based help
+update comment-based help for param
 
 .PRIVATEDATA
 
-#>
+#> 
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -435,17 +435,17 @@ param (
 
     <#
     Level of detail to export to file
-        0   Item paths
-        1   Resolved item paths (server names resolved, DFS targets resolved)
-        2   Expanded resolved item paths (parent paths expanded into children)
-        3   Access lists
-        4   Access rules (server names resolved, inheritance flags resolved)
-        5   Accounts with access
-        6   Expanded access rules (expanded with account info)
-        7   Formatted permissions
-        8   Best Practice issues
-        9   Custom sensor output for Paessler PRTG Network Monitor
-        10  Permission Report
+    - 0   Item paths
+    - 1   Resolved item paths (server names resolved, DFS targets resolved)
+    - 2   Expanded resolved item paths (parent paths expanded into children)
+    - 3   Access lists
+    - 4   Access rules (server names resolved, inheritance flags resolved)
+    - 5   Accounts with access
+    - 6   Expanded access rules (expanded with account info)
+    - 7   Formatted permissions
+    - 8   Best Practice issues
+    - 9   Custom sensor output for Paessler PRTG Network Monitor
+    - 10  Permission Report
     #>
     [int[]]$Detail = 10,
 

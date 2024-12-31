@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.547
+help version: 0.0.548
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -332,17 +332,17 @@ Accept wildcard characters: False
 
 ### -Detail
 Level of detail to export to file
-    0   Item paths
-    1   Resolved item paths (server names resolved, DFS targets resolved)
-    2   Expanded resolved item paths (parent paths expanded into children)
-    3   Access lists
-    4   Access rules (server names resolved, inheritance flags resolved)
-    5   Accounts with access
-    6   Expanded access rules (expanded with account info)
-    7   Formatted permissions
-    8   Best Practice issues
-    9   Custom sensor output for Paessler PRTG Network Monitor
-    10  Permission Report
+- 0   Item paths
+- 1   Resolved item paths (server names resolved, DFS targets resolved)
+- 2   Expanded resolved item paths (parent paths expanded into children)
+- 3   Access lists
+- 4   Access rules (server names resolved, inheritance flags resolved)
+- 5   Accounts with access
+- 6   Expanded access rules (expanded with account info)
+- 7   Formatted permissions
+- 8   Best Practice issues
+- 9   Custom sensor output for Paessler PRTG Network Monitor
+- 10  Permission Report
 
 ```yaml
 Type: System.Int32[]

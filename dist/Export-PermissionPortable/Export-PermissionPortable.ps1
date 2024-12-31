@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.547
+.VERSION 0.0.548
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix spacing in comment-based help
+update comment-based help for param
 
 .PRIVATEDATA
 
@@ -38,7 +38,7 @@ fix spacing in comment-based help
 
 Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
 
-Multithread with in-process caching for fast results
+Multithreaded with in-process caching for fast results
 
 Works as a scheduled task
 

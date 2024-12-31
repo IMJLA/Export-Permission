@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.548] - 2024-12-30
+### Changed
+- update comment-based help for param
+
 ## [0.0.547] - 2024-12-30
 ### Fixed
 - fix spacing in comment-based help

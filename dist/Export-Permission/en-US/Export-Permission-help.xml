@@ -169,7 +169,17 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
           <maml:name>Detail</maml:name>
           <maml:description>
-            <maml:para>Level of detail to export to file     0   Item paths     1   Resolved item paths (server names resolved, DFS targets resolved)     2   Expanded resolved item paths (parent paths expanded into children)     3   Access lists     4   Access rules (server names resolved, inheritance flags resolved)     5   Accounts with access     6   Expanded access rules (expanded with account info)     7   Formatted permissions     8   Best Practice issues     9   Custom sensor output for Paessler PRTG Network Monitor     10  Permission Report</maml:para>
+            <maml:para>Level of detail to export to file - 0   Item paths</maml:para>
+            <maml:para>- 1   Resolved item paths (server names resolved, DFS targets resolved)</maml:para>
+            <maml:para>- 2   Expanded resolved item paths (parent paths expanded into children)</maml:para>
+            <maml:para>- 3   Access lists</maml:para>
+            <maml:para>- 4   Access rules (server names resolved, inheritance flags resolved)</maml:para>
+            <maml:para>- 5   Accounts with access</maml:para>
+            <maml:para>- 6   Expanded access rules (expanded with account info)</maml:para>
+            <maml:para>- 7   Formatted permissions</maml:para>
+            <maml:para>- 8   Best Practice issues</maml:para>
+            <maml:para>- 9   Custom sensor output for Paessler PRTG Network Monitor</maml:para>
+            <maml:para>- 10  Permission Report</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Int32[]</command:parameterValue>
           <dev:type>
@@ -368,7 +378,17 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
         <maml:name>Detail</maml:name>
         <maml:description>
-          <maml:para>Level of detail to export to file     0   Item paths     1   Resolved item paths (server names resolved, DFS targets resolved)     2   Expanded resolved item paths (parent paths expanded into children)     3   Access lists     4   Access rules (server names resolved, inheritance flags resolved)     5   Accounts with access     6   Expanded access rules (expanded with account info)     7   Formatted permissions     8   Best Practice issues     9   Custom sensor output for Paessler PRTG Network Monitor     10  Permission Report</maml:para>
+          <maml:para>Level of detail to export to file - 0   Item paths</maml:para>
+          <maml:para>- 1   Resolved item paths (server names resolved, DFS targets resolved)</maml:para>
+          <maml:para>- 2   Expanded resolved item paths (parent paths expanded into children)</maml:para>
+          <maml:para>- 3   Access lists</maml:para>
+          <maml:para>- 4   Access rules (server names resolved, inheritance flags resolved)</maml:para>
+          <maml:para>- 5   Accounts with access</maml:para>
+          <maml:para>- 6   Expanded access rules (expanded with account info)</maml:para>
+          <maml:para>- 7   Formatted permissions</maml:para>
+          <maml:para>- 8   Best Practice issues</maml:para>
+          <maml:para>- 9   Custom sensor output for Paessler PRTG Network Monitor</maml:para>
+          <maml:para>- 10  Permission Report</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Int32[]</command:parameterValue>
         <dev:type>
