@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.541] - 2024-12-30
+### Fixed
+- fix example spacing
+
 ## [0.0.540] - 2024-12-30
 ### Changed
 - file cleanup
