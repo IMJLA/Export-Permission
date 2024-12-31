@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.535
+.VERSION 0.0.536
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-restore file naming
+fix cmd name
 
 .PRIVATEDATA
 
@@ -35,29 +35,22 @@ restore file naming
 
 .DESCRIPTION 
  Present complex nested permissions and group memberships in a report that is easy to read
-
 Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
-
 Multithread with in-process caching for fast results
-
 Works as a scheduled task
-
 Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
-
 Supports:
 - Active Directory domain trusts
 - Unresolved SIDs for deleted accounts
 - Service SID resolution
 - Group memberships via an account's Primary Group as well as its memberOf property
 - ACL Owners (shown in the report as having Full Control originating from Ownership)
-
 Does not support these scenarios:
 - Unsupported SDDL Components:
     - The System Access Control List (SACL) containing ACL Auditors is not reported.
     - The Primary Group is not reported.
 - File permissions (ToDo enhancement; for now only folder permissions are reported)
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
-
 Behavior:
 - Resolves each path in the TargetPath parameter
   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports

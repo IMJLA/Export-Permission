@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.535
+.VERSION 0.0.536
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -20,16 +20,17 @@
 
 .EXTERNALMODULEDEPENDENCIES 
 
-.REQUIREDSCRIPTS
+.REQUIREDSCRIPTS 
 
-.EXTERNALSCRIPTDEPENDENCIES
+.EXTERNALSCRIPTDEPENDENCIES 
 
 .RELEASENOTES
-restore file naming
+fix cmd name
 
 .PRIVATEDATA
 
-#> 
+
+#>
 
 #Requires -Module PsDfs
 #Requires -Module Adsi
@@ -40,66 +41,26 @@ restore file naming
 #Requires -Module PsRunspace
 #Requires -Module SimplePrtg
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <#
-.SYNOPSIS
-    Create CSV, HTML, JSON, and XML exports of permissions
+
 .DESCRIPTION
     Present complex nested permissions and group memberships in a report that is easy to read
-
     Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
-
     Multithread with in-process caching for fast results
-
     Works as a scheduled task
-
     Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
-
     Supports:
     - Active Directory domain trusts
     - Unresolved SIDs for deleted accounts
     - Service SID resolution
     - Group memberships via an account's Primary Group as well as its memberOf property
     - ACL Owners (shown in the report as having Full Control originating from Ownership)
-
     Does not support these scenarios:
     - Unsupported SDDL Components:
         - The System Access Control List (SACL) containing ACL Auditors is not reported.
         - The Primary Group is not reported.
     - File permissions (ToDo enhancement; for now only folder permissions are reported)
     - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
-
     Behavior:
     - Resolves each path in the TargetPath parameter
       - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
@@ -115,33 +76,27 @@ restore file naming
           - Their hierarchy of nested group memberships is not retrieved (for performance reasons).
     - Exports permissions to files of the specified File Formats, using the specified report Detail levels
     - Outputs permissions to the pipeline in the specified Output Format and using the highest specified report Detail level
+
+.SYNOPSIS
+    Create CSV, HTML, JSON, and XML exports of permissions
 .INPUTS
     [System.IO.DirectoryInfo[]] TargetPath parameter
-
     Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 .OUTPUTS
     [PSCustomObject] Items, permissions, and accounts formatted according to specified parameters.
 .NOTES
     This code has not been reviewed or audited by a third party
-
     This code has limited or no tests
-
     It was designed for presenting reports to non-technical management or administrative staff
-
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Exclude the built-in Administrator account from the HTML report
-
     The ExcludeAccount parameter uses RegEx, so the \ in BUILTIN\Administrator needed to be escaped.
-
     The RegEx escape character is \ so the regular expression needed for the parameter is 'BUILTIN\\Administrator'
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
@@ -150,131 +105,86 @@ restore file naming
         'CREATOR OWNER',
         'NT AUTHORITY\\SYSTEM'
     )
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Exclude from the HTML report:
     - The built-in Administrator account
     - The built-in Administrators group and its members (unless they appear elsewhere in the permissions)
     - The CREATOR OWNER security principal
     - The computer account (NT AUTHORITY\SYSTEM)
-
     Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')
-
     Generate reports on the NTFS permissions for the folder C:\Test
-
     Do not spend time retrieving group members
-
     Include groups on the report, but exclude computers (rather than the default setting which would exclude computers and groups)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Remove the CONTOSO domain prefix from associated accounts and groups
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Remove the CONTOSO1\ and CONTOSO2\ domain prefixes from associated accounts and groups
-
     Across the two domains, accounts with the same samAccountNames will be considered equivalent
-
     Across the two domains, groups with the same Names will be considered equivalent
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Redirect logs and output files to C:\Logs instead of the default location in AppData
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0
-
     Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2
-
     Generate reports on the NTFS permissions for the folder C:\Test
-
     Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 .EXAMPLE
     Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
-
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
-
     Change the title of the HTML report to 'New Custom Report Title'
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
-
     The target path is a DFS folder with folder targets
-
     Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
-
     The target path is a DFS subfolder with folder targets
-
     Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
-
     The target path is a subfolder of a DFS subfolder with folder targets
-
     Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'
-
     This is an edge case that is not currently supported
-
     The target path is the root of an AD domain
-
     Generate reports on the NTFS permissions for the root of an AD domain.  TODO: param validation? or otherwise handle error.
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
-
     This is an edge case that is not currently supported
-
     The target path is the root of a SMB server
-
     Generate reports on the NTFS permissions for the root of a SMB server.  TODO: param validation? or otherwise handle error.
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
-
     This is an edge case that is not currently supported
-
     The target path is a DFS namespace
-
     Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
-
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
-
     This is an edge case that is not currently supported.
-
     The target path is a DFS folder without a folder target
-
     Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
-
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .EXAMPLE
     Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
-
     This is an edge case that is not currently supported.
-
     The target path is a DFS subfolder without a folder target.
-
     Generate reports on the NTFS permissions for the folder on the DFS namespace server associated with this path
-
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .LINK
     https://imjla.github.io/Export-Permission

@@ -147,21 +147,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -197,7 +197,7 @@ Task DetermineNewVersionNumber -depends Lint {
 Task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
     Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
-    Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
+    Microsoft.PowerShell.PSResourceGet\Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
 
     # Supposedly will be resolved in 3.0.15 but right now there is a bug in Update-ScriptFileInfo that adds blank lines after the PSScriptInfo block
     # This RegEx was going to be used to help remove those lines but for now I am just awaiting the new version
@@ -303,7 +303,7 @@ Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         'Verbose'               = $VerbosePreference
     }
 
-    $CommentBasedHelp = Get-Help -name $script:ReleasedScript.FullName
+    $CommentBasedHelp = Get-Help -Name $script:ReleasedScript.FullName
     if ($CommentBasedHelp.relatedLinks.navigationLink.uri) {
         $OnlineHelpUri = @($CommentBasedHelp.relatedLinks.navigationLink.uri)[0]
         $MarkdownParams['OnlineVersionUrl'] = $OnlineHelpUri

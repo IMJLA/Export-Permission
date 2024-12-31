@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.536] - 2024-12-30
+### Fixed
+- fix cmd name
+
 ## [0.0.535] - 2024-12-30
 ### Changed
 - restore file naming
