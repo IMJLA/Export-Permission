@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.551
+help version: 0.0.552
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -404,30 +404,28 @@ Accept wildcard characters: False
 ### -GroupBy
 How to group the permissions in the output stream and within each exported file
 
-    SplitBy	GroupBy
-    none	none	$FlatPermissions all in 1 file
-    none	account	$AccountPermissions all in 1 file
-    none	item	$ItemPermissions all in 1 file
-
-    account	none	1 file per item in $AccountPermissions. 
-In each file, $_.Access | sort path
-    account	account	(same as -SplitBy account -GroupBy none)
-    account	item	1 file per item in $AccountPermissions. 
-In each file, $_.Access | group item | sort name
-
-    item	none	1 file per item in $ItemPermissions. 
-In each file, $_.Access | sort account
-    item	account	1 file per item in $ItemPermissions. 
-In each file, $_.Access | group account | sort name
-    item	item	(same as -SplitBy item -GroupBy none)
-
-    target	none	1 file per $TargetPath. 
-In each file, sort ACEs by item path then account name
-    target	account	1 file per $TargetPath. 
-In each file, group ACEs by account and sort by account name
-    target	item	1 file per $TargetPath. 
-In each file, group ACEs by item and sort by item path
-    target  target  (same as -SplitBy target -GroupBy none)
+| SplitBy | GroupBy | Description |
+|---------|---------|-------------|
+| none    | none    | $FlatPermissions all in 1 file |
+| none    | account | $AccountPermissions all in 1 file |
+| none    | item    | $ItemPermissions all in 1 file |
+| account | none    | 1 file per item in $AccountPermissions.
+In each file, $_.Access \| sort path |
+| account | account | (same as -SplitBy account -GroupBy none) |
+| account | item    | 1 file per item in $AccountPermissions.
+In each file, $_.Access \| group item \| sort name |
+| item    | none    | 1 file per item in $ItemPermissions.
+In each file, $_.Access \| sort account |
+| item    | account | 1 file per item in $ItemPermissions.
+In each file, $_.Access \| group account \| sort name |
+| item    | item    | (same as -SplitBy item -GroupBy none) |
+| target  | none    | 1 file per $TargetPath.
+In each file, sort ACEs by item path then account name |
+| target  | account | 1 file per $TargetPath.
+In each file, group ACEs by account and sort by account name |
+| target  | item    | 1 file per $TargetPath.
+In each file, group ACEs by item and sort by item path |
+| target  | target  | (same as -SplitBy target -GroupBy none) |
 
 ```yaml
 Type: System.String
