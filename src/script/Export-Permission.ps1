@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.556
+.VERSION 0.0.557
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-rename TargetPath param to SourcePath for clarity
+continue param rename
 
 .PRIVATEDATA
 
@@ -348,7 +348,7 @@ param (
     { $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' }
     Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
-    The format of the ResolvedAccountName property is CONTOSO\Group1
+    The format of the ResolvedAccountName property is CONTOSO\Group1 where:
     - CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
     - Group1 is the samAccountName of the account
     #>
@@ -527,7 +527,7 @@ begin {
     $EmptyMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
     $CacheMap = @{ 'ExpansionMap' = $PermissionCache['LogCacheMap'].Value }
     $StopWatchMap = @{ 'ExpansionMap' = $PermissionCache['LogStopWatchMap'].Value }
-    $TargetMap = @{ 'ExpansionMap' = $PermissionCache['LogTargetPathMap'].Value }
+    $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
     Write-LogMsg -Text "`$Cache = [ref](New-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
@@ -549,13 +549,13 @@ process {
 
     #----------------[ Main Execution ]---------------
     $ProgressUpdate = @{
-        'CurrentOperation' = 'Resolve target paths to network paths such as UNC paths (including all DFS folder targets)'
+        'CurrentOperation' = 'Resolve source paths to network paths such as UNC paths (including all DFS folder targets)'
         'PercentComplete'  = 5
-        'Status'           = '5% (step 2 of 20) Resolve-PermissionTarget'
+        'Status'           = '5% (step 2 of 20) Resolve-PermissionSource'
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'TargetPath' = $SourcePath
+        'SourcePath' = $SourcePath
     }
     $TargetCount = $SourcePath.Count
     Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $Cached @Cached @CacheMap
@@ -571,7 +571,7 @@ end {
         'Status'           = '10% (step 3 of 20) Expand-PermissionTarget'
     }
     Write-Progress @Progress @ProgressUpdate
-    $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Values.Count
+    $ParentCount = $PermissionCache['ParentBySourcePath'].Value.Values.Count
     $Cmd = @{
         'RecurseDepth' = $RecurseDepth
     }
@@ -598,11 +598,11 @@ end {
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
         'ErrorAction' = 'Stop'
-        'TargetPath'  = $Items
+        'SourcePath'  = $Items
     }
     $ChildCount = $Items.Values.GetEnumerator().Count
     $ItemCount = $ParentCount + $ChildCount
-    Write-LogMsg -Text 'Get-AccessControlList' -Suffix " # for $ItemCount Items" -Expand $Cmd, $Cached @Cached @TargetMap
+    Write-LogMsg -Text 'Get-AccessControlList' -Suffix " # for $ItemCount Items" -Expand $Cmd, $Cached @Cached @SourceMap
     Get-AccessControlList @Cmd @Cached
 
     $ProgressUpdate = @{
@@ -725,7 +725,7 @@ end {
     $Cmd = @{
 
         # Objects as they progressed through the data pipeline
-        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'TargetPath' = $SourcePath ;
+        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'SourcePath' = $SourcePath ;
 
         # Parameters
         'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ; 'FileFormat' = $FileFormat ;

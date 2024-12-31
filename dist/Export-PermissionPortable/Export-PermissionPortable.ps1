@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.556
+.VERSION 0.0.557
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-rename TargetPath param to SourcePath for clarity
+continue param rename
 
 .PRIVATEDATA
 
@@ -9981,7 +9981,7 @@ function Send-PrtgXmlSensorOutput {
     $EmptyMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
     $CacheMap = @{ 'ExpansionMap' = $PermissionCache['LogCacheMap'].Value }
     $StopWatchMap = @{ 'ExpansionMap' = $PermissionCache['LogStopWatchMap'].Value }
-    $TargetMap = @{ 'ExpansionMap' = $PermissionCache['LogTargetPathMap'].Value }
+    $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
     Write-LogMsg -Text "`$Cache = [ref](New-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
@@ -9995,13 +9995,13 @@ function Send-PrtgXmlSensorOutput {
 }
 process {
     $ProgressUpdate = @{
-        'CurrentOperation' = 'Resolve target paths to network paths such as UNC paths (including all DFS folder targets)'
+        'CurrentOperation' = 'Resolve source paths to network paths such as UNC paths (including all DFS folder targets)'
         'PercentComplete'  = 5
-        'Status'           = '5% (step 2 of 20) Resolve-PermissionTarget'
+        'Status'           = '5% (step 2 of 20) Resolve-PermissionSource'
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'TargetPath' = $SourcePath
+        'SourcePath' = $SourcePath
     }
     $TargetCount = $SourcePath.Count
     Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $Cached @Cached @CacheMap
@@ -10014,7 +10014,7 @@ end {
         'Status'           = '10% (step 3 of 20) Expand-PermissionTarget'
     }
     Write-Progress @Progress @ProgressUpdate
-    $ParentCount = $PermissionCache['ParentByTargetPath'].Value.Values.Count
+    $ParentCount = $PermissionCache['ParentBySourcePath'].Value.Values.Count
     $Cmd = @{
         'RecurseDepth' = $RecurseDepth
     }
@@ -10039,11 +10039,11 @@ end {
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
         'ErrorAction' = 'Stop'
-        'TargetPath'  = $Items
+        'SourcePath'  = $Items
     }
     $ChildCount = $Items.Values.GetEnumerator().Count
     $ItemCount = $ParentCount + $ChildCount
-    Write-LogMsg -Text 'Get-AccessControlList' -Suffix " # for $ItemCount Items" -Expand $Cmd, $Cached @Cached @TargetMap
+    Write-LogMsg -Text 'Get-AccessControlList' -Suffix " # for $ItemCount Items" -Expand $Cmd, $Cached @Cached @SourceMap
     Get-AccessControlList @Cmd @Cached
     $ProgressUpdate = @{
         'CurrentOperation' = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
@@ -10154,7 +10154,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'TargetPath' = $SourcePath ;
+        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'SourcePath' = $SourcePath ;
         'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ; 'FileFormat' = $FileFormat ;
         'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $OutputDir ; 'OutputFormat' = $OutputFormat ;
         'NoMembers' = $NoMembers ; 'RecurseDepth' = $RecurseDepth ; 'SplitBy' = $SplitBy ; 'Title' = $Title ;

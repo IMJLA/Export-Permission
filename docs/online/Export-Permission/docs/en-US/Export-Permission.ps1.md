@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.556
+help version: 0.0.557
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -294,7 +294,7 @@ Accounts used in ACEs should be named Group23
 - ` $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' )`
 Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
-The format of the ResolvedAccountName property is CONTOSO\Group1
+The format of the ResolvedAccountName property is CONTOSO\Group1 where:
 - CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
 - Group1 is the samAccountName of the account
 
