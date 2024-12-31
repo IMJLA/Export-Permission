@@ -196,8 +196,8 @@ Task DetermineNewVersionNumber -depends Lint {
 
 Task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
-    Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
-    Microsoft.PowerShell.PSResourceGet\Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
+    Write-Host "`Update-PSScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
+    Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
 
     # Supposedly will be resolved in 3.0.15 but right now there is a bug in Update-ScriptFileInfo that adds blank lines after the PSScriptInfo block
     # This RegEx was going to be used to help remove those lines but for now I am just awaiting the new version
