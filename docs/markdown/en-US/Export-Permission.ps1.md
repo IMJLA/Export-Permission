@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.549
+help version: 0.0.550
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -287,16 +287,13 @@ Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object
 By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance
 
 In the ScriptBlock, any account properties are available for evaluation:
-
-{ $_.DomainNetbios -eq 'CONTOSO' }
+` $_.DomainNetbios -eq 'CONTOSO' )`
 
 Accounts used in ACEs should be in the CONTOSO domain
-
-{ $_.Name -eq 'Group23' }
+` $_.Name -eq 'Group23' )`
 
 Accounts used in ACEs should be named Group23
-
-{ $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' }
+` $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' )`
 
 Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
@@ -558,6 +555,20 @@ Aliases:
 Required: False
 Position: 18
 Default value: Passthru
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ProgressAction`{ Fill ProgressAction Description )`}
+
+```yaml
+Type: System.Management.Automation.ActionPreference
+Parameter Sets: (All)
+Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

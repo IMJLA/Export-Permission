@@ -20,6 +20,11 @@ $NewMarkdown = $Markdown.Replace("Module Name:`r`n", '')
 # Error: 12/30/2024 10:37:45 AM: At C:\Users\Owner\Documents\PowerShell\Modules\platyPS\0.14.2\platyPS.psm1:238 char:140 + … -ExcludeDontShow:$ExcludeDontShow.IsPresent | processMamlObjectToFile + ~~~~~~~~~~~~~~~~~~~~~~~ [<<==>>] Exception: Item has already been added. Key in dictionary: 'external help file' Key being added: 'external help file'
 $NewMarkdown = $NewMarkdown -replace 'external help file: -help.xml', "external help file: $($ScriptName.Split('.')[0])-help.xml"
 
+# Get rid of squiggly braces in parameter descriptions to avoid Docusaurus HTML conversion issues because of JSON escaping not being supported.
+while ($NewMarkdown -match '[^:][\s]{(?<expression>[^}]+)}') {
+    $NewMarkdown = $NewMarkdown.Replace($Matches[0], "``$($Matches['expression']))``")
+}
+
 # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS
 $ParamToRemove = '-ProgressAction'
 $Pattern = "### $ParamToRemove\r?\n[\S\s\r\n]*?(?=#{2,3}?)"

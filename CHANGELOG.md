@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.550] - 2024-12-30
+### Changed
+- update comment-based help
+
 ## [0.0.549] - 2024-12-30
 ### Changed
 - attempt to add scriptblocks to comment-based help (but I seem to recall this causing trouble for platyps)
