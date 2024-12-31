@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.538
+.VERSION 0.0.539
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -35,8 +35,8 @@ file cleanup
 
 .DESCRIPTION 
  Present complex nested permissions and group memberships in a report that is easy to read
-Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
-Multithread with in-process caching for fast results
+Include additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
+Multithreaded with in-process caching for fast results
 Works as a scheduled task
 Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 Supports:

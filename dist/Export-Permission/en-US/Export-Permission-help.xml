@@ -10,7 +10,7 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property Multithread with in-process caching for fast results Works as a scheduled task Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time) Supports: - Active Directory domain trusts</maml:para>
+      <maml:para>Present complex nested permissions and group memberships in a report that is easy to read Include additional properties of each account such as Name, Description, Title, Department, Company, or any specified property Multithreaded with in-process caching for fast results Works as a scheduled task Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time) Supports: - Active Directory domain trusts</maml:para>
       <maml:para>- Unresolved SIDs for deleted accounts</maml:para>
       <maml:para>- Service SID resolution</maml:para>
       <maml:para>- Group memberships via an account's Primary Group as well as its memberOf property</maml:para>

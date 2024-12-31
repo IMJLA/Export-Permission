@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.538
+help version: 0.0.539
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -28,8 +28,8 @@ Export-Permission.ps1 [-TargetPath] <DirectoryInfo[]> [[-ExcludeAccount] <String
 
 ## DESCRIPTION
 Present complex nested permissions and group memberships in a report that is easy to read
-Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
-Multithread with in-process caching for fast results
+Include additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
+Multithreaded with in-process caching for fast results
 Works as a scheduled task
 Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)
 Supports:
