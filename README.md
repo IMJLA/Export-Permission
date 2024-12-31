@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.552
+help version: 0.0.553
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -406,21 +406,21 @@ How to group the permissions in the output stream and within each exported file
 
 | SplitBy | GroupBy | Description |
 |---------|---------|-------------|
-| none    | none    | $FlatPermissions all in 1 file |
-| none    | account | $AccountPermissions all in 1 file |
-| none    | item    | $ItemPermissions all in 1 file |
-| account | none    | 1 file per item in $AccountPermissions.
-In each file, $_.Access \| sort path |
+| none    | none    | Flat Permissions all in 1 file |
+| none    | account | Account Permissions all in 1 file |
+| none    | item    | Item Permissions all in 1 file |
+| account | none    | 1 file per account.
+In each file, sort ACEs by item path |
 | account | account | (same as -SplitBy account -GroupBy none) |
-| account | item    | 1 file per item in $AccountPermissions.
-In each file, $_.Access \| group item \| sort name |
-| item    | none    | 1 file per item in $ItemPermissions.
-In each file, $_.Access \| sort account |
-| item    | account | 1 file per item in $ItemPermissions.
-In each file, $_.Access \| group account \| sort name |
+| account | item    | 1 file per account.
+In each file, group ACEs by item and sort by item path |
+| item    | none    | 1 file per item.
+In each file, sort ACEs by account name |
+| item    | account | 1 file per item.
+In each file, group ACEs by account and sort by account name |
 | item    | item    | (same as -SplitBy item -GroupBy none) |
 | target  | none    | 1 file per $TargetPath.
-In each file, sort ACEs by item path then account name |
+In each file, sort ACEs by target path |
 | target  | account | 1 file per $TargetPath.
 In each file, group ACEs by account and sort by account name |
 | target  | item    | 1 file per $TargetPath.
