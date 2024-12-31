@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.555
+.VERSION 0.0.556
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comment-based help
+rename TargetPath param to SourcePath for clarity
 
 .PRIVATEDATA
 
@@ -69,7 +69,7 @@ update comment-based help
     - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
     Behavior:
-    - Resolves each path in the TargetPath parameter
+    - Resolves each path in the SourcePath parameter
       - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
       - DFS paths become all of their UNC folder targets, including disabled ones
       - Mapped network drives become their UNC paths
@@ -84,7 +84,7 @@ update comment-based help
     - Exports permissions to files of the specified File Formats, using the specified report Detail levels
     - Outputs permissions to the pipeline in the specified Output Format and using the highest specified report Detail level
 .INPUTS
-    [System.IO.DirectoryInfo[]] TargetPath parameter
+    [System.IO.DirectoryInfo[]] SourcePath parameter
 
     Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 .OUTPUTS
@@ -98,11 +98,11 @@ update comment-based help
 
     It is convenient for that purpose but it is not recommended for compliance reporting or similar formal uses
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test
+    Export-Permission.ps1 -SourcePath C:\Test
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
+    Export-Permission.ps1 -SourcePath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
@@ -112,7 +112,7 @@ update comment-based help
 
     The RegEx escape character is \ so the regular expression needed for the parameter is 'BUILTIN\\Administrator'
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
+    Export-Permission.ps1 -SourcePath C:\Test -ExcludeAccount @(
         'BUILTIN\\Administrators',
         'BUILTIN\\Administrator',
         'CREATOR OWNER',
@@ -129,13 +129,13 @@ update comment-based help
 
     Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')
+    Export-Permission.ps1 -SourcePath C:\Test -ExcludeClass @('computer')
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')
+    Export-Permission.ps1 -SourcePath C:\Test -NoGroupMembers -ExcludeClass @('computer')
 
     Generate reports on the NTFS permissions for the folder C:\Test
 
@@ -143,13 +143,13 @@ update comment-based help
 
     Include groups on the report, but exclude computers (rather than the default setting which would exclude computers and groups)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
+    Export-Permission.ps1 -SourcePath C:\Test -IgnoreDomain 'CONTOSO'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Remove the CONTOSO domain prefix from associated accounts and groups
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
+    Export-Permission.ps1 -SourcePath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
@@ -159,47 +159,47 @@ update comment-based help
 
     Across the two domains, groups with the same Names will be considered equivalent
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
+    Export-Permission.ps1 -SourcePath C:\Test -LogDir C:\Logs
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Redirect logs and output files to C:\Logs instead of the default location in AppData
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0
+    Export-Permission.ps1 -SourcePath C:\Test -RecurseDepth 0
 
     Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2
+    Export-Permission.ps1 -SourcePath C:\Test -RecurseDepth 2
 
     Generate reports on the NTFS permissions for the folder C:\Test
 
     Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
+    Export-Permission.ps1 -SourcePath C:\Test -Title 'New Custom Report Title'
 
     Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
     Change the title of the HTML report to 'New Custom Report Title'
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
 
     The target path is a DFS folder with folder targets
 
     Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
 
     The target path is a DFS subfolder with folder targets
 
     Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
 
     The target path is a subfolder of a DFS subfolder with folder targets
 
     Generate reports on the NTFS permissions for the DFS folder targets associated with this path
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\'
 
     This is an edge case that is not currently supported
 
@@ -207,7 +207,7 @@ update comment-based help
 
     Generate reports on the NTFS permissions for the root of an AD domain.  TODO: param validation? or otherwise handle error.
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
+    Export-Permission.ps1 -SourcePath '\\computer.ad.contoso.com\'
 
     This is an edge case that is not currently supported
 
@@ -215,7 +215,7 @@ update comment-based help
 
     Generate reports on the NTFS permissions for the root of a SMB server.  TODO: param validation? or otherwise handle error.
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace'
 
     This is an edge case that is not currently supported
 
@@ -225,7 +225,7 @@ update comment-based help
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
 
     This is an edge case that is not currently supported.
 
@@ -235,7 +235,7 @@ update comment-based help
 
     Add a warning that they are permissions from the DFS namespace server and could be confusing
 .EXAMPLE
-    Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
+    Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
 
     This is an edge case that is not currently supported.
 
@@ -271,7 +271,7 @@ param (
     #>
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
-    [System.IO.DirectoryInfo[]]$TargetPath,
+    [System.IO.DirectoryInfo[]]$SourcePath,
 
     # Regular expressions matching names of accounts to exclude from the HTML report
     [string[]]$ExcludeAccount = '\\SYSTEM$',
@@ -419,9 +419,9 @@ param (
     | item    | none    | 1 file per item; in each file, sort ACEs by account name |
     | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name |
     | item    | item    | (same as -SplitBy item -GroupBy none) |
-    | target  | none    | 1 file per $TargetPath; in each file, sort ACEs by target path |
-    | target  | account | 1 file per $TargetPath; in each file, group ACEs by account and sort by account name |
-    | target  | item    | 1 file per $TargetPath; in each file, group ACEs by item and sort by item path |
+    | target  | none    | 1 file per source path; in each file, sort ACEs by target path |
+    | target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name |
+    | target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path |
     | target  | target  | (same as -SplitBy target -GroupBy none) |
     #>
     [ValidateSet('account', 'item', 'none', 'target')]
@@ -555,9 +555,9 @@ process {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'TargetPath' = $TargetPath
+        'TargetPath' = $SourcePath
     }
-    $TargetCount = $TargetPath.Count
+    $TargetCount = $SourcePath.Count
     Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $Cached @Cached @CacheMap
     Resolve-PermissionTarget @Cmd @Cached
 
@@ -725,7 +725,7 @@ end {
     $Cmd = @{
 
         # Objects as they progressed through the data pipeline
-        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'TargetPath' = $TargetPath ;
+        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'TargetPath' = $SourcePath ;
 
         # Parameters
         'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ; 'FileFormat' = $FileFormat ;

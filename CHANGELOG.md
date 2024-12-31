@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.556] - 2024-12-30
+### Changed
+- rename TargetPath param to SourcePath for clarity
+
 ## [0.0.555] - 2024-12-30
 ### Changed
 - update comment-based help

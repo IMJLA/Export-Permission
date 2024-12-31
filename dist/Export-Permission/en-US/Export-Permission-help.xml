@@ -24,7 +24,7 @@
       <maml:para>Does not support these scenarios: - Unsupported SDDL Components:     - The System Access Control List (SACL) containing ACL Auditors is not reported.     - The Primary Group is not reported. - File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
       <maml:para>- Share permissions (ToDo enhancement; for now only NTFS permissions are reported)</maml:para>
       <maml:para></maml:para>
-      <maml:para>Behavior: - Resolves each path in the TargetPath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets children of the resolved paths to the specified RecurseDepth</maml:para>
+      <maml:para>Behavior: - Resolves each path in the SourcePath parameter   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports   - DFS paths become all of their UNC folder targets, including disabled ones   - Mapped network drives become their UNC paths - Gets children of the resolved paths to the specified RecurseDepth</maml:para>
       <maml:para>- Gets all permissions for the parent paths</maml:para>
       <maml:para>- Gets non-inherited permissions for the discovered children</maml:para>
       <maml:para>- Uses CIM and ADSI to get information about the accounts and groups listed in the permissions</maml:para>
@@ -36,7 +36,7 @@
       <command:syntaxItem>
         <maml:name>Export-Permission.ps1</maml:name>
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
-          <maml:name>TargetPath</maml:name>
+          <maml:name>SourcePath</maml:name>
           <maml:description>
             <maml:para>Path to the item whose permissions to export</maml:para>
             <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
@@ -135,7 +135,7 @@
           <maml:name>GroupBy</maml:name>
           <maml:description>
             <maml:para>How to group the permissions in the output stream and within each exported file</maml:para>
-            <maml:para>| SplitBy | GroupBy | Description | |---------|---------|-------------| | none    | none    | Flat Permissions all in 1 file | | none    | account | Account Permissions all in 1 file | | none    | item    | Item Permissions all in 1 file | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | target  | none    | 1 file per $TargetPath; in each file, sort ACEs by target path | | target  | account | 1 file per $TargetPath; in each file, group ACEs by account and sort by account name | | target  | item    | 1 file per $TargetPath; in each file, group ACEs by item and sort by item path | | target  | target  | (same as -SplitBy target -GroupBy none) |</maml:para>
+            <maml:para>| SplitBy | GroupBy | Description | |---------|---------|-------------| | none    | none    | Flat Permissions all in 1 file | | none    | account | Account Permissions all in 1 file | | none    | item    | Item Permissions all in 1 file | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | target  | none    | 1 file per source path; in each file, sort ACEs by target path | | target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | target  | target  | (same as -SplitBy target -GroupBy none) |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -458,7 +458,7 @@
         <maml:name>GroupBy</maml:name>
         <maml:description>
           <maml:para>How to group the permissions in the output stream and within each exported file</maml:para>
-          <maml:para>| SplitBy | GroupBy | Description | |---------|---------|-------------| | none    | none    | Flat Permissions all in 1 file | | none    | account | Account Permissions all in 1 file | | none    | item    | Item Permissions all in 1 file | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | target  | none    | 1 file per $TargetPath; in each file, sort ACEs by target path | | target  | account | 1 file per $TargetPath; in each file, group ACEs by account and sort by account name | | target  | item    | 1 file per $TargetPath; in each file, group ACEs by item and sort by item path | | target  | target  | (same as -SplitBy target -GroupBy none) |</maml:para>
+          <maml:para>| SplitBy | GroupBy | Description | |---------|---------|-------------| | none    | none    | Flat Permissions all in 1 file | | none    | account | Account Permissions all in 1 file | | none    | item    | Item Permissions all in 1 file | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | target  | none    | 1 file per source path; in each file, sort ACEs by target path | | target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | target  | target  | (same as -SplitBy target -GroupBy none) |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -635,6 +635,21 @@
         </dev:type>
         <dev:defaultValue>-1</dev:defaultValue>
       </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
+        <maml:name>SourcePath</maml:name>
+        <maml:description>
+          <maml:para>Path to the item whose permissions to export</maml:para>
+          <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
+          <maml:para>Does Not Support (ToDo): - same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
+          <maml:para>- M365 targets (SP sites, Teams, etc)</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
+        <dev:type>
+          <maml:name>System.IO.DirectoryInfo[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
         <maml:name>SplitBy</maml:name>
         <maml:description>
@@ -650,21 +665,6 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>Target</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="1" aliases="none">
-        <maml:name>TargetPath</maml:name>
-        <maml:description>
-          <maml:para>Path to the item whose permissions to export</maml:para>
-          <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
-          <maml:para>Does Not Support (ToDo): - same targets as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
-          <maml:para>- M365 targets (SP sites, Teams, etc)</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.IO.DirectoryInfo[]</command:parameterValue>
-        <dev:type>
-          <maml:name>System.IO.DirectoryInfo[]</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>ThreadCount</maml:name>
@@ -695,7 +695,7 @@
     <command:inputTypes>
       <command:inputType>
         <dev:type>
-          <maml:name>[System.IO.DirectoryInfo[]] TargetPath parameter</maml:name>
+          <maml:name>[System.IO.DirectoryInfo[]] SourcePath parameter</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -731,14 +731,14 @@
     <command:examples>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Exclude the built-in Administrator account from the HTML report</maml:para>
@@ -748,7 +748,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 3 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -ExcludeAccount @(
     'BUILTIN\\Administrators',
     'BUILTIN\\Administrator',
     'CREATOR OWNER',
@@ -766,7 +766,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -ExcludeClass @('computer')</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Include empty groups on the HTML report (rather than the default setting which would exclude computers and groups)</maml:para>
@@ -774,7 +774,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -NoGroupMembers -ExcludeClass @('computer')</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
           <maml:para>Do not spend time retrieving group members</maml:para>
@@ -783,7 +783,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 6 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -IgnoreDomain 'CONTOSO'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Remove the CONTOSO domain prefix from associated accounts and groups</maml:para>
@@ -791,7 +791,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 7 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Remove the CONTOSO1\ and CONTOSO2\ domain prefixes from associated accounts and groups</maml:para>
@@ -801,7 +801,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 8 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -LogDir C:\Logs</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Redirect logs and output files to C:\Logs instead of the default location in AppData</maml:para>
@@ -809,14 +809,14 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 9 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -RecurseDepth 0</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 10 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -RecurseDepth 2</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test</maml:para>
           <maml:para>Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)</maml:para>
@@ -824,7 +824,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 11 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath C:\Test -Title 'New Custom Report Title'</dev:code>
         <dev:remarks>
           <maml:para>Generate reports on the NTFS permissions for the folder C:\Test and all subfolders</maml:para>
           <maml:para>Change the title of the HTML report to 'New Custom Report Title'</maml:para>
@@ -832,7 +832,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 12 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'</dev:code>
         <dev:remarks>
           <maml:para>The target path is a DFS folder with folder targets</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
@@ -840,7 +840,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 13 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'</dev:code>
         <dev:remarks>
           <maml:para>The target path is a DFS subfolder with folder targets</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
@@ -848,7 +848,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 14 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'</dev:code>
         <dev:remarks>
           <maml:para>The target path is a subfolder of a DFS subfolder with folder targets</maml:para>
           <maml:para>Generate reports on the NTFS permissions for the DFS folder targets associated with this path</maml:para>
@@ -856,7 +856,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 15 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
           <maml:para>The target path is the root of an AD domain</maml:para>
@@ -865,7 +865,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 16 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\computer.ad.contoso.com\'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
           <maml:para>The target path is the root of a SMB server</maml:para>
@@ -874,7 +874,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 17 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported</maml:para>
           <maml:para>The target path is a DFS namespace</maml:para>
@@ -884,7 +884,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 18 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported.</maml:para>
           <maml:para>The target path is a DFS folder without a folder target</maml:para>
@@ -894,7 +894,7 @@
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 19 --------------------------</maml:title>
-        <dev:code>Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'</dev:code>
+        <dev:code>Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'</dev:code>
         <dev:remarks>
           <maml:para>This is an edge case that is not currently supported.</maml:para>
           <maml:para>The target path is a DFS subfolder without a folder target.</maml:para>

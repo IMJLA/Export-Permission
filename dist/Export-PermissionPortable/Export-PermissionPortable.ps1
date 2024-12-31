@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.555
+.VERSION 0.0.556
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comment-based help
+rename TargetPath param to SourcePath for clarity
 
 .PRIVATEDATA
 
@@ -59,7 +59,7 @@ Does not support these scenarios:
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
 Behavior:
-- Resolves each path in the TargetPath parameter
+- Resolves each path in the SourcePath parameter
   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
   - DFS paths become all of their UNC folder targets, including disabled ones
   - Mapped network drives become their UNC paths
@@ -80,7 +80,7 @@ Behavior:
 param (
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ Test-Path $_ })]
-    [System.IO.DirectoryInfo[]]$TargetPath,
+    [System.IO.DirectoryInfo[]]$SourcePath,
     [string[]]$ExcludeAccount = '\\SYSTEM$',
     [string[]]$IncludeAccount,
     [string[]]$ExcludeClass = @('group', 'computer'),
@@ -10001,9 +10001,9 @@ process {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'TargetPath' = $TargetPath
+        'TargetPath' = $SourcePath
     }
-    $TargetCount = $TargetPath.Count
+    $TargetCount = $SourcePath.Count
     Write-LogMsg -Text 'Resolve-PermissionTarget' -Suffix " # for $TargetCount Target Paths" -Expand $Cmd, $Cached @Cached @CacheMap
     Resolve-PermissionTarget @Cmd @Cached
 }
@@ -10154,7 +10154,7 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'TargetPath' = $TargetPath ;
+        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ; 'TargetPath' = $SourcePath ;
         'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ; 'FileFormat' = $FileFormat ;
         'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $OutputDir ; 'OutputFormat' = $OutputFormat ;
         'NoMembers' = $NoMembers ; 'RecurseDepth' = $RecurseDepth ; 'SplitBy' = $SplitBy ; 'Title' = $Title ;

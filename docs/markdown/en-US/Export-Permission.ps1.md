@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.555
+help version: 0.0.556
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -17,7 +17,7 @@ Create CSV, HTML, JSON, and XML exports of permissions
 ## SYNTAX
 
 ```powershell
-Export-Permission.ps1 [-TargetPath] <DirectoryInfo[]> [[-ExcludeAccount] <String[]>]
+Export-Permission.ps1 [-SourcePath] <DirectoryInfo[]> [[-ExcludeAccount] <String[]>]
  [[-IncludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>]
  [[-OutputDir] <String>] [-NoMembers] [[-RecurseDepth] <Int32>] [[-Title] <String>]
  [[-AccountConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
@@ -52,7 +52,7 @@ Does not support these scenarios:
 - Share permissions (ToDo enhancement; for now only NTFS permissions are reported)
 
 Behavior:
-- Resolves each path in the TargetPath parameter
+- Resolves each path in the SourcePath parameter
   - Local paths become UNC paths using the administrative shares, so the computer name is shown in reports
   - DFS paths become all of their UNC folder targets, including disabled ones
   - Mapped network drives become their UNC paths
@@ -71,14 +71,14 @@ Behavior:
 
 ### EXAMPLE 1
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test
+Export-Permission.ps1 -SourcePath C:\Test
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
 
 ### EXAMPLE 2
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
+Export-Permission.ps1 -SourcePath C:\Test -ExcludeAccount 'BUILTIN\\Administrator'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -91,7 +91,7 @@ The RegEx escape character is \ so the regular expression needed for the paramet
 
 ### EXAMPLE 3
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -ExcludeAccount @(
+Export-Permission.ps1 -SourcePath C:\Test -ExcludeAccount @(
     'BUILTIN\\Administrators',
     'BUILTIN\\Administrator',
     'CREATOR OWNER',
@@ -111,7 +111,7 @@ Note: CREATOR OWNER will still be reported as an alarm in the PRTG XML output
 
 ### EXAMPLE 4
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -ExcludeClass @('computer')
+Export-Permission.ps1 -SourcePath C:\Test -ExcludeClass @('computer')
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -120,7 +120,7 @@ Include empty groups on the HTML report (rather than the default setting which w
 
 ### EXAMPLE 5
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -NoGroupMembers -ExcludeClass @('computer')
+Export-Permission.ps1 -SourcePath C:\Test -NoGroupMembers -ExcludeClass @('computer')
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test
@@ -131,7 +131,7 @@ Include groups on the report, but exclude computers (rather than the default set
 
 ### EXAMPLE 6
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO'
+Export-Permission.ps1 -SourcePath C:\Test -IgnoreDomain 'CONTOSO'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -140,7 +140,7 @@ Remove the CONTOSO domain prefix from associated accounts and groups
 
 ### EXAMPLE 7
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
+Export-Permission.ps1 -SourcePath C:\Test -IgnoreDomain 'CONTOSO1','CONTOSO2'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -153,7 +153,7 @@ Across the two domains, groups with the same Names will be considered equivalent
 
 ### EXAMPLE 8
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -LogDir C:\Logs
+Export-Permission.ps1 -SourcePath C:\Test -LogDir C:\Logs
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -162,14 +162,14 @@ Redirect logs and output files to C:\Logs instead of the default location in App
 
 ### EXAMPLE 9
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 0
+Export-Permission.ps1 -SourcePath C:\Test -RecurseDepth 0
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test only (no subfolders)
 
 ### EXAMPLE 10
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -RecurseDepth 2
+Export-Permission.ps1 -SourcePath C:\Test -RecurseDepth 2
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test
@@ -178,7 +178,7 @@ Only include subfolders to a maximum of 2 levels deep (C:\Test\Level1\Level2)
 
 ### EXAMPLE 11
 ```powershell
-Export-Permission.ps1 -TargetPath C:\Test -Title 'New Custom Report Title'
+Export-Permission.ps1 -SourcePath C:\Test -Title 'New Custom Report Title'
 ```
 
 Generate reports on the NTFS permissions for the folder C:\Test and all subfolders
@@ -187,7 +187,7 @@ Change the title of the HTML report to 'New Custom Report Title'
 
 ### EXAMPLE 12
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithTarget'
 ```
 
 The target path is a DFS folder with folder targets
@@ -196,7 +196,7 @@ Generate reports on the NTFS permissions for the DFS folder targets associated w
 
 ### EXAMPLE 13
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget'
 ```
 
 The target path is a DFS subfolder with folder targets
@@ -205,7 +205,7 @@ Generate reports on the NTFS permissions for the DFS folder targets associated w
 
 ### EXAMPLE 14
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget\DfsSubfolderWithTarget\Subfolder'
 ```
 
 The target path is a subfolder of a DFS subfolder with folder targets
@@ -214,7 +214,7 @@ Generate reports on the NTFS permissions for the DFS folder targets associated w
 
 ### EXAMPLE 15
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\'
 ```
 
 This is an edge case that is not currently supported
@@ -227,7 +227,7 @@ or otherwise handle error.
 
 ### EXAMPLE 16
 ```powershell
-Export-Permission.ps1 -TargetPath '\\computer.ad.contoso.com\'
+Export-Permission.ps1 -SourcePath '\\computer.ad.contoso.com\'
 ```
 
 This is an edge case that is not currently supported
@@ -240,7 +240,7 @@ or otherwise handle error.
 
 ### EXAMPLE 17
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace'
 ```
 
 This is an edge case that is not currently supported
@@ -253,7 +253,7 @@ Add a warning that they are permissions from the DFS namespace server and could 
 
 ### EXAMPLE 18
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget'
 ```
 
 This is an edge case that is not currently supported.
@@ -266,7 +266,7 @@ Add a warning that they are permissions from the DFS namespace server and could 
 
 ### EXAMPLE 19
 ```powershell
-Export-Permission.ps1 -TargetPath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
+Export-Permission.ps1 -SourcePath '\\ad.contoso.com\DfsNamespace\DfsFolderWithoutTarget\DfsSubfolderWithoutTarget'
 ```
 
 This is an edge case that is not currently supported.
@@ -418,9 +418,9 @@ How to group the permissions in the output stream and within each exported file
 | item    | none    | 1 file per item; in each file, sort ACEs by account name |
 | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name |
 | item    | item    | (same as -SplitBy item -GroupBy none) |
-| target  | none    | 1 file per $TargetPath; in each file, sort ACEs by target path |
-| target  | account | 1 file per $TargetPath; in each file, group ACEs by account and sort by account name |
-| target  | item    | 1 file per $TargetPath; in each file, group ACEs by item and sort by item path |
+| target  | none    | 1 file per source path; in each file, sort ACEs by target path |
+| target  | account | 1 file per source path; in each file, group ACEs by account and sort by account name |
+| target  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path |
 | target  | target  | (same as -SplitBy target -GroupBy none) |
 
 ```yaml
@@ -652,27 +652,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -SplitBy
-How to split up the exported files:
-- none    generate 1 report file with all permissions
-- target  generate 1 report file per target (default)
-- item    generate 1 report file per item
-- account generate 1 report file per account
-- all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
-
-```yaml
-Type: System.String[]
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: 15
-Default value: Target
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -TargetPath
+### -SourcePath
 Path to the item whose permissions to export
 
 Supports:
@@ -695,6 +675,26 @@ Required: True
 Position: 1
 Default value: None
 Accept pipeline input: True (ByValue)
+Accept wildcard characters: False
+```
+
+### -SplitBy
+How to split up the exported files:
+- none    generate 1 report file with all permissions
+- target  generate 1 report file per target (default)
+- item    generate 1 report file per item
+- account generate 1 report file per account
+- all     generate 1 report file per target and 1 file per item and 1 file per account and 1 file with all permissions.
+
+```yaml
+Type: System.String[]
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 15
+Default value: Target
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
@@ -736,7 +736,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ## INPUTS
 
-### [System.IO.DirectoryInfo[]] TargetPath parameter
+### [System.IO.DirectoryInfo[]] SourcePath parameter
 ### Strings can be passed to this parameter and will be re-cast as DirectoryInfo objects.
 ## OUTPUTS
 
