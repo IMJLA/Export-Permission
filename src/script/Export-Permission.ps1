@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.544
+.VERSION 0.0.545
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove extra spaces from script file
+bugfix repair-scriptfile
 
 .PRIVATEDATA
 
@@ -746,4 +746,5 @@ end {
     Write-Progress @Progress -Completed
 
 }
+
 

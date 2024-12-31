@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.545] - 2024-12-30
+### Fixed
+- bugfix repair-scriptfile
+
 ## [0.0.544] - 2024-12-30
 ### Removed
 - remove extra spaces from script file
