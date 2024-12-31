@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.548
+help version: 0.0.549
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -288,20 +288,21 @@ By default, this is a ScriptBlock that always evaluates to $true so it doesn't e
 
 In the ScriptBlock, any account properties are available for evaluation:
 
-$_.DomainNetbios -eq 'CONTOSO'
+{ $_.DomainNetbios -eq 'CONTOSO' }
+
 Accounts used in ACEs should be in the CONTOSO domain
 
-$_.Name -eq 'Group23'
+{ $_.Name -eq 'Group23' }
+
 Accounts used in ACEs should be named Group23
 
-$_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23'
+{ $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' }
+
 Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
 The format of the ResolvedAccountName property is CONTOSO\Group1
-  where
-    CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
-    and
-    Group1 is the samAccountName of the account
+- CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
+- Group1 is the samAccountName of the account
 
 ```yaml
 Type: System.Management.Automation.ScriptBlock

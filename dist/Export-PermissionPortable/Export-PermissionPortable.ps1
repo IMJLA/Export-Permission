@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.548
+.VERSION 0.0.549
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comment-based help for param
+attempt to add scriptblocks to comment-based help (but I seem to recall this causing trouble for platyps)
 
 .PRIVATEDATA
 

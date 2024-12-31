@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.548
+.VERSION 0.0.549
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comment-based help for param
+attempt to add scriptblocks to comment-based help (but I seem to recall this causing trouble for platyps)
 
 .PRIVATEDATA
 
@@ -335,20 +335,21 @@ param (
 
     In the ScriptBlock, any account properties are available for evaluation:
 
-    $_.DomainNetbios -eq 'CONTOSO'
+    { $_.DomainNetbios -eq 'CONTOSO' }
+
     Accounts used in ACEs should be in the CONTOSO domain
 
-    $_.Name -eq 'Group23'
+    { $_.Name -eq 'Group23' }
+
     Accounts used in ACEs should be named Group23
 
-    $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23'
+    { $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' }
+
     Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
     The format of the ResolvedAccountName property is CONTOSO\Group1
-      where
-        CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
-        and
-        Group1 is the samAccountName of the account
+    - CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)
+    - Group1 is the samAccountName of the account
     #>
     [scriptblock]$AccountConvention = { $true },
 
