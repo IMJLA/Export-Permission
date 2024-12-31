@@ -10,7 +10,7 @@ Write-Host "`t`$Content = Get-Content -LiteralPath '$Path' -Raw"
 $Content = Get-Content -LiteralPath $Path -Raw
 
 # Module name is blank for a script because it has no manifest to get it from. Remove this invalid field.
-Write-Host "`t`while (`$Content.Contains("`r`n`r`n`r`n")) { `$Content = `$Content.Replace("``r``n``r``n``r``n", "``r``n``r``n") }"
+Write-Host "`t`while (`$Content.Contains("``r``n``r``n``r``n")) { `$Content = `$Content.Replace("``r``n``r``n``r``n", "``r``n``r``n") }"
 while ($Content.Contains("`r`n`r`n`r`n")) {
     $Content = $Content.Replace("`r`n`r`n`r`n", "`r`n`r`n")
 }

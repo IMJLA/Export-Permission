@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.546] - 2024-12-30
+### Fixed
+- bugfix build
+
 ## [0.0.545] - 2024-12-30
 ### Fixed
 - bugfix repair-scriptfile

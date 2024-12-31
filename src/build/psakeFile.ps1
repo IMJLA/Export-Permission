@@ -196,18 +196,18 @@ Task DetermineNewVersionNumber -depends Lint {
 
 Task UpdateScriptVersion -depends DetermineNewVersionNumber {
 
-    Pause
     Write-Host "`tUpdate-ScriptFileInfo -Path '$MainScript' -Version $script:NewVersion -ReleaseNotes '$CommitMessage'"
     Update-ScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
-    #BUG: As of PSResourceGet version 1.0.4, Update-PSScriptFileInfo removes double-line breaks from the comment-based help, which is a problem for markdown syntax highlighting.
+    # BUG: As of PSResourceGet version 1.0.4, Update-PSScriptFileInfo removes double-line breaks from the comment-based help.
+    # This a problem for markdown syntax highlighting (it causes notes below the code to be formatted as part of the code block)
     #Update-PSScriptFileInfo -Path $MainScript -Version $script:NewVersion -ReleaseNotes $CommitMessage
-    Pause
 
 } -description 'Update PSScriptInfo with the new version.'
 
 Task RepairScriptFile -depends UpdateScriptVersion {
 
     # Workaround a bug in Update-ScriptFileInfo which adds a blank line to the script every time it runs.
+    # https://github.com/PowerShell/PSResourceGet/issues/347
     $ScriptToRun = [IO.Path]::Combine('.', 'Repair-ScriptFile.ps1')
     Write-Host "`t. $ScriptToRun -Path '$MainScript'"
     . $ScriptToRun -Path $MainScript
