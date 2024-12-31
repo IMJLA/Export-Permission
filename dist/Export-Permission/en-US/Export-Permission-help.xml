@@ -294,10 +294,7 @@
             <maml:para>Valid accounts that are allowed to appear in ACEs</maml:para>
             <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
             <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance</maml:para>
-            <maml:para>In the ScriptBlock, any account properties are available for evaluation: ` $_.DomainNetbios -eq 'CONTOSO' )`</maml:para>
-            <maml:para>Accounts used in ACEs should be in the CONTOSO domain ` $_.Name -eq 'Group23' )`</maml:para>
-            <maml:para>Accounts used in ACEs should be named Group23 ` $ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23' )`</maml:para>
-            <maml:para>Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
+            <maml:para>In the ScriptBlock, any account properties are available for evaluation: - ` $_.DomainNetbios -eq 'CONTOSO' )`  Accounts used in ACEs should be in the CONTOSO domain - ` $_.Name -eq 'Group23' )` Accounts used in ACEs should be named Group23 - ` $ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23' )` Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
             <maml:para>The format of the ResolvedAccountName property is CONTOSO\Group1 - CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)</maml:para>
             <maml:para>- Group1 is the samAccountName of the account</maml:para>
           </maml:description>
@@ -343,7 +340,7 @@
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="proga">
-          <maml:name>ProgressAction`{ Fill ProgressAction Description )`}</maml:name>
+          <maml:name>ProgressAction- `{ Fill ProgressAction Description )`}</maml:name>
           <maml:description>
             <maml:para></maml:para>
           </maml:description>
@@ -363,10 +360,7 @@
           <maml:para>Valid accounts that are allowed to appear in ACEs</maml:para>
           <maml:para>Specify as a ScriptBlock meant for the FilterScript parameter of Where-Object</maml:para>
           <maml:para>By default, this is a ScriptBlock that always evaluates to $true so it doesn't evaluate any account convention compliance</maml:para>
-          <maml:para>In the ScriptBlock, any account properties are available for evaluation: ` $_.DomainNetbios -eq 'CONTOSO' )`</maml:para>
-          <maml:para>Accounts used in ACEs should be in the CONTOSO domain ` $_.Name -eq 'Group23' )`</maml:para>
-          <maml:para>Accounts used in ACEs should be named Group23 ` $ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23' )`</maml:para>
-          <maml:para>Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
+          <maml:para>In the ScriptBlock, any account properties are available for evaluation: - ` $_.DomainNetbios -eq 'CONTOSO' )`  Accounts used in ACEs should be in the CONTOSO domain - ` $_.Name -eq 'Group23' )` Accounts used in ACEs should be named Group23 - ` $ .ResolvedAccountName -like 'CONTOSO\Group1*' -or $ .ResolvedAccountName -eq 'CONTOSO\Group23' )` Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23</maml:para>
           <maml:para>The format of the ResolvedAccountName property is CONTOSO\Group1 - CONTOSO is the NetBIOS name of the domain (the computer name for local accounts)</maml:para>
           <maml:para>- Group1 is the samAccountName of the account</maml:para>
         </maml:description>
@@ -552,7 +546,7 @@
         <dev:defaultValue>Passthru</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="proga">
-        <maml:name>ProgressAction`{ Fill ProgressAction Description )`}</maml:name>
+        <maml:name>ProgressAction- `{ Fill ProgressAction Description )`}</maml:name>
         <maml:description>
           <maml:para></maml:para>
         </maml:description>

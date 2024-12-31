@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.550
+.VERSION 0.0.551
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comment-based help
+update comment based help
 
 .PRIVATEDATA
 
@@ -336,15 +336,12 @@ param (
     In the ScriptBlock, any account properties are available for evaluation:
 
     { $_.DomainNetbios -eq 'CONTOSO' }
-
-    Accounts used in ACEs should be in the CONTOSO domain
+     Accounts used in ACEs should be in the CONTOSO domain
 
     { $_.Name -eq 'Group23' }
-
     Accounts used in ACEs should be named Group23
 
     { $_.ResolvedAccountName -like 'CONTOSO\Group1*' -or $_.ResolvedAccountName -eq 'CONTOSO\Group23' }
-
     Accounts used in ACEs should be in the CONTOSO domain and named Group1something or Group23
 
     The format of the ResolvedAccountName property is CONTOSO\Group1

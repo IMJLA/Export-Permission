@@ -22,7 +22,7 @@ $NewMarkdown = $NewMarkdown -replace 'external help file: -help.xml', "external 
 
 # Get rid of squiggly braces in parameter descriptions to avoid Docusaurus HTML conversion issues because of JSON escaping not being supported.
 while ($NewMarkdown -match '[^:][\s]{(?<expression>[^}]+)}') {
-    $NewMarkdown = $NewMarkdown.Replace($Matches[0], "``$($Matches['expression']))``")
+    $NewMarkdown = $NewMarkdown.Replace($Matches[0], "- ``$($Matches['expression']))``")
 }
 
 # Workaround a bug since PS 7.4 introduced the ProgressAction common param which is not yet supported by PlatyPS

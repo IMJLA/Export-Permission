@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.550
+.VERSION 0.0.551
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update comment-based help
+update comment based help
 
 .PRIVATEDATA
 
