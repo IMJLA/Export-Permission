@@ -1,4 +1,4 @@
-# SplitBy Item & GroupBy None/Item/Target
+# SplitBy Item & GroupBy None/Item/Source
 
 ## Item
 

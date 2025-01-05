@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.559] - 2025-01-05
+### Added
+- implement splitby account groupby account
+
 ## [0.0.558] - 2024-12-30
 ### Changed
 - continue param rename

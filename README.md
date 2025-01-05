@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.558
+help version: 0.0.559
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -17,13 +17,13 @@ Create CSV, HTML, JSON, and XML exports of permissions
 ## SYNTAX
 
 ```powershell
-Export-Permission.ps1 [-SourcePath] <DirectoryInfo[]> [[-ExcludeAccount] <String[]>]
- [[-IncludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-IgnoreDomain] <String[]>]
- [[-OutputDir] <String>] [-NoMembers] [[-RecurseDepth] <Int32>] [[-Title] <String>]
- [[-AccountConvention] <ScriptBlock>] [[-ThreadCount] <UInt16>] [-Interactive] [[-PrtgProbe] <String>]
- [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>] [[-PrtgToken] <String>] [[-SplitBy] <String[]>]
+Export-Permission.ps1 [-SourcePath] <DirectoryInfo[]> [[-RecurseDepth] <Int32>] [[-IncludeAccount] <String[]>]
+ [[-ExcludeAccount] <String[]>] [[-ExcludeClass] <String[]>] [[-AccountProperty] <String[]>] [-NoMembers]
+ [[-IgnoreDomain] <String[]>] [[-OutputDir] <String>] [[-Title] <String>] [[-SplitBy] <String[]>]
  [[-GroupBy] <String>] [[-FileFormat] <String[]>] [[-OutputFormat] <String>] [[-Detail] <Int32[]>]
- [-NoProgress] [[-AccountProperty] <String[]>] [<CommonParameters>]
+ [[-AccountConvention] <ScriptBlock>] [[-PrtgProbe] <String>] [[-PrtgProtocol] <String>] [[-PrtgPort] <UInt16>]
+ [[-PrtgToken] <String>] [[-ThreadCount] <UInt16>] [-Interactive] [-NoProgress]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -304,7 +304,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 9
+Position: 15
 Default value: { $true }
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -319,7 +319,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 20
+Position: 6
 Default value: @('DisplayName', 'Company', 'Department', 'Title', 'Description')
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -348,7 +348,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 19
+Position: 14
 Default value: 10
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -363,7 +363,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 2
+Position: 4
 Default value: \\SYSTEM$
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -386,7 +386,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 4
+Position: 5
 Default value: @('group', 'computer')
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -401,7 +401,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 17
+Position: 12
 Default value: Js
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -433,7 +433,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 16
+Position: 11
 Default value: Item
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -452,7 +452,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 5
+Position: 7
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -461,7 +461,7 @@ Accept wildcard characters: False
 ### -IncludeAccount
 Regular expressions matching names of accounts to include in the HTML report
 
-If this parameter is specified, only accounts whose names match these regular expressions will be returned
+If this parameter is specified, only accounts whose names match these regular expressions will be included
 
 ```yaml
 Type: System.String[]
@@ -535,7 +535,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 6
+Position: 8
 Default value: "$env:AppData\Export-Permission"
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -550,7 +550,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 18
+Position: 13
 Default value: Passthru
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -581,7 +581,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 13
+Position: 18
 Default value: 0
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -598,7 +598,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 11
+Position: 16
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -615,7 +615,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 12
+Position: 17
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -632,7 +632,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 14
+Position: 19
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -650,7 +650,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 7
+Position: 2
 Default value: -1
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -688,9 +688,9 @@ How to split up the exported files:
 | Value   | Behavior |
 |---------|----------|
 | none    | generate 1 report file with all permissions |
-| source  | generate 1 report file per source path (default) |
-| item    | generate 1 report file per item |
 | account | generate 1 report file per account |
+| item    | generate 1 report file per item |
+| source  | generate 1 report file per source path (default) |
 
 ```yaml
 Type: System.String[]
@@ -698,7 +698,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 15
+Position: 10
 Default value: Source
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -716,7 +716,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 10
+Position: 20
 Default value: 1
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -731,7 +731,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 8
+Position: 9
 Default value: Permissions Report
 Accept pipeline input: False
 Accept wildcard characters: False

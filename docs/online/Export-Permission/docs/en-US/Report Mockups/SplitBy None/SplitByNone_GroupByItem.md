@@ -1,6 +1,6 @@
 # SplitBy None & GroupBy Item
 
-## Target Paths
+## Source Paths
 
 - C:\Folder1
 - C:\Folder2
@@ -9,7 +9,7 @@ Includes all subfolders with unique permissions
 
 ## Network Paths
 
-Local target paths were resolved to UNC paths, and UNC target paths were resolved to DFS folder targets
+Local source paths were resolved to UNC paths, and UNC source paths were resolved to DFS folder targets
 
 | Path | Inheritance |
 |------|-------------|

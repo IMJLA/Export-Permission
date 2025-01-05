@@ -51,75 +51,10 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
-          <maml:name>ThreadCount</maml:name>
-          <maml:description>
-            <maml:para>Number of asynchronous threads to use</maml:para>
-            <maml:para>Recommended starting with the # of logical CPUs: - ` (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum )`</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
-          <dev:type>
-            <maml:name>System.UInt16</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>1</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
-          <maml:name>PrtgProbe</maml:name>
-          <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
-            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
-          <maml:name>PrtgProtocol</maml:name>
-          <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
-            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="13" aliases="none">
-          <maml:name>PrtgPort</maml:name>
-          <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
-            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
-          <dev:type>
-            <maml:name>System.UInt16</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>0</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
-          <maml:name>PrtgToken</maml:name>
-          <maml:description>
-            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
-            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
           <maml:name>SplitBy</maml:name>
           <maml:description>
             <maml:para>How to split up the exported files:</maml:para>
-            <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | source  | generate 1 report file per source path (default) | | item    | generate 1 report file per item | | account | generate 1 report file per account |</maml:para>
+            <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | account | generate 1 report file per account | | item    | generate 1 report file per item | | source  | generate 1 report file per source path (default) |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
@@ -128,7 +63,7 @@
           </dev:type>
           <dev:defaultValue>Source</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
           <maml:name>GroupBy</maml:name>
           <maml:description>
             <maml:para>How to group the permissions in the output stream and within each exported file. Interacts with the SplitBy parameter:</maml:para>
@@ -141,7 +76,7 @@
           </dev:type>
           <dev:defaultValue>Item</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
           <maml:name>FileFormat</maml:name>
           <maml:description>
             <maml:para>File format(s) to export</maml:para>
@@ -153,7 +88,7 @@
           </dev:type>
           <dev:defaultValue>Js</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="18" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="13" aliases="none">
           <maml:name>OutputFormat</maml:name>
           <maml:description>
             <maml:para>Type of output returned to the output stream</maml:para>
@@ -165,7 +100,7 @@
           </dev:type>
           <dev:defaultValue>Passthru</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
           <maml:name>Detail</maml:name>
           <maml:description>
             <maml:para>Level of detail to export to file</maml:para>
@@ -178,112 +113,7 @@
           </dev:type>
           <dev:defaultValue>10</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
-          <maml:name>ExcludeAccount</maml:name>
-          <maml:description>
-            <maml:para>Regular expressions matching names of accounts to exclude from the HTML report</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>\\SYSTEM$</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="20" aliases="none">
-          <maml:name>AccountProperty</maml:name>
-          <maml:description>
-            <maml:para>Properties of each account to display on the report (left out: managedBy, operatingSystem)</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>@('DisplayName', 'Company', 'Department', 'Title', 'Description')</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
-          <maml:name>IncludeAccount</maml:name>
-          <maml:description>
-            <maml:para>Regular expressions matching names of accounts to include in the HTML report</maml:para>
-            <maml:para>If this parameter is specified, only accounts whose names match these regular expressions will be returned</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
-          <maml:name>ExcludeClass</maml:name>
-          <maml:description>
-            <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
-            <maml:para>Note on the 'group' class:</maml:para>
-            <maml:para>By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.</maml:para>
-            <maml:para>Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).</maml:para>
-            <maml:para>So the 'group' class is excluded here by default.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>@('group', 'computer')</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
-          <maml:name>IgnoreDomain</maml:name>
-          <maml:description>
-            <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
-            <maml:para>Can be used: - to ensure accounts only appear once on the report when they have matching SamAccountNames in multiple domains.</maml:para>
-            <maml:para>- when the domain is often the same and doesn't need to be displayed</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String[]</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
-          <maml:name>OutputDir</maml:name>
-          <maml:description>
-            <maml:para>Path to the folder to save the logs and reports generated by this script</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
-          <maml:name>RecurseDepth</maml:name>
-          <maml:description>
-            <maml:para>How many levels of child items to enumerate - Set to 0 to ignore all children</maml:para>
-            <maml:para>- Set to -1 (default) to recurse through all children</maml:para>
-            <maml:para>- Set to any whole number to enumerate that many levels of children</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Int32</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>-1</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
-          <maml:name>Title</maml:name>
-          <maml:description>
-            <maml:para>Title at the top of the HTML report</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>Permissions Report</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
           <maml:name>AccountConvention</maml:name>
           <maml:description>
             <maml:para>Valid accounts that are allowed to appear in ACEs</maml:para>
@@ -299,6 +129,176 @@
             <maml:uri />
           </dev:type>
           <dev:defaultValue>{ $true }</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
+          <maml:name>PrtgProbe</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
+          <maml:name>PrtgProtocol</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="18" aliases="none">
+          <maml:name>PrtgPort</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
+          <dev:type>
+            <maml:name>System.UInt16</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>0</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
+          <maml:name>PrtgToken</maml:name>
+          <maml:description>
+            <maml:para>If all four of the PRTG parameters are specified,</maml:para>
+            <maml:para>the results will be XML-formatted and pushed to the specified PRTG probe for a push sensor</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+          <maml:name>RecurseDepth</maml:name>
+          <maml:description>
+            <maml:para>How many levels of child items to enumerate - Set to 0 to ignore all children</maml:para>
+            <maml:para>- Set to -1 (default) to recurse through all children</maml:para>
+            <maml:para>- Set to any whole number to enumerate that many levels of children</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>-1</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="20" aliases="none">
+          <maml:name>ThreadCount</maml:name>
+          <maml:description>
+            <maml:para>Number of asynchronous threads to use</maml:para>
+            <maml:para>Recommended starting with the # of logical CPUs: - ` (Get-CimInstance -ClassName CIM_Processor | Measure-Object -Sum -Property NumberOfLogicalProcessors).Sum )`</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.UInt16</command:parameterValue>
+          <dev:type>
+            <maml:name>System.UInt16</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>1</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="3" aliases="none">
+          <maml:name>IncludeAccount</maml:name>
+          <maml:description>
+            <maml:para>Regular expressions matching names of accounts to include in the HTML report</maml:para>
+            <maml:para>If this parameter is specified, only accounts whose names match these regular expressions will be included</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
+          <maml:name>ExcludeAccount</maml:name>
+          <maml:description>
+            <maml:para>Regular expressions matching names of accounts to exclude from the HTML report</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>\\SYSTEM$</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
+          <maml:name>ExcludeClass</maml:name>
+          <maml:description>
+            <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
+            <maml:para>Note on the 'group' class:</maml:para>
+            <maml:para>By default, a group with members is replaced in the report by its members unless the -NoGroupMembers switch is used.</maml:para>
+            <maml:para>Any remaining groups are empty and not useful to see in the middle of a list of users/job titles/departments/etc).</maml:para>
+            <maml:para>So the 'group' class is excluded here by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>@('group', 'computer')</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
+          <maml:name>AccountProperty</maml:name>
+          <maml:description>
+            <maml:para>Properties of each account to display on the report (left out: managedBy, operatingSystem)</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>@('DisplayName', 'Company', 'Department', 'Title', 'Description')</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
+          <maml:name>IgnoreDomain</maml:name>
+          <maml:description>
+            <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
+            <maml:para>Can be used: - to ensure accounts only appear once on the report when they have matching SamAccountNames in multiple domains.</maml:para>
+            <maml:para>- when the domain is often the same and doesn't need to be displayed</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
+          <maml:name>OutputDir</maml:name>
+          <maml:description>
+            <maml:para>Path to the folder to save the logs and reports generated by this script</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+          <maml:name>Title</maml:name>
+          <maml:description>
+            <maml:para>Title at the top of the HTML report</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>Permissions Report</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>Interactive</maml:name>
@@ -351,7 +351,7 @@
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
         <maml:name>AccountConvention</maml:name>
         <maml:description>
           <maml:para>Valid accounts that are allowed to appear in ACEs</maml:para>
@@ -368,7 +368,7 @@
         </dev:type>
         <dev:defaultValue>{ $true }</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="20" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
         <maml:name>AccountProperty</maml:name>
         <maml:description>
           <maml:para>Properties of each account to display on the report (left out: managedBy, operatingSystem)</maml:para>
@@ -380,7 +380,7 @@
         </dev:type>
         <dev:defaultValue>@('DisplayName', 'Company', 'Department', 'Title', 'Description')</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
         <maml:name>Detail</maml:name>
         <maml:description>
           <maml:para>Level of detail to export to file</maml:para>
@@ -393,7 +393,7 @@
         </dev:type>
         <dev:defaultValue>10</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
         <maml:name>ExcludeAccount</maml:name>
         <maml:description>
           <maml:para>Regular expressions matching names of accounts to exclude from the HTML report</maml:para>
@@ -405,7 +405,7 @@
         </dev:type>
         <dev:defaultValue>\\SYSTEM$</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="4" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
         <maml:name>ExcludeClass</maml:name>
         <maml:description>
           <maml:para>Accounts whose objectClass property is in this list are excluded from the HTML report</maml:para>
@@ -421,7 +421,7 @@
         </dev:type>
         <dev:defaultValue>@('group', 'computer')</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
         <maml:name>FileFormat</maml:name>
         <maml:description>
           <maml:para>File format(s) to export</maml:para>
@@ -433,7 +433,7 @@
         </dev:type>
         <dev:defaultValue>Js</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
         <maml:name>GroupBy</maml:name>
         <maml:description>
           <maml:para>How to group the permissions in the output stream and within each exported file. Interacts with the SplitBy parameter:</maml:para>
@@ -446,7 +446,7 @@
         </dev:type>
         <dev:defaultValue>Item</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="5" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
         <maml:name>IgnoreDomain</maml:name>
         <maml:description>
           <maml:para>Domain(s) to ignore (they will be removed from the username)</maml:para>
@@ -464,7 +464,7 @@
         <maml:name>IncludeAccount</maml:name>
         <maml:description>
           <maml:para>Regular expressions matching names of accounts to include in the HTML report</maml:para>
-          <maml:para>If this parameter is specified, only accounts whose names match these regular expressions will be returned</maml:para>
+          <maml:para>If this parameter is specified, only accounts whose names match these regular expressions will be included</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
@@ -512,7 +512,7 @@
         </dev:type>
         <dev:defaultValue>False</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="6" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
         <maml:name>OutputDir</maml:name>
         <maml:description>
           <maml:para>Path to the folder to save the logs and reports generated by this script</maml:para>
@@ -524,7 +524,7 @@
         </dev:type>
         <dev:defaultValue>"$env:AppData\Export-Permission"</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="18" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="13" aliases="none">
         <maml:name>OutputFormat</maml:name>
         <maml:description>
           <maml:para>Type of output returned to the output stream</maml:para>
@@ -548,7 +548,7 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="13" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="18" aliases="none">
         <maml:name>PrtgPort</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -561,7 +561,7 @@
         </dev:type>
         <dev:defaultValue>0</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="11" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="16" aliases="none">
         <maml:name>PrtgProbe</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -574,7 +574,7 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="12" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="17" aliases="none">
         <maml:name>PrtgProtocol</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -587,7 +587,7 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="14" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="19" aliases="none">
         <maml:name>PrtgToken</maml:name>
         <maml:description>
           <maml:para>If all four of the PRTG parameters are specified,</maml:para>
@@ -600,7 +600,7 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="7" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="2" aliases="none">
         <maml:name>RecurseDepth</maml:name>
         <maml:description>
           <maml:para>How many levels of child items to enumerate - Set to 0 to ignore all children</maml:para>
@@ -629,11 +629,11 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="15" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
         <maml:name>SplitBy</maml:name>
         <maml:description>
           <maml:para>How to split up the exported files:</maml:para>
-          <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | source  | generate 1 report file per source path (default) | | item    | generate 1 report file per item | | account | generate 1 report file per account |</maml:para>
+          <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | account | generate 1 report file per account | | item    | generate 1 report file per item | | source  | generate 1 report file per source path (default) |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>
@@ -642,7 +642,7 @@
         </dev:type>
         <dev:defaultValue>Source</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="10" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="20" aliases="none">
         <maml:name>ThreadCount</maml:name>
         <maml:description>
           <maml:para>Number of asynchronous threads to use</maml:para>
@@ -655,7 +655,7 @@
         </dev:type>
         <dev:defaultValue>1</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="8" aliases="none">
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="9" aliases="none">
         <maml:name>Title</maml:name>
         <maml:description>
           <maml:para>Title at the top of the HTML report</maml:para>

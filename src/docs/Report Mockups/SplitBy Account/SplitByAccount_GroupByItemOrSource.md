@@ -1,6 +1,6 @@
-# SplitBy Account & GroupBy Item/Target
+# SplitBy Account & GroupBy Item/Source
 
-## Target Paths
+## Source Paths
 
 - C:\Folder1
 - C:\Folder2
@@ -9,7 +9,7 @@ Includes all subfolders with unique permissions
 
 ## Network Paths
 
-Local target paths were resolved to UNC paths, and UNC target paths were resolved to DFS folder targets
+Local source paths were resolved to UNC paths, and UNC source paths were resolved to DFS folder targets
 
 | Path | Inheritance |
 |------|-------------|
@@ -28,6 +28,6 @@ Local target paths were resolved to UNC paths, and UNC target paths were resolve
 
 Inherited permissions from the parent (C) are included. This folder can only be accessed by the accounts listed here:
 
-| Access | Due to Membership In | Source of Access | Account Property 1 | Account Property 2 | etc. |
-|--------|----------------------|------------------|------------------|------------------|------------------|
-| ReadAndExecute, Synchronize this folder but not subfolders | TestPC\\Group1 | Discretionary ACL | - | - | ... |
+| Access | Due to Membership In | Source of Access |
+|--------|----------------------|------------------|
+| ReadAndExecute, Synchronize this folder but not subfolders | TestPC\\Group1 | Discretionary ACL |
