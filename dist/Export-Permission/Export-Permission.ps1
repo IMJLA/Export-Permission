@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.559
+.VERSION 0.0.560
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement splitby account groupby account
+implement SplitBy Account GroupBy Item
 
 .PRIVATEDATA
 
