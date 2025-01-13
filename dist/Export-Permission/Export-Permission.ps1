@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.564
+.VERSION 0.0.565
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,20 +25,20 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add required module versions
+ensure dependency version feature is repeatable
 
 .PRIVATEDATA
 
 #> 
 
-#requires -Modules @{ 'ModuleName' = 'PsDfs' ; 'RequiredVersion' = '1.0.18' }
-#requires -Modules @{ 'ModuleName' = 'Adsi' ; 'RequiredVersion' = '4.0.520' }
-#requires -Modules @{ 'ModuleName' = 'Permission' ; 'RequiredVersion' = '0.0.1185' }
-#requires -Modules @{ 'ModuleName' = 'PsBootstrapCss' ; 'RequiredVersion' = '1.0.53' }
-#requires -Modules @{ 'ModuleName' = 'PsLogMessage' ; 'RequiredVersion' = '1.0.118' }
-#requires -Modules @{ 'ModuleName' = 'PsNtfs' ; 'RequiredVersion' = '2.0.227' }
-#requires -Modules @{ 'ModuleName' = 'PsRunspace' ; 'RequiredVersion' = '1.0.124' }
-#requires -Modules @{ 'ModuleName' = 'SimplePrtg' ; 'RequiredVersion' = '1.0.13' }
+#Requires -Module @{ ModuleName = 'PsDfs'; RequiredVersion = '1.0.18' }
+#Requires -Module @{ ModuleName = 'Adsi'; RequiredVersion = '4.0.520' }
+#Requires -Module @{ ModuleName = 'Permission'; RequiredVersion = '0.0.1185' }
+#Requires -Module @{ ModuleName = 'PsBootstrapCss'; RequiredVersion = '1.0.53' }
+#Requires -Module @{ ModuleName = 'PsLogMessage'; RequiredVersion = '1.0.118' }
+#Requires -Module @{ ModuleName = 'PsNtfs'; RequiredVersion = '2.0.227' }
+#Requires -Module @{ ModuleName = 'PsRunspace'; RequiredVersion = '1.0.124' }
+#Requires -Module @{ ModuleName = 'SimplePrtg'; RequiredVersion = '1.0.13' }
 
 <#
 .SYNOPSIS

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.565] - 2025-01-12
+### Changed
+- ensure dependency version feature is repeatable
+
 ## [0.0.564] - 2025-01-12
 ### Added
 - add required module versions

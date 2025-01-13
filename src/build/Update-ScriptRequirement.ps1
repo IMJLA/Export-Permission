@@ -13,16 +13,21 @@ $replacements = @{}
 
 foreach ($line in $Lines) {
 
-    if ($line -match '#requires -Module(.+)') {
+    if ($line -match '#requires -Module(?:s*)(.+)') {
 
+        $StringToReplace = $matches[0]
         $moduleName = $matches[1].Trim()
+
+        if ($moduleName -match 'ModuleName[^;=]*=([^;}]*)') {
+            $moduleName = $matches[1].Trim()
+        }
 
         $moduleVersion = Get-Module -Name $moduleName -ListAvailable |
         Sort-Object -Property Version -Descending |
         Select-Object -First 1 -ExpandProperty Version
 
         if ($moduleVersion) {
-            $replacements[$matches[0]] = "#requires -Modules @{ 'ModuleName' = '$moduleName' ; 'RequiredVersion' = '$moduleVersion' }"
+            $replacements[$StringToReplace] = "#requires -Modules @{ 'ModuleName' = '$moduleName' ; 'RequiredVersion' = '$moduleVersion' }"
         }
 
     }
