@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.563] - 2025-01-12
+### Added
+- add required module versions
+
+## [0.0.562] - 2025-01-12
+### Changed
+- specify required module versions
+
 ## [0.0.561] - 2025-01-12
 ### Changed
 - update docs

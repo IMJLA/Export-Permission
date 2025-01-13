@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.561
+.VERSION 0.0.563
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update docs
+add required module versions
 
 .PRIVATEDATA
 
@@ -524,7 +524,7 @@ begin {
         'OutputDir'      = $OutputDir
         'TranscriptFile' = $TranscriptFile
     }
-    $PermissionCache = New-PermissionCache @Cmd
+    $PermissionCache = Initialize-PermissionCache @Cmd
 
     # Create a splat of the cache parameter to pass to various functions for script readability.
     $Cache = [ref]$PermissionCache
@@ -535,7 +535,7 @@ begin {
     $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
-    Write-LogMsg -Text "`$Cache = [ref](New-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
+    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
 
     # Get the FQDN of the computer running the script.
     $Cmd = @{
@@ -613,15 +613,15 @@ end {
     $ProgressUpdate = @{
         'CurrentOperation' = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
         'PercentComplete'  = 25
-        'Status'           = '25% (step 6 of 20) Initialize-Cache'
+        'Status'           = '25% (step 6 of 20) Optimize-PermissionCache'
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
         'Fqdn' = $ServerFqdns
     }
     $FqdnCount = $ServerFqdns.Count
-    Write-LogMsg -Text 'Initialize-Cache' -Suffix " # for $FqdnCount Server FQDNs" -Expand $Cmd, $Cached @Cached @CacheMap
-    Initialize-Cache @Cmd @Cached
+    Write-LogMsg -Text 'Optimize-PermissionCache' -Suffix " # for $FqdnCount Server FQDNs" -Expand $Cmd, $Cached @Cached @CacheMap
+    Optimize-PermissionCache @Cmd @Cached
 
     # The resolved name will include the domain name (or local computer name for local accounts)
     $ProgressUpdate = @{
@@ -812,5 +812,6 @@ end {
     Write-Progress @Progress -Completed
 
 }
+
 
 

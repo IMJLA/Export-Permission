@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.561
+.VERSION 0.0.563
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update docs
+add required module versions
 
 .PRIVATEDATA
 
@@ -7477,121 +7477,7 @@ function Get-TimeZoneName {
         return $TimeZone.StandardName
     }
 }
-function Initialize-Cache {
-    param (
-        [string[]]$Fqdn,
-        [Parameter(Mandatory)]
-        [ref]$Cache
-    )
-    $Progress = Get-PermissionProgress -Activity 'Initialize-Cache' -Cache $Cache
-    $Count = $Fqdn.Count
-    $LogBuffer = $Cache.Value['LogBuffer']
-    $GetAdsiServer = @{
-        Cache = $Cache
-    }
-    $ThreadCount = $Cache.Value['ThreadCount'].Value
-    if ($ThreadCount -eq 1) {
-        $i = 0
-        ForEach ($ThisServerName in $Fqdn) {
-            [int]$PercentComplete = $i / $Count * 100
-            $i++ 
-            Write-Progress -Status "$PercentComplete% (FQDN $i of $Count) Get-AdsiServer" -CurrentOperation "Get-AdsiServer '$ThisServerName'" -PercentComplete $PercentComplete @Progress
-            Write-LogMsg -Text "Get-AdsiServer -Fqdn '$ThisServerName'" -Expand $GetAdsiServer -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value
-            $null = Get-AdsiServer -Fqdn $ThisServerName @GetAdsiServer
-        }
-    } else {
-        $SplitThread = @{
-            Command          = 'Get-AdsiServer'
-            InputObject      = $Fqdn
-            InputParameter   = 'Fqdn'
-            TodaysHostname   = $ThisHostname
-            WhoAmI           = $WhoAmI
-            LogBuffer        = $LogBuffer
-            Timeout          = 600
-            Threads          = $ThreadCount
-            ProgressParentId = $ProgressParentId
-            AddParam         = $GetAdsiServer
-        }
-        Write-LogMsg -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($Fqdn -join "',")')" -Cache $Cache
-        $null = Split-Thread @SplitThread
-    }
-    Write-Progress @Progress -Completed
-}
-function Invoke-PermissionAnalyzer {
-    param (
-        [hashtable]$AllowDisabledInheritance,
-        [scriptblock]$AccountConvention = { $true },
-        [Parameter(Mandatory)]
-        [ref]$Cache
-    )
-    $AclByPath = $Cache.Value['AclByPath']
-    $AceByGUID = $Cache.Value['AceByGUID']
-    $AceByGUID = $Cache.Value['AceByGUID']
-    $PrincipalByID = $Cache.Value['PrincipalByID']
-    $ItemsWithBrokenInheritance = $AclByPath.Value.Keys |
-    Where-Object -FilterScript {
-        $AclByPath.Value[$_].AreAccessRulesProtected -and
-        -not $AllowDisabledInheritance[$_]
-    }
-    $ViolatesAccountConvention = [scriptblock]::Create("!($AccountConvention)")
-    $NonCompliantAccounts = $PrincipalByID.Value.Values |
-    Where-Object -FilterScript { $_.SchemaClassName -eq 'Group' } |
-    Where-Object -FilterScript $ViolatesAccountConvention
-    if ($NonCompliantAccounts) {
-        $AceGUIDsWithNonCompliantAccounts = $Cache.Value['AceGuidByID'].Value[$NonCompliantAccounts]
-    }
-    if ($AceGUIDsWithNonCompliantAccounts) {
-        $ACEsWithNonCompliantAccounts = $AceByGUID.Value[$AceGUIDsWithNonCompliantAccounts]
-    }
-    $ACEsWithUsers = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $ACEsWithUnresolvedSIDs = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $ACEsWithCreatorOwner = [System.Collections.Generic.List[PSCustomObject]]::new()
-    ForEach ($ACE in $AceByGUID.Value.Values) {
-        if (
-            $PrincipalByID.Value[$ACE.IdentityReferenceResolved].SchemaClassName -eq 'User' -and
-            $_.IdentityReferenceSID -ne 'S-1-5-18' -and 
-            $_.SourceOfAccess -ne 'Ownership' 
-        ) {
-            $ACEsWithUsers.Add($ACE)
-        }
-        if ( $ACE.IdentityReferenceResolved -like "*$($ACE.IdentityReferenceSID)*" ) {
-            $ACEsWithUnresolvedSIDs.Add($ACE)
-        }
-        if ( $ACE.IdentityReferenceResolved -match 'CREATOR OWNER' ) {
-            $ACEsWithCreatorOwner.Add($ACE)
-        }
-    }
-    return [PSCustomObject]@{
-        ACEsWithCreatorOwner         = $ACEsWithCreatorOwner
-        ACEsWithNonCompliantAccounts = $ACEsWithNonCompliantAccounts
-        ACEsWithUsers                = $ACEsWithUsers
-        ACEsWithUnresolvedSIDs       = $ACEsWithUnresolvedSIDs
-        ItemsWithBrokenInheritance   = $ItemsWithBrokenInheritance
-        NonCompliantAccounts         = $NonCompliantAccounts
-    }
-}
-function Invoke-PermissionCommand {
-    param (
-        [String]$Command,
-        [Parameter(Mandatory)]
-        [ref]$Cache
-    )
-    $Steps = [System.Collections.Specialized.OrderedDictionary]::New()
-    $Steps.Add(
-        'Get the NTAccount caption of the user running the script, with the correct capitalization',
-        { HOSTNAME.EXE }
-    )
-    $Steps.Add(
-        'Get the hostname of the computer running the script',
-        { Get-CurrentWhoAmI -LogBuffer $LogBuffer -ThisHostName $ThisHostname }
-    )
-    $StepCount = $Steps.Count
-    Write-LogMsg -Cache $Cache -Type Verbose -Text $Command
-    $ScriptBlock = $Steps[$Command]
-    Write-LogMsg -Cache $Cache -Type Debug -Text $ScriptBlock
-    Invoke-Command -ScriptBlock $ScriptBlock
-}
-function New-PermissionCache {
+function Initialize-PermissionCache {
     param(
         [uint16]$ThreadCount = 1,
         [string]$OutputDir = "$env:AppData\Export-Permission",
@@ -7678,6 +7564,120 @@ function New-PermissionCache {
             'WellKnownSidBySid'            = [ref]$WellKnownSidBySid
             'WhoAmI'                       = [ref]$WhoAmI
         })
+}
+function Invoke-PermissionAnalyzer {
+    param (
+        [hashtable]$AllowDisabledInheritance,
+        [scriptblock]$AccountConvention = { $true },
+        [Parameter(Mandatory)]
+        [ref]$Cache
+    )
+    $AclByPath = $Cache.Value['AclByPath']
+    $AceByGUID = $Cache.Value['AceByGUID']
+    $AceByGUID = $Cache.Value['AceByGUID']
+    $PrincipalByID = $Cache.Value['PrincipalByID']
+    $ItemsWithBrokenInheritance = $AclByPath.Value.Keys |
+    Where-Object -FilterScript {
+        $AclByPath.Value[$_].AreAccessRulesProtected -and
+        -not $AllowDisabledInheritance[$_]
+    }
+    $ViolatesAccountConvention = [scriptblock]::Create("!($AccountConvention)")
+    $NonCompliantAccounts = $PrincipalByID.Value.Values |
+    Where-Object -FilterScript { $_.SchemaClassName -eq 'Group' } |
+    Where-Object -FilterScript $ViolatesAccountConvention
+    if ($NonCompliantAccounts) {
+        $AceGUIDsWithNonCompliantAccounts = $Cache.Value['AceGuidByID'].Value[$NonCompliantAccounts]
+    }
+    if ($AceGUIDsWithNonCompliantAccounts) {
+        $ACEsWithNonCompliantAccounts = $AceByGUID.Value[$AceGUIDsWithNonCompliantAccounts]
+    }
+    $ACEsWithUsers = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $ACEsWithUnresolvedSIDs = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $ACEsWithCreatorOwner = [System.Collections.Generic.List[PSCustomObject]]::new()
+    ForEach ($ACE in $AceByGUID.Value.Values) {
+        if (
+            $PrincipalByID.Value[$ACE.IdentityReferenceResolved].SchemaClassName -eq 'User' -and
+            $_.IdentityReferenceSID -ne 'S-1-5-18' -and 
+            $_.SourceOfAccess -ne 'Ownership' 
+        ) {
+            $ACEsWithUsers.Add($ACE)
+        }
+        if ( $ACE.IdentityReferenceResolved -like "*$($ACE.IdentityReferenceSID)*" ) {
+            $ACEsWithUnresolvedSIDs.Add($ACE)
+        }
+        if ( $ACE.IdentityReferenceResolved -match 'CREATOR OWNER' ) {
+            $ACEsWithCreatorOwner.Add($ACE)
+        }
+    }
+    return [PSCustomObject]@{
+        ACEsWithCreatorOwner         = $ACEsWithCreatorOwner
+        ACEsWithNonCompliantAccounts = $ACEsWithNonCompliantAccounts
+        ACEsWithUsers                = $ACEsWithUsers
+        ACEsWithUnresolvedSIDs       = $ACEsWithUnresolvedSIDs
+        ItemsWithBrokenInheritance   = $ItemsWithBrokenInheritance
+        NonCompliantAccounts         = $NonCompliantAccounts
+    }
+}
+function Invoke-PermissionCommand {
+    param (
+        [String]$Command,
+        [Parameter(Mandatory)]
+        [ref]$Cache
+    )
+    $Steps = [System.Collections.Specialized.OrderedDictionary]::New()
+    $Steps.Add(
+        'Get the NTAccount caption of the user running the script, with the correct capitalization',
+        { HOSTNAME.EXE }
+    )
+    $Steps.Add(
+        'Get the hostname of the computer running the script',
+        { Get-CurrentWhoAmI -LogBuffer $LogBuffer -ThisHostName $ThisHostname }
+    )
+    $StepCount = $Steps.Count
+    Write-LogMsg -Cache $Cache -Type Verbose -Text $Command
+    $ScriptBlock = $Steps[$Command]
+    Write-LogMsg -Cache $Cache -Type Debug -Text $ScriptBlock
+    Invoke-Command -ScriptBlock $ScriptBlock
+}
+function Optimize-PermissionCache {
+    param (
+        [string[]]$Fqdn,
+        [Parameter(Mandatory)]
+        [ref]$Cache
+    )
+    $Progress = Get-PermissionProgress -Activity 'Initialize-Cache' -Cache $Cache
+    $Count = $Fqdn.Count
+    $LogBuffer = $Cache.Value['LogBuffer']
+    $GetAdsiServer = @{
+        Cache = $Cache
+    }
+    $ThreadCount = $Cache.Value['ThreadCount'].Value
+    if ($ThreadCount -eq 1) {
+        $i = 0
+        ForEach ($ThisServerName in $Fqdn) {
+            [int]$PercentComplete = $i / $Count * 100
+            $i++ 
+            Write-Progress -Status "$PercentComplete% (FQDN $i of $Count) Get-AdsiServer" -CurrentOperation "Get-AdsiServer '$ThisServerName'" -PercentComplete $PercentComplete @Progress
+            Write-LogMsg -Text "Get-AdsiServer -Fqdn '$ThisServerName'" -Expand $GetAdsiServer -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value
+            $null = Get-AdsiServer -Fqdn $ThisServerName @GetAdsiServer
+        }
+    } else {
+        $SplitThread = @{
+            Command          = 'Get-AdsiServer'
+            InputObject      = $Fqdn
+            InputParameter   = 'Fqdn'
+            TodaysHostname   = $ThisHostname
+            WhoAmI           = $WhoAmI
+            LogBuffer        = $LogBuffer
+            Timeout          = 600
+            Threads          = $ThreadCount
+            ProgressParentId = $ProgressParentId
+            AddParam         = $GetAdsiServer
+        }
+        Write-LogMsg -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($Fqdn -join "',")')" -Cache $Cache
+        $null = Split-Thread @SplitThread
+    }
+    Write-Progress @Progress -Completed
 }
 function Out-Permission {
     param (
@@ -10288,7 +10288,7 @@ function Send-PrtgXmlSensorOutput {
         'OutputDir'      = $OutputDir
         'TranscriptFile' = $TranscriptFile
     }
-    $PermissionCache = New-PermissionCache @Cmd
+    $PermissionCache = Initialize-PermissionCache @Cmd
     $Cache = [ref]$PermissionCache
     $Cached = @{ 'Cache' = $Cache }
     $EmptyMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
@@ -10297,7 +10297,7 @@ function Send-PrtgXmlSensorOutput {
     $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
-    Write-LogMsg -Text "`$Cache = [ref](New-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
+    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
     $Cmd = @{
         'ComputerName' = $PermissionCache['ThisHostname'].Value
     }
@@ -10361,15 +10361,15 @@ end {
     $ProgressUpdate = @{
         'CurrentOperation' = 'Query each FQDN to pre-populate caches, avoiding redundant ADSI and CIM queries'
         'PercentComplete'  = 25
-        'Status'           = '25% (step 6 of 20) Initialize-Cache'
+        'Status'           = '25% (step 6 of 20) Optimize-PermissionCache'
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
         'Fqdn' = $ServerFqdns
     }
     $FqdnCount = $ServerFqdns.Count
-    Write-LogMsg -Text 'Initialize-Cache' -Suffix " # for $FqdnCount Server FQDNs" -Expand $Cmd, $Cached @Cached @CacheMap
-    Initialize-Cache @Cmd @Cached
+    Write-LogMsg -Text 'Optimize-PermissionCache' -Suffix " # for $FqdnCount Server FQDNs" -Expand $Cmd, $Cached @Cached @CacheMap
+    Optimize-PermissionCache @Cmd @Cached
     $ProgressUpdate = @{
         'CurrentOperation' = 'Resolve each identity reference to its SID and NTAccount name'
         'PercentComplete'  = 30

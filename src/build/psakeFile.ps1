@@ -213,7 +213,14 @@ Task RepairScriptFile -depends UpdateScriptVersion {
 
 }
 
-Task DeleteOldBuilds -depends RepairScriptFile {
+Task UpdateScriptRequirements -depends RepairScriptFile {
+
+    $ScriptToRun = [IO.Path]::Combine('.', 'Update-ScriptRequirement.ps1')
+    . $ScriptToRun -Path $MainScript
+
+}
+
+Task DeleteOldBuilds -depends UpdateScriptRequirements {
 
     Write-Host "`tGet-ChildItem -Directory -Path '$BuildOutDir' | Remove-Item -Recurse -Force"
     Get-ChildItem -Directory -Path $BuildOutDir |
