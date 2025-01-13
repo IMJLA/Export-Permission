@@ -13,7 +13,7 @@ $replacements = @{}
 
 foreach ($line in $Lines) {
 
-    if ($line -match '#requires -Module(?:s*)(.+)') {
+    if ($line -match '#Requires -Module(?:s*)(.+)') {
 
         $StringToReplace = $matches[0]
         $moduleName = $matches[1].Trim()
@@ -27,7 +27,7 @@ foreach ($line in $Lines) {
         Select-Object -First 1 -ExpandProperty Version
 
         if ($moduleVersion) {
-            $replacements[$StringToReplace] = "#requires -Modules @{ 'ModuleName' = '$moduleName' ; 'RequiredVersion' = '$moduleVersion' }"
+            $replacements[$StringToReplace] = "#Requires -Module @{ ModuleName = '$moduleName' ; RequiredVersion = '$moduleVersion' }"
         }
 
     }

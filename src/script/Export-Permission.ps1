@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.565
+.VERSION 0.0.566
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-ensure dependency version feature is repeatable
+bugfix to match behavior of update-scriptfileinfo (I think that's what's updating the requires statements anyway)
 
 .PRIVATEDATA
 
