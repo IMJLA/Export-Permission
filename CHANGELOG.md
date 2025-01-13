@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.561] - 2025-01-12
+### Changed
+- update docs
+
 ## [0.0.560] - 2025-01-12
 ### Added
 - implement SplitBy Account GroupBy Item

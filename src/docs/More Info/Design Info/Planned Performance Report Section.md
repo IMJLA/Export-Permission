@@ -1,32 +1,34 @@
-# Performance of this Report
+# Planned Performance Report Section
+
+## Performance of this Report
 
 <table>
 <tr>
 <td>
 
-## CPU Usage
+### CPU Usage
 
-### Time
+#### Time
 
 | Min | Max | Average |
 |-----|-----|---------|
 | 0%  | 99% | 25%     |
 
-## Memory Usage
+### Memory Usage
 
-### Consumption
+#### Consumption
 
 | Min  | Max  | Average |
 |------|------|---------|
 | 1.0 GiB | 1.0 GiB | 1.0 GiB |
 
-## Disk Usage
+### Disk Usage
 
-### Size
+#### Size
 
 (size of output folder, edited in after all files generated)
 
-### IOPS
+#### IOPS
 
 | Min | Max | Average |
 |-----|-----|---------|
@@ -35,27 +37,27 @@
 </td>
 <td>
 
-## Network Usage
+### Network Usage
 
-### Total Data: 1.2 TiB
+#### Total Data: 1.2 TiB
 
-#### Throughput
-
-| Min  | Max  | Average |
-|------|------|---------|
-| 0.9 Gbps | 1.2 Gbps | 1.0 Gbps |
-
-### Sent Data: 600 GiB
-
-#### Throughput
+##### Throughput
 
 | Min  | Max  | Average |
 |------|------|---------|
 | 0.9 Gbps | 1.2 Gbps | 1.0 Gbps |
 
-### Received Data: 600 GiB
+#### Sent Data: 600 GiB
 
-#### Throughput
+##### Throughput
+
+| Min  | Max  | Average |
+|------|------|---------|
+| 0.9 Gbps | 1.2 Gbps | 1.0 Gbps |
+
+#### Received Data: 600 GiB
+
+##### Throughput
 
 | Min  | Max  | Average |
 |------|------|---------|

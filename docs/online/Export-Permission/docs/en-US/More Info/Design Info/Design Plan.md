@@ -1,12 +1,14 @@
+# Design Plan
+
 ````
 Export-Permission
 
 
   Get-Permission
     (foreach LiteralPath)
-      Resolve-PermissionTarget
+      Resolve-PermissionSource
       (foreach ResolvedLiteralPath)
-        Expand-PermissionTarget
+        Expand-PermissionSource
         (foreach ExpandedResolvedLiteralPath)
           Get-FolderAcl
             Get-DirectorySecurity
@@ -44,8 +46,8 @@ flowchart TB
 
 subgraph Export-Permission
     ExportPermission["Create CSV, HTML, and XML reports of permissions"]:::description
-    subgraph Resolve-PermissionTarget
-    ResolvePermissionTarget["Resolve each target path to all of its associated UNC paths (including all DFS folder targets)"]:::description
+    subgraph Resolve-PermissionSource
+    ResolvePermissionSource["Resolve each Source path to all of its associated UNC paths (including all DFS folder targets)"]:::description
     end
     subgraph Expand-Folder
         ExpandFolder["Expand each UNC path into the paths of its subfolders"]:::description
