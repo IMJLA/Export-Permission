@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.563
+.VERSION 0.0.564
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -31,14 +31,14 @@ add required module versions
 
 #> 
 
-#Requires -Module PsDfs
-#Requires -Module Adsi
-#Requires -Module Permission
-#Requires -Module PsBootstrapCss
-#Requires -Module PsLogMessage
-#Requires -Module PsNtfs
-#Requires -Module PsRunspace
-#Requires -Module SimplePrtg
+#requires -Modules @{ 'ModuleName' = 'PsDfs' ; 'RequiredVersion' = '1.0.18' }
+#requires -Modules @{ 'ModuleName' = 'Adsi' ; 'RequiredVersion' = '4.0.520' }
+#requires -Modules @{ 'ModuleName' = 'Permission' ; 'RequiredVersion' = '0.0.1185' }
+#requires -Modules @{ 'ModuleName' = 'PsBootstrapCss' ; 'RequiredVersion' = '1.0.53' }
+#requires -Modules @{ 'ModuleName' = 'PsLogMessage' ; 'RequiredVersion' = '1.0.118' }
+#requires -Modules @{ 'ModuleName' = 'PsNtfs' ; 'RequiredVersion' = '2.0.227' }
+#requires -Modules @{ 'ModuleName' = 'PsRunspace' ; 'RequiredVersion' = '1.0.124' }
+#requires -Modules @{ 'ModuleName' = 'SimplePrtg' ; 'RequiredVersion' = '1.0.13' }
 
 <#
 .SYNOPSIS

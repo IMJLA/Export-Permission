@@ -13,7 +13,7 @@ $replacements = @{}
 
 foreach ($line in $Lines) {
 
-    if ($line -match '#requires -Modules (.+)') {
+    if ($line -match '#requires -Module(.+)') {
 
         $moduleName = $matches[1].Trim()
 
