@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.577] - 2025-01-16
+### Changed
+- cleanup build console output
+
 ## [0.0.576] - 2025-01-16
 ### Fixed
 - bugfix need to remove quotes from modulename

@@ -39,7 +39,7 @@ Write-Host "`t`$Content = Get-Content -LiteralPath '$Path' -Raw"
 $Content = Get-Content -LiteralPath $Path -Raw
 
 ForEach ($StringToReplace in $replacements.Keys) {
-    Write-Host "`t`$Content = $Content.Replace('$StringToReplace', '$($replacements[$StringToReplace])')"
+    Write-Host "`t`$Content = `$Content.Replace('$StringToReplace', '$($replacements[$StringToReplace])')"
     $Content = $Content.Replace($StringToReplace, $replacements[$StringToReplace])
 }
 
