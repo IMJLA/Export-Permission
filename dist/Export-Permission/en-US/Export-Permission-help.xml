@@ -39,7 +39,7 @@
           <maml:name>SourcePath</maml:name>
           <maml:description>
             <maml:para>Path to the item whose permissions to export</maml:para>
-            <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
+            <maml:para>Supports: - NTFS folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
             <maml:para>Does Not Support (ToDo): - same sources as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
             <maml:para>- M365 sources (SP sites, Teams, etc)</maml:para>
           </maml:description>
@@ -54,7 +54,7 @@
           <maml:name>SplitBy</maml:name>
           <maml:description>
             <maml:para>How to split up the exported files:</maml:para>
-            <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | account | generate 1 report file per account | | item    | generate 1 report file per item | | source  | generate 1 report file per source path (default) |</maml:para>
+            <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | account | generate 1 report file per account | | source  | generate 1 report file per source path (default) |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
           <dev:type>
@@ -67,7 +67,7 @@
           <maml:name>GroupBy</maml:name>
           <maml:description>
             <maml:para>How to group the permissions in the output stream and within each exported file. Interacts with the SplitBy parameter:</maml:para>
-            <maml:para>| SplitBy | GroupBy | Behavior | |---------|---------|----------| | none    | none    | 1 file with all permissions in a flat list | | none    | account | 1 file with all permissions grouped by account | | none    | item    | 1 file with all permissions grouped by item | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | source  | none    | 1 file per source path; in each file, sort ACEs by source path | | source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | source  | source  | (same as -SplitBy source -GroupBy none) |</maml:para>
+            <maml:para>| SplitBy | GroupBy | Behavior | |---------|---------|----------| | none    | none    | 1 file with all permissions in a flat list | | none    | account | 1 file with all permissions grouped by account | | none    | item    | 1 file with all permissions grouped by item | | none    | source    | 1 file with all permissions grouped by source path | | account | none    | 1 file per account; in each file, sort permissions by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group permissions by item and sort by item path | | account | source  | 1 file per account; in each file, group permissions by source path and sort by item path | | source  | none    | 1 file per source path; in each file, sort permissions by item path | | source  | account | 1 file per source path; in each file, group permissions by account and sort by account name | | source  | item    | 1 file per source path; in each file, group permissions by item and sort by item path | | source  | source  | (same as -SplitBy source -GroupBy none) |</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -437,7 +437,7 @@
         <maml:name>GroupBy</maml:name>
         <maml:description>
           <maml:para>How to group the permissions in the output stream and within each exported file. Interacts with the SplitBy parameter:</maml:para>
-          <maml:para>| SplitBy | GroupBy | Behavior | |---------|---------|----------| | none    | none    | 1 file with all permissions in a flat list | | none    | account | 1 file with all permissions grouped by account | | none    | item    | 1 file with all permissions grouped by item | | account | none    | 1 file per account; in each file, sort ACEs by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path | | item    | none    | 1 file per item; in each file, sort ACEs by account name | | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name | | item    | item    | (same as -SplitBy item -GroupBy none) | | source  | none    | 1 file per source path; in each file, sort ACEs by source path | | source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name | | source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path | | source  | source  | (same as -SplitBy source -GroupBy none) |</maml:para>
+          <maml:para>| SplitBy | GroupBy | Behavior | |---------|---------|----------| | none    | none    | 1 file with all permissions in a flat list | | none    | account | 1 file with all permissions grouped by account | | none    | item    | 1 file with all permissions grouped by item | | none    | source    | 1 file with all permissions grouped by source path | | account | none    | 1 file per account; in each file, sort permissions by item path | | account | account | (same as -SplitBy account -GroupBy none) | | account | item    | 1 file per account; in each file, group permissions by item and sort by item path | | account | source  | 1 file per account; in each file, group permissions by source path and sort by item path | | source  | none    | 1 file per source path; in each file, sort permissions by item path | | source  | account | 1 file per source path; in each file, group permissions by account and sort by account name | | source  | item    | 1 file per source path; in each file, group permissions by item and sort by item path | | source  | source  | (same as -SplitBy source -GroupBy none) |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -618,7 +618,7 @@
         <maml:name>SourcePath</maml:name>
         <maml:description>
           <maml:para>Path to the item whose permissions to export</maml:para>
-          <maml:para>Supports: - NTFS Folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
+          <maml:para>Supports: - NTFS folder paths     - Local folder paths     - UNC folder paths     - DFS folder paths     - Mapped network drives</maml:para>
           <maml:para>Does Not Support (ToDo): - same sources as Get-Acl (AD, Registry, StorageSubSystem)</maml:para>
           <maml:para>- M365 sources (SP sites, Teams, etc)</maml:para>
         </maml:description>
@@ -633,7 +633,7 @@
         <maml:name>SplitBy</maml:name>
         <maml:description>
           <maml:para>How to split up the exported files:</maml:para>
-          <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | account | generate 1 report file per account | | item    | generate 1 report file per item | | source  | generate 1 report file per source path (default) |</maml:para>
+          <maml:para>| Value   | Behavior | |---------|----------| | none    | generate 1 report file with all permissions | | account | generate 1 report file per account | | source  | generate 1 report file per source path (default) |</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String[]</command:parameterValue>
         <dev:type>

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.566
+.VERSION 0.0.567
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix to match behavior of update-scriptfileinfo (I think that's what's updating the requires statements anyway)
+remove splitby item option because it makes no sense
 
 .PRIVATEDATA
 
@@ -259,7 +259,7 @@ param (
     Path to the item whose permissions to export
 
     Supports:
-    - NTFS Folder paths
+    - NTFS folder paths
         - Local folder paths
         - UNC folder paths
         - DFS folder paths
@@ -340,10 +340,9 @@ param (
     |---------|----------|
     | none    | generate 1 report file with all permissions |
     | account | generate 1 report file per account |
-    | item    | generate 1 report file per item |
     | source  | generate 1 report file per source path (default) |
     #>
-    [ValidateSet('account', 'item', 'none', 'source')]
+    [ValidateSet('account', 'none', 'source')]
     [string[]]$SplitBy = 'source',
 
     <#
@@ -354,15 +353,14 @@ param (
     | none    | none    | 1 file with all permissions in a flat list |
     | none    | account | 1 file with all permissions grouped by account |
     | none    | item    | 1 file with all permissions grouped by item |
-    | account | none    | 1 file per account; in each file, sort ACEs by item path |
+    | none    | source    | 1 file with all permissions grouped by source path |
+    | account | none    | 1 file per account; in each file, sort permissions by item path |
     | account | account | (same as -SplitBy account -GroupBy none) |
-    | account | item    | 1 file per account; in each file, group ACEs by item and sort by item path |
-    | item    | none    | 1 file per item; in each file, sort ACEs by account name |
-    | item    | account | 1 file per item; in each file, group ACEs by account and sort by account name |
-    | item    | item    | (same as -SplitBy item -GroupBy none) |
-    | source  | none    | 1 file per source path; in each file, sort ACEs by source path |
-    | source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name |
-    | source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path |
+    | account | item    | 1 file per account; in each file, group permissions by item and sort by item path |
+    | account | source  | 1 file per account; in each file, group permissions by source path and sort by item path |
+    | source  | none    | 1 file per source path; in each file, sort permissions by item path |
+    | source  | account | 1 file per source path; in each file, group permissions by account and sort by account name |
+    | source  | item    | 1 file per source path; in each file, group permissions by item and sort by item path |
     | source  | source  | (same as -SplitBy source -GroupBy none) |
     #>
     [ValidateSet('account', 'item', 'none', 'source')]

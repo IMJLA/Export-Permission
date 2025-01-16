@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.566
+help version: 0.0.567
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -416,15 +416,14 @@ Interacts with the SplitBy parameter:
 | none    | none    | 1 file with all permissions in a flat list |
 | none    | account | 1 file with all permissions grouped by account |
 | none    | item    | 1 file with all permissions grouped by item |
-| account | none    | 1 file per account; in each file, sort ACEs by item path |
+| none    | source    | 1 file with all permissions grouped by source path |
+| account | none    | 1 file per account; in each file, sort permissions by item path |
 | account | account | (same as -SplitBy account -GroupBy none) |
-| account | item    | 1 file per account; in each file, group ACEs by item and sort by item path |
-| item    | none    | 1 file per item; in each file, sort ACEs by account name |
-| item    | account | 1 file per item; in each file, group ACEs by account and sort by account name |
-| item    | item    | (same as -SplitBy item -GroupBy none) |
-| source  | none    | 1 file per source path; in each file, sort ACEs by source path |
-| source  | account | 1 file per source path; in each file, group ACEs by account and sort by account name |
-| source  | item    | 1 file per source path; in each file, group ACEs by item and sort by item path |
+| account | item    | 1 file per account; in each file, group permissions by item and sort by item path |
+| account | source  | 1 file per account; in each file, group permissions by source path and sort by item path |
+| source  | none    | 1 file per source path; in each file, sort permissions by item path |
+| source  | account | 1 file per source path; in each file, group permissions by account and sort by account name |
+| source  | item    | 1 file per source path; in each file, group permissions by item and sort by item path |
 | source  | source  | (same as -SplitBy source -GroupBy none) |
 
 ```yaml
@@ -660,7 +659,7 @@ Accept wildcard characters: False
 Path to the item whose permissions to export
 
 Supports:
-- NTFS Folder paths
+- NTFS folder paths
     - Local folder paths
     - UNC folder paths
     - DFS folder paths
@@ -689,7 +688,6 @@ How to split up the exported files:
 |---------|----------|
 | none    | generate 1 report file with all permissions |
 | account | generate 1 report file per account |
-| item    | generate 1 report file per item |
 | source  | generate 1 report file per source path (default) |
 
 ```yaml

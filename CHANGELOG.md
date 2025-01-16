@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.567] - 2025-01-15
+### Removed
+- remove splitby item option because it makes no sense
+
 ## [0.0.566] - 2025-01-12
 ### Fixed
 - bugfix to match behavior of update-scriptfileinfo (I think that's what's updating the requires statements anyway)

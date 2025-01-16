@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.566
+.VERSION 0.0.567
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix to match behavior of update-scriptfileinfo (I think that's what's updating the requires statements anyway)
+remove splitby item option because it makes no sense
 
 .PRIVATEDATA
 
@@ -90,7 +90,7 @@ param (
     [string[]]$IgnoreDomain,
     [string]$OutputDir = "$env:AppData\Export-Permission",
     [string]$Title = 'Permissions Report',
-    [ValidateSet('account', 'item', 'none', 'source')]
+    [ValidateSet('account', 'none', 'source')]
     [string[]]$SplitBy = 'source',
     [ValidateSet('account', 'item', 'none', 'source')]
     [string]$GroupBy = 'item',
@@ -5500,7 +5500,7 @@ function Get-HtmlReportElements {
         [int[]]$Detail = @(0..10),
         [ValidateSet('account', 'item', 'none', 'source')]
         [string]$GroupBy = 'item',
-        [ValidateSet('account', 'item', 'none', 'source')]
+        [ValidateSet('account', 'none', 'source')]
         [string[]]$SplitBy = 'source',
         [String]$Split,
         [String]$FileName,
@@ -6706,7 +6706,7 @@ function ConvertTo-PermissionFqdn {
 }
 function Expand-Permission {
     param (
-        [ValidateSet('account', 'item', 'none', 'source')]
+        [ValidateSet('account', 'none', 'source')]
         [string[]]$SplitBy = 'source',
         [ValidateSet('account', 'item', 'none', 'source')]
         [string]$GroupBy = 'item',
@@ -7716,7 +7716,7 @@ function Out-PermissionFile {
         [String]$OutputFormat = 'passthru',
         [ValidateSet('account', 'item', 'none', 'source')]
         [string]$GroupBy = 'item',
-        [ValidateSet('account', 'item', 'none', 'source')]
+        [ValidateSet('account', 'none', 'source')]
         [string[]]$SplitBy = 'source',
         [PSCustomObject]$Analysis,
         [uint64]$SourceCount,
