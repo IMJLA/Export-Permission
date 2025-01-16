@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.569] - 2025-01-16
+### Changed
+- change OutputDir type from string to DirectoryInfo for improved validation
+
 ## [0.0.568] - 2025-01-15
 ### Fixed
 - fix installation docs

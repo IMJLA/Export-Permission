@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.568
+.VERSION 0.0.569
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-fix installation docs
+change OutputDir type from string to DirectoryInfo for improved validation
 
 .PRIVATEDATA
 
@@ -88,7 +88,7 @@ param (
     [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description'),
     [switch]$NoMembers,
     [string[]]$IgnoreDomain,
-    [string]$OutputDir = "$env:AppData\Export-Permission",
+    [System.IO.DirectoryInfo]$OutputDir = "$env:AppData\Export-Permission",
     [string]$Title = 'Permissions Report',
     [ValidateSet('account', 'none', 'source')]
     [string[]]$SplitBy = 'source',
@@ -10278,14 +10278,14 @@ function Send-PrtgXmlSensorOutput {
     $StopWatch = [System.Diagnostics.Stopwatch]::new()
     $null = $StopWatch.Start()
     $ReportInstanceId = [guid]::NewGuid().ToString()
-    $OutputDir = New-DatedSubfolder -Root $OutputDir -Suffix "_$ReportInstanceId"
-    $TranscriptFile = Join-Path -Path $OutputDir -ChildPath 'PowerShellTranscript.log'
+    $ReportDir = New-DatedSubfolder -Root $OutputDir.FullName -Suffix "_$ReportInstanceId"
+    $TranscriptFile = Join-Path -Path $ReportDir -ChildPath 'PowerShellTranscript.log'
     Start-Transcript -Path $TranscriptFile *>$null
     Write-Information $TranscriptFile
-    $LogFile = Join-Path -Path $OutputDir -ChildPath 'Export-Permission.log'
+    $LogFile = Join-Path -Path $ReportDir -ChildPath 'Export-Permission.log'
     $Cmd = @{
         'ThreadCount'    = $ThreadCount
-        'OutputDir'      = $OutputDir
+        'OutputDir'      = $ReportDir
         'TranscriptFile' = $TranscriptFile
     }
     $PermissionCache = Initialize-PermissionCache @Cmd
@@ -10470,7 +10470,7 @@ end {
         'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ;
         'Permission' = $Permissions ; 'SourcePath' = $SourcePath ;
         'AccountProperty' = $AccountProperty ; 'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ;
-        'FileFormat' = $FileFormat ; 'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $OutputDir ; 'Title' = $Title ;
+        'FileFormat' = $FileFormat ; 'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $ReportDir ; 'Title' = $Title ;
         'OutputFormat' = $OutputFormat ; 'NoMembers' = $NoMembers ; 'RecurseDepth' = $RecurseDepth ; 'SplitBy' = $SplitBy ;
         'LogFileList' = $TranscriptFile, $LogFile ; 'StopWatch' = $StopWatch ; 'ReportInstanceId' = $ReportInstanceId ;
         'SourceCount' = $SourceCount ; 'ParentCount' = $ParentCount ; 'ChildCount' = $ChildCount ; 'FqdnCount' = $FqdnCount ;
