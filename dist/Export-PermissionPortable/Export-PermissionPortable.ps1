@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.574
+.VERSION 0.0.576
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix update-scriptrequirement console output
+bugfix need to remove quotes from modulename
 
 .PRIVATEDATA
 

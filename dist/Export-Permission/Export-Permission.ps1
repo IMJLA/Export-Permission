@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.574
+.VERSION 0.0.576
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,20 +25,20 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix update-scriptrequirement console output
+bugfix need to remove quotes from modulename
 
 .PRIVATEDATA
 
 #> 
 
-#Requires -Module @{ ModuleName = 'PsDfs'; RequiredVersion = '1.0.18' }
-#Requires -Module @{ ModuleName = 'Adsi'; RequiredVersion = '4.0.520' }
-#Requires -Module @{ ModuleName = 'Permission'; RequiredVersion = '0.0.1185' }
-#Requires -Module @{ ModuleName = 'PsBootstrapCss'; RequiredVersion = '1.0.53' }
-#Requires -Module @{ ModuleName = 'PsLogMessage'; RequiredVersion = '1.0.118' }
-#Requires -Module @{ ModuleName = 'PsNtfs'; RequiredVersion = '2.0.227' }
-#Requires -Module @{ ModuleName = 'PsRunspace'; RequiredVersion = '1.0.124' }
-#Requires -Module @{ ModuleName = 'SimplePrtg'; RequiredVersion = '1.0.13' }
+#Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
+#Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.522' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1186' }
+#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
+#Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.118' }
+#Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.227' }
+#Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }
+#Requires -Module @{ ModuleName = 'SimplePrtg' ; RequiredVersion = '1.0.13' }
 
 <#
 .SYNOPSIS

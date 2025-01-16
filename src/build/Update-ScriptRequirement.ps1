@@ -16,10 +16,10 @@ foreach ($line in $Lines) {
     if ($line -match '#Requires -Module(?:s*)(.+)') {
 
         $StringToReplace = $matches[0]
-        $moduleName = $matches[1].Trim()
+        $moduleName = $matches[1].Trim() -replace "['`"]", ''
 
         if ($moduleName -match 'ModuleName[^;=]*=([^;}]*)') {
-            $moduleName = $matches[1].Trim()
+            $moduleName = $matches[1].Trim() -replace "['`"]", ''
         }
 
         $moduleVersion = Get-Module -Name $moduleName -ListAvailable |
@@ -28,9 +28,8 @@ foreach ($line in $Lines) {
 
         if ($moduleVersion) {
             $replacements[$StringToReplace] = "#Requires -Module @{ ModuleName = '$moduleName' ; RequiredVersion = '$moduleVersion' }"
+            Write-Host "`t$($replacements[$StringToReplace])"
         }
-
-        Write-Host "`t$($replacements[$StringToReplace])"
 
     }
 
