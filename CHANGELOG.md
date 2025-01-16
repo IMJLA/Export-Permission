@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.571] - 2025-01-16
+### Changed
+- update adsi module ver
+
 ## [0.0.570] - 2025-01-16
 ### Changed
 - adsi module bugfix: resolve-idrefsid should be called with accountproperty then pass it to resolve-identityreference

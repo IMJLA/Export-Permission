@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.570
+.VERSION 0.0.571
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-adsi module bugfix: resolve-idrefsid should be called with accountproperty then pass it to resolve-identityreference
+update adsi module ver
 
 .PRIVATEDATA
 
