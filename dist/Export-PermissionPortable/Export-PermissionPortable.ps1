@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.569
+.VERSION 0.0.570
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-change OutputDir type from string to DirectoryInfo for improved validation
+adsi module bugfix: resolve-idrefsid should be called with accountproperty then pass it to resolve-identityreference
 
 .PRIVATEDATA
 
@@ -1434,7 +1434,8 @@ function Resolve-IdRefSID {
         [PSObject]$AdsiServer,
         [string]$ServerNetBIOS = $AdsiServer.Netbios,
         [Parameter(Mandatory)]
-        [ref]$Cache
+        [ref]$Cache,
+        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     $CachedWellKnownSID = Find-CachedWellKnownSID -IdentityReference $IdentityReference -DomainNetBIOS $ServerNetBIOS -DomainByNetbios $Cache.Value['DomainByNetbios']
     $AccountProperties = @{}
@@ -1519,6 +1520,7 @@ function Resolve-IdRefSID {
     }
     if ($NTAccount) {
         $ResolveIdentityReferenceParams = @{
+            AccountProperty   = $AccountProperty
             Cache             = $Cache
             IdentityReference = $NTAccount
             AdsiServer        = $DomainCacheResult
@@ -4290,7 +4292,7 @@ function Resolve-IdentityReference {
         }
     }
     if ($Name.Substring(0, 4) -eq 'S-1-') {
-        $Resolved = Resolve-IdRefSID -Cache $Cache @splat1 @splat2
+        $Resolved = Resolve-IdRefSID -AccountProperty $AccountProperty -Cache $Cache @splat1 @splat2
         return $Resolved
     }
     if ($null -ne $ServerNetBIOS) {
@@ -10297,7 +10299,7 @@ function Send-PrtgXmlSensorOutput {
     $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
-    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
+    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Suffix ') # This command was already run but is now being logged' -Expand $Cmd @Cached @EmptyMap
     $Cmd = @{
         'ComputerName' = $PermissionCache['ThisHostname'].Value
     }

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.569
+.VERSION 0.0.570
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-change OutputDir type from string to DirectoryInfo for improved validation
+adsi module bugfix: resolve-idrefsid should be called with accountproperty then pass it to resolve-identityreference
 
 .PRIVATEDATA
 
@@ -516,7 +516,10 @@ begin {
 
     $LogFile = Join-Path -Path $ReportDir -ChildPath 'Export-Permission.log'
 
-    # Create an in-process cache to reduce calls to other processes, disk, or network, and to store common parameters for better readability of code and logs.
+    <#
+    Create an in-process cache to reduce calls to other processes, disk, or network,
+    and to store common parameters for better readability of code and logs.
+    #>
     $Cmd = @{
         'ThreadCount'    = $ThreadCount
         'OutputDir'      = $ReportDir
@@ -533,7 +536,7 @@ begin {
     $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
-    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Expand $Cmd -Suffix ') # This command was already run but is now being logged' @Cached @EmptyMap
+    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Suffix ') # This command was already run but is now being logged' -Expand $Cmd @Cached @EmptyMap
 
     # Get the FQDN of the computer running the script.
     $Cmd = @{
