@@ -16,6 +16,6 @@ Update-Script Export-Permission
 
 ### GitHub
 
-The repository can be cloned or downloaded from <https://github.com/IMJLA/Export-Permission>
+The repository can be cloned or downloaded from [GitHub](https://github.com/IMJLA/Export-Permission)
 
-Inside the repository, the script can be found at /dist/Export-Permission/Export-Permission.ps1
+Inside the repository, the script can be found at `/dist/Export-Permission/Export-Permission.ps1`

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.568] - 2025-01-15
+### Fixed
+- fix installation docs
+
 ## [0.0.567] - 2025-01-15
 ### Removed
 - remove splitby item option because it makes no sense

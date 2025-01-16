@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.567
+.VERSION 0.0.568
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove splitby item option because it makes no sense
+fix installation docs
 
 .PRIVATEDATA
 
