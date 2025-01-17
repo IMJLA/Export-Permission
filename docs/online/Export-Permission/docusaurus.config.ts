@@ -66,6 +66,12 @@ const config: Config = {
     ],
   ],
 
+  // Enable MermaidJS
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+
   themeConfig: {
     image: 'img/social-card.svg',
     navbar: {

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.580] - 2025-01-17
+### Added
+- add mermaid to docs
+
 ## [0.0.579] - 2025-01-17
 ### Changed
 - update Permission module
