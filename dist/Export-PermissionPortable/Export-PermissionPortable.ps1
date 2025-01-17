@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.577
+.VERSION 0.0.578
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-cleanup build console output
+update Permission module
 
 .PRIVATEDATA
 
@@ -6574,62 +6574,6 @@ function Select-PermissionTableProperty {
         }
     }
     return $OutputHash
-}
-function Add-CachedCimInstance {
-    param (
-        [Parameter(ValueFromPipeline)]
-        $InputObject,
-        [String]$ComputerName,
-        [String]$ClassName,
-        [String]$Query,
-        [Hashtable]$CimCache = ([Hashtable]::Synchronized(@{})),
-        [ValidateSet('Silent', 'Quiet', 'Success', 'Debug', 'Verbose', 'Output', 'Host', 'Warning', 'Error', 'Information', $null)]
-        [String]$DebugOutputStream = 'Debug',
-        [String]$ThisHostName = (HOSTNAME.EXE),
-        [String]$WhoAmI = (whoami.EXE),
-        [Parameter(Mandatory)]
-        [ref]$LogBuffer,
-        [string[]]$CacheByProperty
-    )
-    begin {
-        $Log = @{
-            Buffer       = $LogBuffer
-            ThisHostname = $ThisHostname
-            Type         = $DebugOutputStream
-            WhoAmI       = $WhoAmI
-        }
-        $ComputerCache = $CimCache[$ComputerName]
-        if (-not $ComputerCache) {
-            $ComputerCache = [Hashtable]::Synchronized(@{})
-        }
-    }
-    process {
-        ForEach ($Prop in $CacheByProperty) {
-            if ($PSBoundParameters.ContainsKey('ClassName')) {
-                $InstanceCacheKey = "$ClassName`By$Prop"
-            } else {
-                if ($PSBoundParameters.ContainsKey('Query')) {
-                    $InstanceCacheKey = "$Query`By$Prop"
-                } else {
-                    $ClassName = @($InputObject)[0].CimClass.CimClassName
-                    $InstanceCacheKey = "$ClassName`By$Prop"
-                }
-            }
-            $InstanceCache = $ComputerCache[$InstanceCacheKey]
-            if (-not $InstanceCache) {
-                $InstanceCache = [Hashtable]::Synchronized(@{})
-            }
-            ForEach ($Instance in $InputObject) {
-                $InstancePropertyValue = $Instance.$Prop
-                Write-LogMsg @Log -Text " # Add '$InstancePropertyValue' to the '$InstanceCacheKey' cache for '$ComputerName'"
-                $InstanceCache[$InstancePropertyValue] = $Instance
-            }
-            $ComputerCache[$InstanceCacheKey] = $InstanceCache
-        }
-    }
-    end {
-        $CimCache[$ComputerName] = $ComputerCache
-    }
 }
 function Add-CacheItem {
     param (

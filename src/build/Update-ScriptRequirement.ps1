@@ -28,7 +28,6 @@ foreach ($line in $Lines) {
 
         if ($moduleVersion) {
             $replacements[$StringToReplace] = "#Requires -Module @{ ModuleName = '$moduleName' ; RequiredVersion = '$moduleVersion' }"
-            Write-Host "`t$($replacements[$StringToReplace])"
         }
 
     }
