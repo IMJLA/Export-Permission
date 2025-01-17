@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.581
+.VERSION 0.0.582
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-install mermaid theme node modules for build
+upgrade docusaurus
 
 .PRIVATEDATA
 

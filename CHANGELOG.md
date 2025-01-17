@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.582] - 2025-01-17
+### Changed
+- upgrade docusaurus
+
 ## [0.0.581] - 2025-01-17
 ### Changed
 - install mermaid theme node modules for build
