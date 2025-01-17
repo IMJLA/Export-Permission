@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.578
+.VERSION 0.0.579
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -33,7 +33,7 @@ update Permission module
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.522' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1187' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1189' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.118' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.227' }
@@ -813,6 +813,5 @@ end {
     Write-Progress @Progress -Completed
 
 }
-
 
 

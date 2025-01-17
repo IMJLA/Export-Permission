@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.578
+.VERSION 0.0.579
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -4401,7 +4401,7 @@ function ConvertTo-ClassExclusionDiv {
     } else {
         $Content = 'No accounts were excluded based on objectClass.'
     }
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Class' -Content `$Content"
+    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Class' -Content `$Content"
     return New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Class' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-FileList {
@@ -4517,7 +4517,7 @@ function ConvertTo-IgnoredDomainDiv {
     } else {
         $Content = 'No domains were ignored.  All accounts have their domain listed.'
     }
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText 'Domains Ignored by Name' -Content `$Content"
+    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Domains Ignored by Name' -Content `$Content"
     return New-BootstrapDivWithHeading -HeadingText 'Domains Ignored by Name' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-MemberExclusionDiv {
@@ -4531,7 +4531,7 @@ function ConvertTo-MemberExclusionDiv {
     } else {
         $Content = 'No accounts were excluded based on group membership.<br />Members of groups from the ACLs are included in the report.'
     }
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText 'Group Members' -Content '$Content'"
+    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Group Members' -Content '$Content'"
     return New-BootstrapDivWithHeading -HeadingText 'Group Members' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-NameExclusionDiv {
@@ -4548,7 +4548,7 @@ function ConvertTo-NameExclusionDiv {
     } else {
         $Content = 'No accounts were excluded based on name.'
     }
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Name' -Content `$Content"
+    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Name' -Content `$Content"
     return New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Name' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-PermissionGroup {
@@ -5525,19 +5525,23 @@ function Get-HtmlReportElements {
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
     $Culture = $Cache.Value['Culture'].Value
-    Write-LogMsg -Cache $Cache -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
+    $Log = @{
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+    }
+    Write-LogMsg @Log -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
     $ReportDescription = Get-ReportDescription -RecurseDepth $RecurseDepth
     $NetworkPathTable = Select-ItemTableProperty -InputObject $NetworkPath -Culture $Culture -SkipFilterCheck |
     ConvertTo-Html -Fragment |
     New-BootstrapTable
     $NetworkPathDivHeader = 'Local source paths were resolved to UNC paths, and UNC source paths were resolved to DFS folder targets'
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText '$NetworkPathDivHeader' -Content `$NetworkPathTable"
+    Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText '$NetworkPathDivHeader' -Content `$NetworkPathTable"
     $NetworkPathDiv = New-BootstrapDivWithHeading -HeadingText $NetworkPathDivHeader -Content $NetworkPathTable -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
-    Write-LogMsg -Cache $Cache -Text "Get-SummaryDivHeader -GroupBy $GroupBy"
+    Write-LogMsg @Log -Text "Get-SummaryDivHeader -GroupBy $GroupBy"
     $SummaryDivHeader = Get-SummaryDivHeader -GroupBy $GroupBy -Split $Split
-    Write-LogMsg -Cache $Cache -Text "Get-SummaryTableHeader -RecurseDepth $RecurseDepth -GroupBy $GroupBy"
+    Write-LogMsg @Log -Text "Get-SummaryTableHeader -RecurseDepth $RecurseDepth -GroupBy $GroupBy"
     $SummaryTableHeader = Get-SummaryTableHeader -RecurseDepth $RecurseDepth -GroupBy $GroupBy
-    Write-LogMsg -Cache $Cache -Text "Get-DetailDivHeader -GroupBy '$GroupBy' -Split '$Split'"
+    Write-LogMsg @Log -Text "Get-DetailDivHeader -GroupBy '$GroupBy' -Split '$Split'"
     $DetailDivHeader = Get-DetailDivHeader -GroupBy $GroupBy -Split $Split
     if ($Account) {
         $AccountObj = [pscustomobject]@{'Account' = $Account }
@@ -5545,13 +5549,13 @@ function Get-HtmlReportElements {
         ConvertTo-Html -Fragment |
         New-BootstrapTable
         $AccountDivHeader = 'The report only includes permissions for this account (option was used to generate a report per account)'
-        Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText '$AccountDivHeader' -Content `$AccountTable"
+        Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText '$AccountDivHeader' -Content `$AccountTable"
         $AccountDiv = New-BootstrapDivWithHeading -HeadingText $AccountDivHeader -Content $AccountTable -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
     }
-    Write-LogMsg -Cache $Cache -Text "New-HtmlHeading 'Source Paths' -Level 5"
+    Write-LogMsg @Log -Text "New-HtmlHeading 'Source Paths' -Level 5"
     $SourceHeading = New-HtmlHeading 'Source Paths' -Level 5
     $SourcePathString = $SourcePath -join '<br />'
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapAlert -Class Dark -Text '$SourcePathString'"
+    Write-LogMsg @Log -Text "New-BootstrapAlert -Class Dark -Text '$SourcePathString'"
     $SourceAlert = New-BootstrapAlert -Class Dark -Text $SourcePathString -AdditionalClasses ' small'
     $ReportParameters = @{
         Title       = $Title
@@ -5561,7 +5565,7 @@ function Get-HtmlReportElements {
     $ExcludedClasses = ConvertTo-ClassExclusionDiv -ExcludeClass $ExcludeClass -Cache $Cache
     $IgnoredDomains = ConvertTo-IgnoredDomainDiv -IgnoreDomain $IgnoreDomain -Cache $Cache
     $ExcludedMembers = ConvertTo-MemberExclusionDiv -NoMembers:$NoMembers -Cache $Cache
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapColumn -Html '`$ExcludedMembers`$ExcludedClasses',`$IgnoredDomains`$ExcludedNames"
+    Write-LogMsg @Log -Text "New-BootstrapColumn -Html '`$ExcludedMembers`$ExcludedClasses',`$IgnoredDomains`$ExcludedNames"
     $ExclusionsDiv = New-BootstrapColumn -Html "$ExcludedMembers$ExcludedClasses", "$IgnoredDomains$ExcludedNames" -Width 6
     $HtmlListOfLogs = $LogFileList |
     Split-Path -Leaf | 
@@ -5572,11 +5576,11 @@ function Get-HtmlReportElements {
     $HtmlOutputDir = New-BootstrapAlert -Text $OutputDir -Class 'secondary' -AdditionalClasses ' small'
     $ReportFileList = ConvertTo-FileList -Detail $Detail -Format $Formats -FileName $FileName
     $HtmlReportsDiv = (ConvertTo-FileListDiv -FileList $ReportFileList) -join "`r`n"
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapColumn -Html '`$HtmlReportsHeading`$HtmlReportsDiv',`$HtmlLogsHeading`$HtmlListOfLogs"
+    Write-LogMsg @Log -Text "New-BootstrapColumn -Html '`$HtmlReportsHeading`$HtmlReportsDiv',`$HtmlLogsHeading`$HtmlListOfLogs"
     $HtmlDivOfFileColumns = New-BootstrapColumn -Html "$HtmlReportsHeading$HtmlReportsDiv", "$HtmlLogsHeading$HtmlListOfLogs" -Width 6
-    Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content '`$HtmlOutputDir`$HtmlDivOfFileColumns'"
+    Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content '`$HtmlOutputDir`$HtmlDivOfFileColumns'"
     $HtmlDivOfFiles = New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content "$HtmlOutputDir$HtmlDivOfFileColumns" -HeadingLevel 6
-    Write-LogMsg -Cache $Cache -Text "Get-ReportFooter -StopWatch `$StopWatch -ReportInstanceId '$ReportInstanceId' -WhoAmI '$WhoAmI' -ThisFqdn '$ThisFqdn'"
+    Write-LogMsg @Log -Text "Get-ReportFooter -StopWatch `$StopWatch -ReportInstanceId '$ReportInstanceId' -WhoAmI '$WhoAmI' -ThisFqdn '$ThisFqdn'"
     $FooterParams = @{
         'ItemCount'                = $ItemCount
         'FormattedPermissionCount' = (
@@ -6193,7 +6197,7 @@ function Resolve-Folder {
             ClassName   = 'Win32_MappedLogicalDisk'
             KeyProperty = 'DeviceID'
         }
-        Write-LogMsg -Text "Get-CachedCimInstance -ComputerName '$ComputerName'" -Expand $CimParams -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value
+        Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value -Expand $CimParams -Text "Get-CachedCimInstance -ComputerName '$ComputerName'"
         $MappedNetworkDrives = Get-CachedCimInstance -ComputerName $ComputerName @CimParams
         $MatchingNetworkDrive = $MappedNetworkDrives |
         Where-Object -FilterScript { $_.DeviceID -eq "$($Matches.DriveLetter):" }
@@ -6204,12 +6208,12 @@ function Resolve-Folder {
         }
         if ($UNC) {
             $Server = $UNC.split('\')[2]
-            Write-LogMsg -Text "ConvertTo-PermissionFqdn -ComputerName '$Server' -Cache `$Cache" -Cache $Cache
+            Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value -Text "ConvertTo-PermissionFqdn -ComputerName '$Server' -Cache `$Cache"
             $FQDN = ConvertTo-PermissionFqdn -ComputerName $Server -Cache $Cache
             $UNC -replace "^\\\\$Server\\", "\\$FQDN\"
         }
     } else {
-        Write-LogMsg -Text "Get-NetDfsEnum -FolderPath '$SourcePath'" -Cache $Cache
+        Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "Get-NetDfsEnum -FolderPath '$SourcePath'"
         $AllDfs = Get-NetDfsEnum -FolderPath $SourcePath -ErrorAction SilentlyContinue
         if ($AllDfs) {
             $MatchingDfsEntryPaths = $AllDfs |
@@ -6283,7 +6287,10 @@ function Resolve-IdentityReferenceDomainDNS {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    $Log = @{ 'Cache' = $Cache }
+    $Log = @{
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+    }
     if ($Cache.Value['WellKnownSidBySid'].Value[$IdentityReference]) {
         $DomainDNS = Find-ServerNameInPath -LiteralPath $ItemPath -Cache $Cache
         return $DomainDNS
@@ -6620,17 +6627,21 @@ function ConvertTo-ItemBlock {
         [ref]$Cache
     )
     $Culture = $Cache.Value['Culture'].Value
-    Write-LogMsg -Cache $Cache -Text "`$ObjectsForTable = Select-ItemTableProperty -InputObject `$ItemPermissions -Culture '$Culture'"
+    $Log = @{
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+    }
+    Write-LogMsg @Log -Text "`$ObjectsForTable = Select-ItemTableProperty -InputObject `$ItemPermissions -Culture '$Culture'"
     $ObjectsForTable = Select-ItemTableProperty -InputObject $ItemPermissions -Culture $Culture
-    Write-LogMsg -Cache $Cache -Text "`$ObjectsForTable | ConvertTo-Html -Fragment | New-BootstrapTable"
+    Write-LogMsg @Log -Text "`$ObjectsForTable | ConvertTo-Html -Fragment | New-BootstrapTable"
     $HtmlTable = $ObjectsForTable |
     ConvertTo-Html -Fragment |
     New-BootstrapTable
     $JsonData = $ObjectsForTable |
     ConvertTo-Json -Compress
-    Write-LogMsg -Cache $Cache -Text "Get-ColumnJson -InputObject `$ObjectsForTable"
+    Write-LogMsg @Log -Text "Get-ColumnJson -InputObject `$ObjectsForTable"
     $JsonColumns = Get-ColumnJson -InputObject $ObjectsForTable
-    Write-LogMsg -Cache $Cache -Text "ConvertTo-BootstrapJavaScriptTable -Id 'Folders' -InputObject `$ObjectsForTable -DataFilterControl -SearchableColumn 'Folder' -DropdownColumn 'Inheritance'"
+    Write-LogMsg @Log -Text "ConvertTo-BootstrapJavaScriptTable -Id 'Folders' -InputObject `$ObjectsForTable -DataFilterControl -SearchableColumn 'Folder' -DropdownColumn 'Inheritance'"
     $JsonTable = ConvertTo-BootstrapJavaScriptTable -Id 'Folders' -InputObject $ObjectsForTable -DataFilterControl -SearchableColumn 'Folder' -DropdownColumn 'Inheritance'
     return [pscustomobject]@{
         HtmlDiv     = $HtmlTable
@@ -6647,7 +6658,7 @@ function ConvertTo-PermissionFqdn {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    Write-LogMsg -Text "ConvertTo-DnsFqdn -ComputerName '$ComputerName' -Cache `$Cache -ThisFqdn:`$$ThisFqdn" -Cache $Cache
+    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "ConvertTo-DnsFqdn -ComputerName '$ComputerName' -Cache `$Cache -ThisFqdn:`$$ThisFqdn"
     ConvertTo-DnsFqdn -ComputerName $ComputerName -Cache $Cache -ThisFqdn:$ThisFqdn
 }
 function Expand-Permission {
@@ -6660,7 +6671,10 @@ function Expand-Permission {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    $Log = @{ 'Cache' = $Cache }
+    $Log = @{
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+    }
     $Progress = Get-PermissionProgress -Activity 'Expand-Permission' -Cache $Cache
     $ProgressSplat = @{
         'Status'           = '0% : Prepare to group permission references, then expand them into objects'
@@ -6791,7 +6805,7 @@ function Expand-PermissionSource {
                 $IntervalCounter = 0
             }
             $i++ 
-            Write-LogMsg -Text "Get-Subfolder -TargetPath '$ThisFolder' -RecurseDepth $RecurseDepth" -Cache $Cache
+            Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "Get-Subfolder -TargetPath '$ThisFolder' -RecurseDepth $RecurseDepth"
             Get-Subfolder -TargetPath $ThisFolder @GetSubfolderParams
         }
     } else {
@@ -7149,7 +7163,7 @@ function Get-AccessControlList {
     if ($WarningCache.Keys.Count -ge 1) {
         $StartingLogType = $Cache.Value['LogType'].Value
         $Cache.Value['LogType'].Value = 'Warning' 
-        Write-LogMsg -Text " # Errors on $($WarningCache.Keys.Count) items while getting access control lists. See verbose log for details." -Cache $Cache
+        Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text " # Errors on $($WarningCache.Keys.Count) items while getting access control lists. See verbose log for details."
         $Cache.Value['LogType'].Value = $StartingLogType
     }
     Write-Progress @Progress -Status '50% (step 2 of 2) Find non-inherited owners for parent and child items' -CurrentOperation 'Find non-inherited owners for parent and child items' -PercentComplete 50
@@ -7204,7 +7218,7 @@ function Get-AccessControlList {
     if ($AclByPath.Value.Keys.Count -eq 0) {
         $StartingLogType = $Cache.Value['LogType'].Value
         $Cache.Value['LogType'].Value = 'Error'
-        Write-LogMsg -Text ' # 0 access control lists could be retrieved. Exiting script.' -Cache $Cache
+        Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text ' # 0 access control lists could be retrieved. Exiting script.'
         $Cache.Value['LogType'].Value = $StartingLogType
     }
 }
@@ -7221,8 +7235,9 @@ function Get-CachedCimInstance {
         [ref]$Cache
     )
     $Log = @{
-        'Cache'  = $Cache
-        'Suffix' = " # for ComputerName '$ComputerName'"
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'Suffix'       = " # for ComputerName '$ComputerName'"
     }
     if ($PSBoundParameters.ContainsKey('ClassName')) {
         $InstanceCacheKey = "$ClassName`By$KeyProperty"
@@ -7242,7 +7257,7 @@ function Get-CachedCimInstance {
         $CimServer = New-PermissionCacheRef -Key $String -Value ([type]'System.Management.Automation.PSReference')
         $CimCache.Value[$ComputerName] = $CimServer
     }
-    Write-LogMsg @Log -Text "`$CimSession = Get-CachedCimSession -ComputerName '$ComputerName' -Cache `$Cache"
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "`$CimSession = Get-CachedCimSession -ComputerName '$ComputerName' -Cache `$Cache"
     $CimSession = Get-CachedCimSession -ComputerName $ComputerName -Cache $Cache
     if ($CimSession) {
         $GetCimInstanceParams = @{
@@ -7254,11 +7269,11 @@ function Get-CachedCimInstance {
             $GetCimInstanceParams['Namespace'] = $Namespace
         }
         if ($PSBoundParameters.ContainsKey('ClassName')) {
-            Write-LogMsg @Log -Text "Get-CimInstance -ClassName '$ClassName'" -Expand $GetCimInstanceParams -ExpansionMap $Cache.Value['LogCimMap'].Value
+            Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogCimMap'].Value -Expand $GetCimInstanceParams -Text "Get-CimInstance -ClassName '$ClassName'"
             $CimInstance = Get-CimInstance -ClassName $ClassName @GetCimInstanceParams
         }
         if ($PSBoundParameters.ContainsKey('Query')) {
-            Write-LogMsg @Log -Text "Get-CimInstance -Query '$Query'" -Expand $GetCimInstanceParams -ExpansionMap $Cache.Value['LogCimMap'].Value
+            Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogCimMap'].Value -Expand $GetCimInstanceParams -Text "Get-CimInstance -Query '$Query'"
             $CimInstance = Get-CimInstance -Query $Query @GetCimInstanceParams
         }
         if ($CimInstance) {
@@ -7293,8 +7308,9 @@ function Get-CachedCimSession {
         [ref]$Cache
     )
     $Log = @{
-        'Cache'  = $Cache
-        'Suffix' = " # for ComputerName '$ComputerName'"
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'Suffix'       = " # for ComputerName '$ComputerName'"
     }
     $ThisFqdn = $Cache.Value['ThisFqdn'].Value
     $ThisHostname = $Cache.Value['ThisHostname'].Value
@@ -7380,7 +7396,7 @@ function Get-PermissionPrincipal {
                 $IntervalCounter = 0
             }
             $i++
-            Write-LogMsg @Log -Text "ConvertFrom-ResolvedID -IdentityReference '$ThisID'" -Expand $AdsiParams -ExpansionMap $Cache.Value['LogCacheMap'].Value
+            Write-LogMsg @Log -ExpansionMap $Cache.Value['LogCacheMap'].Value -Expand $AdsiParams -Text "ConvertFrom-ResolvedID -IdentityReference '$ThisID'"
             ConvertFrom-ResolvedID -IdentityReference $ThisID @AdsiParams
         }
     } else {
@@ -7394,7 +7410,7 @@ function Get-PermissionPrincipal {
             ObjectStringProperty = 'Name'
             AddParam             = $AdsiParams
         }
-        Write-LogMsg @Log -Text 'Split-Thread' -Expand $SplitThreadParams
+        Write-LogMsg @Log -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Expand $SplitThreadParams -Text 'Split-Thread'
         Split-Thread @SplitThreadParams
     }
     Write-Progress @Progress -Completed
@@ -7451,11 +7467,11 @@ function Initialize-PermissionCache {
         'Buffer'       = ([ref]$LogBuffer)
         'ExpandKeyMap' = $LogEmptyMap
     }
-    Write-LogMsg -Text '$StopWatch = [System.Diagnostics.Stopwatch]::new() ; $StopWatch.Start() # This command was already run but is now being logged' @Log
-    Write-LogMsg -Text "New-Item -ItemType Directory -Path '$OutputDir' -ErrorAction SilentlyContinue # This command was already run but is now being logged" @Log
-    Write-LogMsg -Text "Start-Transcript -Path '$TranscriptFile' # This command was already run but is now being logged" @Log
-    Write-LogMsg -Text 'HOSTNAME.EXE # This command was already run but is now being logged' @Log
-    Write-LogMsg -Text "Get-PermissionWhoAmI -ThisHostName '$ThisHostname' # This command was already run but is now being logged" @Log
+    Write-LogMsg @Log -Text '$StopWatch = [System.Diagnostics.Stopwatch]::new() ; $StopWatch.Start() # This command was already run but is now being logged'
+    Write-LogMsg @Log -Text "New-Item -ItemType Directory -Path '$OutputDir' -ErrorAction SilentlyContinue # This command was already run but is now being logged"
+    Write-LogMsg @Log -Text "Start-Transcript -Path '$TranscriptFile' # This command was already run but is now being logged"
+    Write-LogMsg @Log -Text 'HOSTNAME.EXE # This command was already run but is now being logged'
+    Write-LogMsg @Log -Text "Get-PermissionWhoAmI -ThisHostName '$ThisHostname' # This command was already run but is now being logged"
     $Boolean = [type]'String'
     $String = [type]'String'
     $GuidList = [type]'System.Collections.Generic.List[Guid]'
@@ -7580,9 +7596,9 @@ function Invoke-PermissionCommand {
         { Get-CurrentWhoAmI -LogBuffer $LogBuffer -ThisHostName $ThisHostname }
     )
     $StepCount = $Steps.Count
-    Write-LogMsg -Cache $Cache -Type Verbose -Text $Command
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache['LogEmptyMap'].Value -Type Verbose -Text $Command
     $ScriptBlock = $Steps[$Command]
-    Write-LogMsg -Cache $Cache -Type Debug -Text $ScriptBlock
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache['LogEmptyMap'].Value -Type Debug -Text $ScriptBlock
     Invoke-Command -ScriptBlock $ScriptBlock
 }
 function Optimize-PermissionCache {
@@ -7604,7 +7620,7 @@ function Optimize-PermissionCache {
             [int]$PercentComplete = $i / $Count * 100
             $i++ 
             Write-Progress -Status "$PercentComplete% (FQDN $i of $Count) Get-AdsiServer" -CurrentOperation "Get-AdsiServer '$ThisServerName'" -PercentComplete $PercentComplete @Progress
-            Write-LogMsg -Text "Get-AdsiServer -Fqdn '$ThisServerName'" -Expand $GetAdsiServer -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value
+            Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogCacheMap'].Value -Expand $GetAdsiServer -Text "Get-AdsiServer -Fqdn '$ThisServerName'"
             $null = Get-AdsiServer -Fqdn $ThisServerName @GetAdsiServer
         }
     } else {
@@ -7620,7 +7636,7 @@ function Optimize-PermissionCache {
             ProgressParentId = $ProgressParentId
             AddParam         = $GetAdsiServer
         }
-        Write-LogMsg -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($Fqdn -join "',")')" -Cache $Cache
+        Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "Split-Thread -Command 'Get-AdsiServer' -InputParameter AdsiServer -InputObject @('$($Fqdn -join "',")')"
         $null = Split-Thread @SplitThread
     }
     Write-Progress @Progress -Completed
@@ -7678,6 +7694,10 @@ function Out-PermissionFile {
         [ref]$Cache,
         [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
     )
+    $Log = @{
+        'Cache'        = $Cache
+        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+    }
     $Culture = $Cache.Value['Culture'].Value
     $AceByGUID = $Cache.Value['AceByGUID']
     $AclByPath = $Cache.Value['AclByPath']
@@ -7800,19 +7820,19 @@ function Out-PermissionFile {
                             $GroupBy -eq 'none' -or
                             $GroupBy -eq $Split
                         ) {
-                            Write-LogMsg -Cache $Cache -Text "Get-HtmlBody -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
+                            Write-LogMsg @Log -Text "Get-HtmlBody -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
                             $Body = Get-HtmlBody @BodyParams
                             $ReportParameters = $HtmlElements.ReportParameters
-                            Write-LogMsg -Cache $Cache -Text 'New-BootstrapReport @ReportParameters'
+                            Write-LogMsg @Log -Text 'New-BootstrapReport @ReportParameters'
                             New-BootstrapReport -Body $Body @ReportParameters
                         } else {
-                            Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText '$HtmlElements.SummaryTableHeader' -Content `$FormattedPermission.$Format`Group.Table"
+                            Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText '$HtmlElements.SummaryTableHeader' -Content `$FormattedPermission.$Format`Group.Table"
                             $TableOfContents = New-BootstrapDivWithHeading -HeadingText $HtmlElements.SummaryTableHeader -Content $PermissionGroupings.Table -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
-                            Write-LogMsg -Cache $Cache -Text "Get-HtmlBody -TableOfContents `$TableOfContents -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
+                            Write-LogMsg @Log -Text "Get-HtmlBody -TableOfContents `$TableOfContents -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
                             $Body = Get-HtmlBody -TableOfContents $TableOfContents @BodyParams
                         }
                         $ReportParameters = $HtmlElements.ReportParameters
-                        Write-LogMsg -Cache $Cache -Text "New-BootstrapReport @$HtmlElements.ReportParameters"
+                        Write-LogMsg @Log -Text "New-BootstrapReport @$HtmlElements.ReportParameters"
                         New-BootstrapReport -Body $Body @ReportParameters
                     }
                     break
@@ -7836,18 +7856,18 @@ function Out-PermissionFile {
                             $GroupBy -eq 'none' -or
                             $GroupBy -eq $Split
                         ) {
-                            Write-LogMsg -Cache $Cache -Text "Get-HtmlBody -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
+                            Write-LogMsg @Log -Text "Get-HtmlBody -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
                             $Body = Get-HtmlBody @BodyParams
                         } else {
-                            Write-LogMsg -Cache $Cache -Text "New-BootstrapDivWithHeading -HeadingText '$HtmlElements.SummaryTableHeader' -Content `$FormattedPermission.$Format`Group.Table"
+                            Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText '$HtmlElements.SummaryTableHeader' -Content `$FormattedPermission.$Format`Group.Table"
                             $TableOfContents = New-BootstrapDivWithHeading -HeadingText $HtmlElements.SummaryTableHeader -Content $PermissionGroupings.Table -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
-                            Write-LogMsg -Cache $Cache -Text "Get-HtmlBody -TableOfContents `$TableOfContents -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
+                            Write-LogMsg @Log -Text "Get-HtmlBody -TableOfContents `$TableOfContents -HtmlFolderPermissions `$FormattedPermission.$Format.Div"
                             $Body = Get-HtmlBody -TableOfContents $TableOfContents @BodyParams
                         }
-                        Write-LogMsg -Cache $Cache -Text "ConvertTo-ScriptHtml -Permission `$Permissions -PermissionGrouping `$PermissionGroupings"
+                        Write-LogMsg @Log -Text "ConvertTo-ScriptHtml -Permission `$Permissions -PermissionGrouping `$PermissionGroupings"
                         $ScriptHtml = ConvertTo-ScriptHtml -Permission $Permissions -PermissionGrouping $PermissionGroupings -GroupBy $GroupBy -Split $Split
                         $ReportParameters = $HtmlElements.ReportParameters
-                        Write-LogMsg -Cache $Cache -Text "New-BootstrapReport -JavaScript @$HtmlElements.ReportParameters"
+                        Write-LogMsg @Log -Text "New-BootstrapReport -JavaScript @$HtmlElements.ReportParameters"
                         New-BootstrapReport -JavaScript -AdditionalScriptHtml $ScriptHtml -Body $Body @ReportParameters
                     }
                     $FormatString = 'json'
@@ -7990,7 +8010,7 @@ function Resolve-AccessControlList {
         [int]$ProgressInterval = [math]::max(($Count / 100), 1)
         $IntervalCounter = 0
         $i = 0
-        Write-LogMsg @Log -Text "`$Cache.Value['AclByPath'].Value.Keys | %{ Resolve-Acl -ItemPath '`$_'" -Expand $ResolveAclParams -Suffix " } # for $Count ACLs" -ExpansionMap $Cache.Value['LogCacheMap'].Value
+        Write-LogMsg @Log -ExpansionMap $Cache.Value['LogCacheMap'].Value -Expand $ResolveAclParams -Text "`$Cache.Value['AclByPath'].Value.Keys | %{ Resolve-Acl -ItemPath '`$_'" -Suffix " } # for $Count ACLs"
         ForEach ($ThisPath in $Paths) {
             $IntervalCounter++
             if ($IntervalCounter -eq $ProgressInterval) {
@@ -8013,7 +8033,7 @@ function Resolve-AccessControlList {
             ProgressParentId = $Progress['Id']
             AddParam         = $ResolveAclParams
         }
-        Write-LogMsg @Log -Text 'Split-Thread' -Expand $SplitThreadParams
+        Write-LogMsg @Log -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Expand $SplitThreadParams -Text 'Split-Thread'
         Split-Thread @SplitThreadParams
     }
     Write-Progress @Progress -Completed
@@ -8025,8 +8045,12 @@ function Resolve-PermissionSource {
         [ref]$Cache
     )
     $Parents = $Cache.Value['ParentBySourcePath']
+    $Log = @{
+        'Cache'        = $Cache
+        'ExpansionMap' = $Cache.Value['LogCacheMap'].Value
+    }
     ForEach ($ThisSourcePath in $SourcePath) {
-        Write-LogMsg -Text "Resolve-Folder -SourcePath '$ThisSourcePath' -Cache `$Cache" -Cache $Cache
+        Write-LogMsg @Log -Text "Resolve-Folder -SourcePath '$ThisSourcePath' -Cache `$Cache"
         $Parents.Value[$ThisSourcePath] = Resolve-Folder -SourcePath $ThisSourcePath -Cache $Cache
     }
 }
