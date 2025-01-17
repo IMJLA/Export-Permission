@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.581] - 2025-01-17
+### Changed
+- install mermaid theme node modules for build
+
 ## [0.0.580] - 2025-01-17
 ### Added
 - add mermaid to docs

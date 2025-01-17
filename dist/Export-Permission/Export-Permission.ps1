@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.580
+.VERSION 0.0.581
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add mermaid to docs
+install mermaid theme node modules for build
 
 .PRIVATEDATA
 
