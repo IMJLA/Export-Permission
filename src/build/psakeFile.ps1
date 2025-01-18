@@ -147,21 +147,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -314,7 +314,7 @@ Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         'Verbose'               = $VerbosePreference
     }
 
-    $CommentBasedHelp = Get-Help -Name $script:ReleasedScript.FullName
+    $CommentBasedHelp = Get-Help -name $script:ReleasedScript.FullName
     if ($CommentBasedHelp.relatedLinks.navigationLink.uri) {
         $OnlineHelpUri = @($CommentBasedHelp.relatedLinks.navigationLink.uri)[0]
         $MarkdownParams['OnlineVersionUrl'] = $OnlineHelpUri
@@ -438,7 +438,7 @@ Task ConvertArt -depends CopyArt {
 
 } -description 'Convert SVGs to PNG using Inkscape.'
 
-Task BuildOnlineHelp -depends CopyArt {
+Task BuildOnlineHelp -depends ConvertArt {
 
     $Location = Get-Location
     Set-Location $OnlineHelpDir
