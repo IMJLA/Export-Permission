@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.582
+.VERSION 0.0.587
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-upgrade docusaurus
+bugfix psakefile
 
 .PRIVATEDATA
 
@@ -35,7 +35,7 @@ upgrade docusaurus
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.522' }
 #Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1189' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
-#Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.118' }
+#Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.227' }
 #Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }
 #Requires -Module @{ ModuleName = 'SimplePrtg' ; RequiredVersion = '1.0.13' }

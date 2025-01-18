@@ -147,21 +147,21 @@ Task Default -depends FindLinter, FindBuildModule, FindDocumentationModule, Dete
 Task FindLinter -precondition { $LintEnabled } {
 
     Write-Host "`tGet-Module -Name PSScriptAnalyzer -ListAvailable"
-    $script:FindLinter = [boolean](Get-Module -Name PSScriptAnalyzer -ListAvailable)
+    $script:FindLinter = [boolean](Get-Module -name PSScriptAnalyzer -ListAvailable)
 
 } -description 'Find the prerequisite PSScriptAnalyzer PowerShell module.'
 
 Task FindBuildModule -precondition { $script:FindLinter } {
 
     Write-Host "`tGet-Module -Name PowerShellBuild -ListAvailable"
-    $script:FindBuildModule = [boolean](Get-Module -Name PowerShellBuild -ListAvailable)
+    $script:FindBuildModule = [boolean](Get-Module -name PowerShellBuild -ListAvailable)
 
 } -description 'Find the prerequisite PowerShellBuild PowerShell module.'
 
 Task FindDocumentationModule {
 
     Write-Host "`tGet-Module -Name PlatyPS -ListAvailable"
-    $script:PlatyPS = [boolean](Get-Module -Name PlatyPS -ListAvailable)
+    $script:PlatyPS = [boolean](Get-Module -name PlatyPS -ListAvailable)
 
 } -description 'Find the prerequisite PlatyPS PowerShell module.'
 
@@ -314,7 +314,7 @@ Task BuildMarkdownHelp -depends DeleteMarkdownHelp {
         'Verbose'               = $VerbosePreference
     }
 
-    $CommentBasedHelp = Get-Help -name $script:ReleasedScript.FullName
+    $CommentBasedHelp = Get-Help -Name $script:ReleasedScript.FullName
     if ($CommentBasedHelp.relatedLinks.navigationLink.uri) {
         $OnlineHelpUri = @($CommentBasedHelp.relatedLinks.navigationLink.uri)[0]
         $MarkdownParams['OnlineVersionUrl'] = $OnlineHelpUri
@@ -409,26 +409,36 @@ Task BuildArt -depends BuildUpdatableHelp {
 
     $Script:StaticImageDir = [IO.Path]::Combine($OnlineHelpDir, 'static', 'img')
     $null = New-Item -ItemType Directory -Path $Script:StaticImageDir -ErrorAction SilentlyContinue
-    $ImageScriptDir = [IO.Path]::Combine('..', 'img')
+    $Script:SrcImageDir = [IO.Path]::Combine('..', 'img')
 
-    ForEach ($ScriptToRun in (Get-ChildItem -Path $ImageScriptDir -Filter '*.ps1')) {
-        $ThisPath = [IO.Path]::Combine($ImageScriptDir, $ScriptToRun.Name)
+    ForEach ($ScriptToRun in (Get-ChildItem -Path $SrcImageDir -Filter '*.ps1')) {
+        $ThisPath = [IO.Path]::Combine($SrcImageDir, $ScriptToRun.Name)
         Write-Host "`t. $ThisPath -OutputDir '$StaticImageDir'"
         . $ThisPath -OutputDir $StaticImageDir
     }
 
-} -description 'Build SVG art using PSSVG.'
+} -description 'Build dynamic SVG art using PSSVG.'
 
-Task ConvertArt -depends BuildArt {
+Task CopyArt -depends BuildArt {
 
-    $ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
-    $sourceSVG = [IO.Path]::Combine($Script:StaticImageDir, 'logo.svg')
-    Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
-    . $ScriptToRun -Path $sourceSVG -ExportWidth 512
+    Write-Host "`tGet-ChildItem -Path '$Script:SrcImageDir' -Filter '*.svg' |"
+    Write-Host "`tCopy-Item -Destination '$Script:StaticImageDir'"
+
+    Get-ChildItem -Path $Script:SrcImageDir -Filter '*.svg' |
+    Copy-Item -Destination $Script:StaticImageDir
+
+} -description 'Copy static SVG art to the online help website.'
+
+Task ConvertArt -depends CopyArt {
+
+    #$ScriptToRun = [IO.Path]::Combine('.', 'ConvertFrom-SVG.ps1')
+    #$sourceSVG = [IO.Path]::Combine($Script:StaticImageDir, 'logo.svg')
+    #Write-Host "`t. $ScriptToRun -Path '$sourceSVG' -ExportWidth 512"
+    #. $ScriptToRun -Path $sourceSVG -ExportWidth 512
 
 } -description 'Convert SVGs to PNG using Inkscape.'
 
-Task BuildOnlineHelp -depends ConvertArt {
+Task BuildOnlineHelp -depends CopyArt {
 
     $Location = Get-Location
     Set-Location $OnlineHelpDir

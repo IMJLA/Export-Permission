@@ -1,48 +1,7 @@
-# Design Plan
-
-````
-Export-Permission
-
-
-  Get-Permission
-    (foreach LiteralPath)
-      Resolve-PermissionSource
-      (foreach ResolvedLiteralPath)
-        Expand-PermissionSource
-        (foreach ExpandedResolvedLiteralPath)
-          Get-FolderAcl
-            Get-DirectorySecurity
-            Get-OwnerAce
-          Resolve-AccessControlList
-            Resolve-Acl
-              (foreach AccessControlEntry)
-                Resolve-Ace
-                  Resolve-IdentityReferenceDomainDNS
-                  Get-AdsiServer
-                  Resolve-IdentityReference
-                Get-PermissionPrincipal
-                  ConvertFrom-IdentityReferenceResolved
-                    Get-DirectoryEntry -or
-                    Get-WinNTGroupMember -or
-                    Search-Directory
-                    (foreach GroupMember)
-                      Get-AdsiGroupMember -or
-                      Get-WinNTGroupMember
-
-                Format-PermissionAccount
-                  Format-SecurityPrincipal
-                Select-UniqueAccountPermission
-                Format-FolderPermission
-
-  Export-PermissionCsv
-  Export-PermissionHtml
-````
-
-```mermaid
 ---
 title: Functional Block Diagram (planned)
 ---
-flowchart TB
+flowchart TD
 
 subgraph Export-Permission
     ExportPermission["Create CSV, HTML, and XML reports of permissions"]:::description
@@ -97,4 +56,3 @@ classDef externalSystem fill:#999999
 
 classDef type stroke-width:0px, color:#fff, fill:transparent, font-size:12px
 classDef description stroke-width:0px, fill:transparent, font-size:13px
-```

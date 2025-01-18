@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.587] - 2025-01-17
+### Fixed
+- bugfix psakefile
+
+## [0.0.586] - 2025-01-17
+### Changed
+- troubleshoot new psake task
+
+## [0.0.585] - 2025-01-17
+### Added
+- add psake task to copy static svg art to the online help website
+
+## [0.0.584] - 2025-01-17
+### Fixed
+- fix docs
+
+## [0.0.583] - 2025-01-17
+### Changed
+- update docs
+
 ## [0.0.582] - 2025-01-17
 ### Changed
 - upgrade docusaurus
