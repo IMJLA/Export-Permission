@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.588] - 2025-01-17
+### Changed
+- retry build
+
 ## [0.0.587] - 2025-01-17
 ### Fixed
 - bugfix psakefile

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.587
+.VERSION 0.0.588
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix psakefile
+retry build
 
 .PRIVATEDATA
 
