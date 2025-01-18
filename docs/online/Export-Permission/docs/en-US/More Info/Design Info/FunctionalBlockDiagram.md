@@ -42,6 +42,8 @@ This page contains functional block diagrams representing the script and the fun
 
 ## Original Design
 
+This original design was discarded in favor of a flatter code structure.
+
 ### Markdown
 
 #### Export-Permission
