@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.590
+.VERSION 0.0.591
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove unused files
+implement Adsi and PsNtfs module updates
 
 .PRIVATEDATA
 
@@ -999,7 +999,9 @@ function ConvertTo-PermissionPrincipal {
                     }
                     $OutputProperties['ResolvedAccountName'] = $ResolvedAccountName
                     $PrincipalById.Value[$ResolvedAccountName] = [PSCustomObject]$OutputProperties
-                    $AceGuidByID.Value[$ResolvedAccountName] = $AceGuid
+                    ForEach ($ACE in $AceGuid) {
+                        Add-PermissionCacheItem -Cache $AceGuidByID -Key $ResolvedAccountName -Value $ACE -Type ([System.Guid])
+                    }
                     $ResolvedAccountName
                 }
             }
@@ -7077,7 +7079,7 @@ function Format-TimeSpan {
     foreach ($Unit in $UnitsToResolve) {
         if ($TimeSpan."$Unit`s") {
             if ($aUnitWithAValueHasBeenFound) {
-                $null = $StringBuilder.Append(", ")
+                $null = $StringBuilder.Append(', ')
             }
             $aUnitWithAValueHasBeenFound = $true
             if ($TimeSpan."$Unit`s" -eq 1) {
@@ -8987,6 +8989,7 @@ function GetDirectories {
         WarningCache  = $WarningCache
     }
     ForEach ($Child in $result) {
+        $Child
         Write-LogMsg -Text "[System.IO.Directory]::GetDirectories('$Child','$SearchPattern',[System.IO.SearchOption]::$SearchOption)" -Cache $Cache
         GetDirectories -TargetPath $Child @GetSubfolderParams
     }
