@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.595
+.VERSION 0.0.596
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update psntfs module for bugfix in variable name related to caching errors during acl retrieval
+implement error div
 
 .PRIVATEDATA
 
@@ -33,7 +33,7 @@ update psntfs module for bugfix in variable name related to caching errors durin
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1191' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1192' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }

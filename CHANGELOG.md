@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.596] - 2025-01-20
+### Added
+- implement error div
+
 ## [0.0.595] - 2025-01-20
 ### Changed
 - update psntfs module for bugfix in variable name related to caching errors during acl retrieval
