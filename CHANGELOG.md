@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.594] - 2025-01-20
+### Added
+- implement caching of errors during item enum and dacl retrival
+
 ## [0.0.593] - 2025-01-20
 ### Added
 - add errorbyitempath to cache for item enumeration and acl retrieval

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.593
+.VERSION 0.0.594
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add errorbyitempath to cache for item enumeration and acl retrieval
+implement caching of errors during item enum and dacl retrival
 
 .PRIVATEDATA
 
@@ -7499,7 +7499,7 @@ function Initialize-PermissionCache {
             'DomainByNetbios'              = New-PermissionCacheRef -Key $String -Value $Object 
             'DomainByFqdn'                 = New-PermissionCacheRef -Key $String -Value $Object 
             'ErrorByItemPath_Enumeration'  = New-PermissionCacheRef -Key $String -Value $String 
-            'ErrorByItemPath_DACL'         = New-PermissionCacheRef -Key $String -Value $String 
+            'ErrorByItemPath_AclRetrieval' = New-PermissionCacheRef -Key $String -Value $String 
             'ExcludeAccountFilterContents' = New-PermissionCacheRef -Key $String -Value $Boolean 
             'ExcludeClassFilterContents'   = New-PermissionCacheRef -Key $String -Value $Boolean 
             'IdByShortName'                = New-PermissionCacheRef -Key $String -Value $StringList 
@@ -8967,7 +8967,7 @@ function GetDirectories {
         return $result
     }
     catch {
-        $WarningCache[$_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')] = $null
+        $WarningCache[$_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')] = $TargetPath
     }
     Write-LogMsg -Text "[System.IO.Directory]::GetDirectories('$TargetPath','$SearchPattern',[System.IO.SearchOption]::TopDirectoryOnly)" -Cache $Cache
     try {
@@ -8975,7 +8975,8 @@ function GetDirectories {
     }
     catch {
         $ThisWarning = $_.Exception.Message.Replace('Exception calling "GetDirectories" with "3" argument(s): ', '').Replace('"', '')
-        $WarningCache[$ThisWarning] = $null
+        $WarningCache[$ThisWarning] = $TargetPath
+        $Cache.Value['ErrorByItemPath_Enumeration'].Value[$TargetPath] = $ThisWarning
         if (-not $PSBoundParameters.ContainsKey('WarningCache')) {
             $Cache.Value['LogType'].Value = 'Warning' 
             ForEach ($Warning in $WarningCache.Keys) {
@@ -9220,6 +9221,7 @@ function Get-DirectorySecurity {
     catch {
         $ThisWarning = $_.Exception.Message.Replace('Exception calling ".ctor" with "2" argument(s): ', '').Replace('"', '')
         $WarningCache[$LiteralPath] = $ThisWarning
+        $Cache.Value['ErrorByItemPath_AclRetrieval'].Value[$TargetPath] = $ThisWarning
         $StartingLogType = $Cache.Value['LogType'].Value
         $Cache.Value['LogType'].Value = 'Verbose' 
         Write-LogMsg  -Text " # Error getting ACL for '$LiteralPath': '$ThisWarning'" -Cache $Cache
