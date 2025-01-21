@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.598
+.VERSION 0.0.599
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix error aggregation
+incorporate bugfix for error table and give it some pizazze
 
 .PRIVATEDATA
 
@@ -5798,8 +5798,8 @@ function Get-ReportErrorDiv {
         $ErrorTable = $ErrorObjects |
         Sort-Object -Property Item, Stage |
         ConvertTo-Html -Fragment |
-        New-BootstrapTable
-        $null = $StringBuilder.Append($ErrorTable)
+        New-BootstrapTable -Class ' table-danger'
+        $null = $StringBuilder.AppendLine($ErrorTable)
         New-BootstrapDiv -Text ($StringBuilder.ToString())
     }
 }

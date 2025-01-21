@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.598
+.VERSION 0.0.599
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix error aggregation
+incorporate bugfix for error table and give it some pizazze
 
 .PRIVATEDATA
 
@@ -33,7 +33,7 @@ bugfix error aggregation
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1193' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1197' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.599] - 2025-01-20
+### Changed
+- incorporate bugfix for error table and give it some pizazze
+
 ## [0.0.598] - 2025-01-20
 ### Fixed
 - bugfix error aggregation
