@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.599
+.VERSION 0.0.600
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-incorporate bugfix for error table and give it some pizazze
+new version of psbootstrapcss module
 
 .PRIVATEDATA
 
@@ -34,7 +34,7 @@ incorporate bugfix for error table and give it some pizazze
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
 #Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1197' }
-#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
+#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.62' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }
 #Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }

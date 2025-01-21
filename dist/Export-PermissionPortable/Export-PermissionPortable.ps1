@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.599
+.VERSION 0.0.600
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-incorporate bugfix for error table and give it some pizazze
+new version of psbootstrapcss module
 
 .PRIVATEDATA
 
@@ -8507,7 +8507,7 @@ function New-BootstrapDiv {
     }
     process {
         ForEach ($String in $Text) {
-            "<div$DivId class=`"alert alert-$($Class.ToLower())`">$String</div>"
+            "<div$DivId class=`"alert $($Class.ToLower())`">$String</div>"
         }
     }
 }
@@ -8654,12 +8654,13 @@ Function New-BootstrapTable {
             ValueFromPipeline,
             ValueFromPipelineByPropertyName
         )]
-        [System.String[]]$HtmlTable
+        [System.String[]]$HtmlTable,
+        [string]$Class
     )
     begin {}
     process {
         ForEach ($Table in $HtmlTable) {
-            $Table -replace '<table>', '<table class="table table-striped text-nowrap small table-sm">'
+            $Table -replace '<table>', "<table class=`"table table-striped text-nowrap small table-sm$Class`">"
         }
     }
     end {}
