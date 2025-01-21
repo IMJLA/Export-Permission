@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.597
+.VERSION 0.0.598
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -5780,21 +5780,22 @@ function Get-ReportErrorDiv {
         $StringBuilder = [System.Text.StringBuilder]::new()
         $Alert = New-BootstrapAlert -Class danger -Text 'Danger! Errors were encountered which could result in permissions missing from this report.'
         $null = $StringBuilder.Append($Alert)
-        $EnumErrorObjects = ForEach ($EnumErrorPath in $EnumErrors.Keys) {
-            [PSCustomObject]@{
-                'Stage' = 'Item Enumeration'
-                'Item'  = $EnumErrorPath
-                'Error' = $EnumErrors[$EnumErrorPath]
-            }
+        $ErrorObjects = [System.Collections.Generic.list[PSCustomObject]]::new()
+        ForEach ($EnumErrorPath in $EnumErrors.Keys) {
+            $ErrorObjects.Add([PSCustomObject]@{
+                    'Stage' = 'Item Enumeration'
+                    'Item'  = $EnumErrorPath
+                    'Error' = $EnumErrors[$EnumErrorPath]
+                })
         }
-        $AclErrorObjects = ForEach ($AclErrorPath in $AclErrors.Keys) {
-            [PSCustomObject]@{
-                'Stage' = 'ACL Retrieval'
-                'Item'  = $AclErrorPath
-                'Error' = $AclErrors[$AclErrorPath]
-            }
+        ForEach ($AclErrorPath in $AclErrors.Keys) {
+            $ErrorObjects.Add([PSCustomObject]@{
+                    'Stage' = 'ACL Retrieval'
+                    'Item'  = $AclErrorPath
+                    'Error' = $AclErrors[$AclErrorPath]
+                })
         }
-        $ErrorTable = $EnumErrorObjects + $AclErrorObjects |
+        $ErrorTable = $ErrorObjects |
         Sort-Object -Property Item, Stage |
         ConvertTo-Html -Fragment |
         New-BootstrapTable
