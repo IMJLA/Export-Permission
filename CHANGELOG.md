@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.593] - 2025-01-20
+### Added
+- add errorbyitempath to cache for item enumeration and acl retrieval
+
 ## [0.0.591] - 2025-01-18
 ### Added
 - implement Adsi and PsNtfs module updates

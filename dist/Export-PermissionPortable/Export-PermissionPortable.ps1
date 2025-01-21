@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.591
+.VERSION 0.0.593
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement Adsi and PsNtfs module updates
+add errorbyitempath to cache for item enumeration and acl retrieval
 
 .PRIVATEDATA
 
@@ -7079,7 +7079,7 @@ function Format-TimeSpan {
     foreach ($Unit in $UnitsToResolve) {
         if ($TimeSpan."$Unit`s") {
             if ($aUnitWithAValueHasBeenFound) {
-                $null = $StringBuilder.Append(', ')
+                $null = $StringBuilder.Append(", ")
             }
             $aUnitWithAValueHasBeenFound = $true
             if ($TimeSpan."$Unit`s" -eq 1) {
@@ -7498,6 +7498,8 @@ function Initialize-PermissionCache {
             'DomainBySID'                  = New-PermissionCacheRef -Key $String -Value $Object 
             'DomainByNetbios'              = New-PermissionCacheRef -Key $String -Value $Object 
             'DomainByFqdn'                 = New-PermissionCacheRef -Key $String -Value $Object 
+            'ErrorByItemPath_Enumeration'  = New-PermissionCacheRef -Key $String -Value $String 
+            'ErrorByItemPath_DACL'         = New-PermissionCacheRef -Key $String -Value $String 
             'ExcludeAccountFilterContents' = New-PermissionCacheRef -Key $String -Value $Boolean 
             'ExcludeClassFilterContents'   = New-PermissionCacheRef -Key $String -Value $Boolean 
             'IdByShortName'                = New-PermissionCacheRef -Key $String -Value $StringList 
