@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.597] - 2025-01-20
+### Fixed
+- bugfix error aggregation
+
 ## [0.0.596] - 2025-01-20
 ### Added
 - implement error div
