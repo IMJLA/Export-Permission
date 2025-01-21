@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.594
+.VERSION 0.0.595
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement caching of errors during item enum and dacl retrival
+update psntfs module for bugfix in variable name related to caching errors during acl retrieval
 
 .PRIVATEDATA
 
@@ -9221,7 +9221,7 @@ function Get-DirectorySecurity {
     catch {
         $ThisWarning = $_.Exception.Message.Replace('Exception calling ".ctor" with "2" argument(s): ', '').Replace('"', '')
         $WarningCache[$LiteralPath] = $ThisWarning
-        $Cache.Value['ErrorByItemPath_AclRetrieval'].Value[$TargetPath] = $ThisWarning
+        $Cache.Value['ErrorByItemPath_AclRetrieval'].Value[$LiteralPath] = $ThisWarning
         $StartingLogType = $Cache.Value['LogType'].Value
         $Cache.Value['LogType'].Value = 'Verbose' 
         Write-LogMsg  -Text " # Error getting ACL for '$LiteralPath': '$ThisWarning'" -Cache $Cache

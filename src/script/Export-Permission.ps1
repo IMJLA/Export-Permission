@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.594
+.VERSION 0.0.595
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-implement caching of errors during item enum and dacl retrival
+update psntfs module for bugfix in variable name related to caching errors during acl retrieval
 
 .PRIVATEDATA
 
@@ -36,7 +36,7 @@ implement caching of errors during item enum and dacl retrival
 #Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1191' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.53' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
-#Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.229' }
+#Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }
 #Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }
 #Requires -Module @{ ModuleName = 'SimplePrtg' ; RequiredVersion = '1.0.13' }
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.595] - 2025-01-20
+### Changed
+- update psntfs module for bugfix in variable name related to caching errors during acl retrieval
+
 ## [0.0.594] - 2025-01-20
 ### Added
 - implement caching of errors during item enum and dacl retrival
