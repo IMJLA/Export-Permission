@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.602] - 2025-01-21
+### Added
+- add orig cmd to footer of report
+
 ## [0.0.601] - 2025-01-21
 ### Changed
 - reuse PSBoundParameters for Out-PermissionFile rather than all params split out

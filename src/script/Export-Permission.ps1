@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.601
+.VERSION 0.0.602
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-reuse PSBoundParameters for Out-PermissionFile rather than all params split out
+add orig cmd to footer of report
 
 .PRIVATEDATA
 
@@ -33,8 +33,8 @@ reuse PSBoundParameters for Out-PermissionFile rather than all params split out
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1199' }
-#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.62' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1202' }
+#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.64' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }
 #Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }
@@ -549,6 +549,15 @@ begin {
     Write-LogMsg -Text 'Get-PermissionTrustedDomain' -Expand $Cached @Cached @CacheMap
     Get-PermissionTrustedDomain @Cached
 
+    # Add all parameters (including unbound parameters) to the PSBoundParameters collection.
+    foreach ($ParamName in $MyInvocation.MyCommand.Parameters.Keys) {
+        if (-not $PSBoundParameters.ContainsKey($ParamName)) {
+            try {
+                $PSBoundParameters.Add($ParamName, (Get-Variable -Name $ParamName -ValueOnly))
+            } catch {}
+        }
+    }
+
 }
 
 process {
@@ -810,5 +819,6 @@ end {
     Write-Progress @Progress -Completed
 
 }
+
 
 
