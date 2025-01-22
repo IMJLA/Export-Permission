@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.602
+.VERSION 0.0.603
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-add orig cmd to footer of report
+update permission module for bugfix in new footer feature
 
 .PRIVATEDATA
 
@@ -33,7 +33,7 @@ add orig cmd to footer of report
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1202' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1203' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.64' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }

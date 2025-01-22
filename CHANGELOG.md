@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.603] - 2025-01-21
+### Changed
+- update permission module for bugfix in new footer feature
+
 ## [0.0.602] - 2025-01-21
 ### Added
 - add orig cmd to footer of report
