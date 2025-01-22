@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.603
+.VERSION 0.0.604
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update permission module for bugfix in new footer feature
+bugfix remove rogue code
 
 .PRIVATEDATA
 
@@ -5587,8 +5587,6 @@ function Get-HtmlReportElements {
     $HtmlDivOfFileColumns = New-BootstrapColumn -Html "$HtmlReportsHeading$HtmlReportsDiv", "$HtmlLogsHeading$HtmlListOfLogs" -Width 6
     Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content '`$HtmlOutputDir`$HtmlDivOfFileColumns'"
     $HtmlDivOfFiles = New-BootstrapDivWithHeading -HeadingText 'Output Folder:' -Content "$HtmlOutputDir$HtmlDivOfFileColumns" -HeadingLevel 6
-    $OriginalCommand = Write-LogMsg -Text 'Export-Permission' -Expand $ParameterDict -Type Output -AddPrefix $false
-    $CodeBlock = New-BootstrapCodeBlock -Code $OriginalCommand
     Write-LogMsg @Log -Text "Get-HtmlReportFooter -StopWatch `$StopWatch -ReportInstanceId '$ReportInstanceId' -WhoAmI '$WhoAmI' -ThisFqdn '$ThisFqdn'"
     $FooterParams = @{
         'ItemCount'                = $ItemCount

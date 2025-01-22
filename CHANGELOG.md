@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.604] - 2025-01-21
+### Fixed
+- bugfix remove rogue code
+
 ## [0.0.603] - 2025-01-21
 ### Changed
 - update permission module for bugfix in new footer feature
