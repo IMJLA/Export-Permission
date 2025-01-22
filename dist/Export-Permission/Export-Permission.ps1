@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.600
+.VERSION 0.0.601
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new version of psbootstrapcss module
+reuse PSBoundParameters for Out-PermissionFile rather than all params split out
 
 .PRIVATEDATA
 
@@ -33,7 +33,7 @@ new version of psbootstrapcss module
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1197' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1199' }
 #Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.62' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }
@@ -530,13 +530,13 @@ begin {
     # Create a splat of the cache parameter to pass to various functions for script readability.
     $Cache = [ref]$PermissionCache
     $Cached = @{ 'Cache' = $Cache }
-    $EmptyMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
+    $NoMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
     $CacheMap = @{ 'ExpansionMap' = $PermissionCache['LogCacheMap'].Value }
     $StopWatchMap = @{ 'ExpansionMap' = $PermissionCache['LogStopWatchMap'].Value }
     $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
-    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Suffix ') # This command was already run but is now being logged' -Expand $Cmd @Cached @EmptyMap
+    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Suffix ') # This command was already run but is now being logged' -Expand $Cmd @Cached @NoMap
 
     # Get the FQDN of the computer running the script.
     $Cmd = @{
@@ -731,16 +731,13 @@ end {
     $Cmd = @{
 
         # Objects as they progressed through the data pipeline
-        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ;
-        'Permission' = $Permissions ; 'SourcePath' = $SourcePath ;
+        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ;
 
         # Parameters
-        'AccountProperty' = $AccountProperty ; 'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ;
-        'FileFormat' = $FileFormat ; 'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $ReportDir ; 'Title' = $Title ;
-        'OutputFormat' = $OutputFormat ; 'NoMembers' = $NoMembers ; 'RecurseDepth' = $RecurseDepth ; 'SplitBy' = $SplitBy ;
+        'ParameterDict' = $PSBoundParameters ;
 
         # Cached variables in memory
-        'LogFileList' = $TranscriptFile, $LogFile ; 'StopWatch' = $StopWatch ; 'ReportInstanceId' = $ReportInstanceId ;
+        'LogFileList' = $TranscriptFile, $LogFile ; 'OutputDir' = $ReportDir ; 'ReportInstanceId' = $ReportInstanceId ; 'StopWatch' = $StopWatch ;
 
         # Measurements taken
         'SourceCount' = $SourceCount ; 'ParentCount' = $ParentCount ; 'ChildCount' = $ChildCount ; 'FqdnCount' = $FqdnCount ;
@@ -774,7 +771,7 @@ end {
         'PrtgPort'     = $PrtgPort
         'PrtgToken'    = $PrtgToken
     }
-    Write-LogMsg -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd @Cached @EmptyMap
+    Write-LogMsg -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd @Cached @NoMap
     Send-PrtgXmlSensorOutput @Cmd
 
     $ProgressUpdate = @{
@@ -813,6 +810,5 @@ end {
     Write-Progress @Progress -Completed
 
 }
-
 
 

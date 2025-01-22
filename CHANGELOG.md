@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.601] - 2025-01-21
+### Changed
+- reuse PSBoundParameters for Out-PermissionFile rather than all params split out
+
 ## [0.0.600] - 2025-01-20
 ### Changed
 - new version of psbootstrapcss module

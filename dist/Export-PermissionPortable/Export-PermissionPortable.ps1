@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.600
+.VERSION 0.0.601
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new version of psbootstrapcss module
+reuse PSBoundParameters for Out-PermissionFile rather than all params split out
 
 .PRIVATEDATA
 
@@ -5489,33 +5489,18 @@ function Get-HtmlBody {
 }
 function Get-HtmlReportElements {
     param (
-        [string[]]$ExcludeAccount,
-        [string[]]$ExcludeClass = @('group', 'computer'),
-        $IgnoreDomain,
         [string[]]$SourcePath,
         $NetworkPath,
-        [switch]$NoMembers,
         $OutputDir,
         $WhoAmI,
         $ThisFqdn,
         $StopWatch,
-        $Title,
         $Permission,
-        $RecurseDepth,
         $LogFileList,
         $ReportInstanceId,
         [Hashtable]$AceByGUID,
-        [int[]]$Detail = @(0..10),
-        [ValidateSet('account', 'item', 'none', 'source')]
-        [string]$GroupBy = 'item',
-        [ValidateSet('account', 'none', 'source')]
-        [string[]]$SplitBy = 'source',
         [String]$Split,
         [String]$FileName,
-        $FormattedPermission,
-        $Analysis,
-        [string[]]$FileFormat,
-        [String]$OutputFormat,
         [uint64]$SourceCount,
         [uint64]$ParentCount,
         [uint64]$ChildCount,
@@ -5528,8 +5513,17 @@ function Get-HtmlReportElements {
         [pscustomobject[]]$Account,
         [Parameter(Mandatory)]
         [ref]$Cache,
-        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
+        [hashtable]$ParameterDict
     )
+    $AccountProperty = $ParameterDict['AccountProperty']
+    $Detail = $ParameterDict['Detail']
+    $ExcludeAccount = $ParameterDict['ExcludeAccount']
+    $ExcludeClass = $ParameterDict['ExcludeClass']
+    $GroupBy = $ParameterDict['GroupBy']
+    $IgnoreDomain = $ParameterDict['IgnoreDomain']
+    $Title = $ParameterDict['Title']
+    $NoMembers = $ParameterDict['NoMembers']
+    $RecurseDepth = $ParameterDict['RecurseDepth']
     $Culture = $Cache.Value['Culture'].Value
     $Log = @{
         'Cache'        = $Cache
@@ -7702,29 +7696,16 @@ function Out-Permission {
 }
 function Out-PermissionFile {
     param (
-        [string[]]$ExcludeAccount,
-        [string[]]$ExcludeClass = @('group', 'computer'),
-        $IgnoreDomain,
-        [string[]]$SourcePath,
-        [switch]$NoMembers,
         $OutputDir,
         $StopWatch,
-        $Title,
+        [PSCustomObject]$Analysis,
+        [Parameter(Mandatory)]
+        [ref]$Cache,
+        [hashtable]$ParameterDict,
         $Permission,
         $FormattedPermission,
-        $RecurseDepth,
         $LogFileList,
         $ReportInstanceId,
-        [int[]]$Detail = @(0..10),
-        [ValidateSet('csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
-        [string[]]$FileFormat = @('csv', 'html', 'js', 'json', 'prtgxml', 'xml'),
-        [ValidateSet('passthru', 'none', 'csv', 'html', 'js', 'json', 'prtgxml', 'xml')]
-        [String]$OutputFormat = 'passthru',
-        [ValidateSet('account', 'item', 'none', 'source')]
-        [string]$GroupBy = 'item',
-        [ValidateSet('account', 'none', 'source')]
-        [string[]]$SplitBy = 'source',
-        [PSCustomObject]$Analysis,
         [uint64]$SourceCount,
         [uint64]$ParentCount,
         [uint64]$ChildCount,
@@ -7733,11 +7714,14 @@ function Out-PermissionFile {
         [uint64]$AclCount,
         [uint64]$AceCount,
         [uint64]$IdCount,
-        [UInt64]$PrincipalCount,
-        [Parameter(Mandatory)]
-        [ref]$Cache,
-        [string[]]$AccountProperty = @('DisplayName', 'Company', 'Department', 'Title', 'Description')
+        [UInt64]$PrincipalCount
     )
+    $Detail = $ParameterDict['Detail']
+    $FileFormat = $ParameterDict['FileFormat']
+    $GroupBy = $ParameterDict['GroupBy']
+    $OutputFormat = $ParameterDict['OutputFormat']
+    $SplitBy = $ParameterDict['SplitBy']
+    $SourcePath = $ParameterDict['SourcePath']
     $Log = @{
         'Cache'        = $Cache
         'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
@@ -7978,6 +7962,7 @@ function Out-PermissionFile {
                 if ($File.Path) {
                     $Params['SourcePath'] = $File.Path
                 }
+                $Params['ParameterDict'] = $ParameterDict
                 $Params['NetworkPath'] = $File.NetworkPaths
                 $Params['Split'] = $Split
                 $Params['FileName'] = $FileName
@@ -10310,13 +10295,13 @@ function Send-PrtgXmlSensorOutput {
     $PermissionCache = Initialize-PermissionCache @Cmd
     $Cache = [ref]$PermissionCache
     $Cached = @{ 'Cache' = $Cache }
-    $EmptyMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
+    $NoMap = @{ 'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value }
     $CacheMap = @{ 'ExpansionMap' = $PermissionCache['LogCacheMap'].Value }
     $StopWatchMap = @{ 'ExpansionMap' = $PermissionCache['LogStopWatchMap'].Value }
     $SourceMap = @{ 'ExpansionMap' = $PermissionCache['LogSourcePathMap'].Value }
     $FormatMap = @{ 'ExpansionMap' = $PermissionCache['LogFormattedMap'].Value }
     $LogAnalysisMap = @{ 'ExpansionMap' = $PermissionCache['LogAnalysisMap'].Value }
-    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Suffix ') # This command was already run but is now being logged' -Expand $Cmd @Cached @EmptyMap
+    Write-LogMsg -Text "`$Cache = [ref](Initialize-PermissionCache" -Suffix ') # This command was already run but is now being logged' -Expand $Cmd @Cached @NoMap
     $Cmd = @{
         'ComputerName' = $PermissionCache['ThisHostname'].Value
     }
@@ -10486,12 +10471,9 @@ end {
     }
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
-        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ;
-        'Permission' = $Permissions ; 'SourcePath' = $SourcePath ;
-        'AccountProperty' = $AccountProperty ; 'Detail' = $Detail ; 'ExcludeAccount' = $ExcludeAccount ; 'ExcludeClass' = $ExcludeClass ;
-        'FileFormat' = $FileFormat ; 'GroupBy' = $GroupBy ; 'IgnoreDomain' = $IgnoreDomain ; 'OutputDir' = $ReportDir ; 'Title' = $Title ;
-        'OutputFormat' = $OutputFormat ; 'NoMembers' = $NoMembers ; 'RecurseDepth' = $RecurseDepth ; 'SplitBy' = $SplitBy ;
-        'LogFileList' = $TranscriptFile, $LogFile ; 'StopWatch' = $StopWatch ; 'ReportInstanceId' = $ReportInstanceId ;
+        'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ;
+        'ParameterDict' = $PSBoundParameters ;
+        'LogFileList' = $TranscriptFile, $LogFile ; 'OutputDir' = $ReportDir ; 'ReportInstanceId' = $ReportInstanceId ; 'StopWatch' = $StopWatch ;
         'SourceCount' = $SourceCount ; 'ParentCount' = $ParentCount ; 'ChildCount' = $ChildCount ; 'FqdnCount' = $FqdnCount ;
         'AclCount' = $AclCount ; 'AceCount' = $AceCount ; 'IdCount' = $IdCount ; 'PrincipalCount' = $PrincipalCount ; 'ItemCount' = $ItemCount
     }
@@ -10520,7 +10502,7 @@ end {
         'PrtgPort'     = $PrtgPort
         'PrtgToken'    = $PrtgToken
     }
-    Write-LogMsg -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd @Cached @EmptyMap
+    Write-LogMsg -Text 'Send-PrtgXmlSensorOutput' -Expand $Cmd @Cached @NoMap
     Send-PrtgXmlSensorOutput @Cmd
     $ProgressUpdate = @{
         'CurrentOperation' = 'Output the result to the pipeline'
