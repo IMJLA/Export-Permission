@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.610
+.VERSION 0.0.611
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-new permission module
+bugfix missing sourcepath
 
 .PRIVATEDATA
 
@@ -7975,6 +7975,8 @@ function Out-PermissionFile {
                 [Hashtable]$Params = $PSBoundParameters
                 if ($File.Path) {
                     $Params['SourcePath'] = $File.Path
+                } else {
+                    $Params['SourcePath'] = $ParameterDict['SourcePath']
                 }
                 $Params['ParameterDict'] = $ParameterDict
                 $Params['NetworkPath'] = $File.NetworkPaths
