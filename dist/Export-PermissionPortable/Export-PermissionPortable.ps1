@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.606
+.VERSION 0.0.607
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-disable portable script publication
+bugfix replace old var name for cache
 
 .PRIVATEDATA
 
@@ -4403,7 +4403,7 @@ function ConvertTo-ClassExclusionDiv {
     } else {
         $Content = 'No accounts were excluded based on objectClass.'
     }
-    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Class' -Content `$Content"
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Class' -Content `$Content"
     return New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Class' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-FileList {
@@ -4519,7 +4519,7 @@ function ConvertTo-IgnoredDomainDiv {
     } else {
         $Content = 'No domains were ignored.  All accounts have their domain listed.'
     }
-    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Domains Ignored by Name' -Content `$Content"
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Domains Ignored by Name' -Content `$Content"
     return New-BootstrapDivWithHeading -HeadingText 'Domains Ignored by Name' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-MemberExclusionDiv {
@@ -4533,7 +4533,7 @@ function ConvertTo-MemberExclusionDiv {
     } else {
         $Content = 'No accounts were excluded based on group membership.<br />Members of groups from the ACLs are included in the report.'
     }
-    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Group Members' -Content '$Content'"
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Group Members' -Content '$Content'"
     return New-BootstrapDivWithHeading -HeadingText 'Group Members' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-NameExclusionDiv {
@@ -4550,7 +4550,7 @@ function ConvertTo-NameExclusionDiv {
     } else {
         $Content = 'No accounts were excluded based on name.'
     }
-    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Name' -Content `$Content"
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Name' -Content `$Content"
     return New-BootstrapDivWithHeading -HeadingText 'Accounts Excluded by Name' -Content $Content -HeadingLevel 6
 }
 function ConvertTo-PermissionGroup {
@@ -5533,7 +5533,7 @@ function Get-HtmlReportElements {
     $WhoAmI = $Cache.Value['WhoAmI'].Value
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
     }
     Write-LogMsg @Log -Text "Get-ReportDescription -RecurseDepth $RecurseDepth"
     $ReportDescription = Get-ReportDescription -RecurseDepth $RecurseDepth
@@ -6337,7 +6337,7 @@ function Resolve-IdentityReferenceDomainDNS {
     )
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
     }
     if ($Cache.Value['WellKnownSidBySid'].Value[$IdentityReference]) {
         $DomainDNS = Find-ServerNameInPath -LiteralPath $ItemPath -Cache $Cache
@@ -6677,7 +6677,7 @@ function ConvertTo-ItemBlock {
     $Culture = $Cache.Value['Culture'].Value
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
     }
     Write-LogMsg @Log -Text "`$ObjectsForTable = Select-ItemTableProperty -InputObject `$ItemPermissions -Culture '$Culture'"
     $ObjectsForTable = Select-ItemTableProperty -InputObject $ItemPermissions -Culture $Culture
@@ -6706,7 +6706,7 @@ function ConvertTo-PermissionFqdn {
         [Parameter(Mandatory)]
         [ref]$Cache
     )
-    Write-LogMsg -Cache $Cache -ExpansionMap $PermissionCache['LogEmptyMap'].Value -Text "ConvertTo-DnsFqdn -ComputerName '$ComputerName' -Cache `$Cache -ThisFqdn:`$$ThisFqdn"
+    Write-LogMsg -Cache $Cache -ExpansionMap $Cache.Value['LogEmptyMap'].Value -Text "ConvertTo-DnsFqdn -ComputerName '$ComputerName' -Cache `$Cache -ThisFqdn:`$$ThisFqdn"
     ConvertTo-DnsFqdn -ComputerName $ComputerName -Cache $Cache -ThisFqdn:$ThisFqdn
 }
 function Expand-Permission {
@@ -6721,7 +6721,7 @@ function Expand-Permission {
     )
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
     }
     $Progress = Get-PermissionProgress -Activity 'Expand-Permission' -Cache $Cache
     $ProgressSplat = @{
@@ -7284,7 +7284,7 @@ function Get-CachedCimInstance {
     )
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
         'Suffix'       = " # for ComputerName '$ComputerName'"
     }
     if ($PSBoundParameters.ContainsKey('ClassName')) {
@@ -7357,7 +7357,7 @@ function Get-CachedCimSession {
     )
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
         'Suffix'       = " # for ComputerName '$ComputerName'"
     }
     $ThisFqdn = $Cache.Value['ThisFqdn'].Value
@@ -7421,7 +7421,7 @@ function Get-PermissionParameter {
     foreach ($ParamName in $Invocation.MyCommand.Parameters.Keys) {
         if (-not $BoundParameter.ContainsKey($ParamName)) {
             try {
-                $BoundParameter.Add($ParamName, (Get-Variable -Name $ParamName -ValueOnly))
+                $BoundParameter.Add($ParamName, (Get-Variable -Name $ParamName -Scope Script -ValueOnly))
             } catch {}
         }
     }
@@ -7751,7 +7751,7 @@ function Out-PermissionFile {
     $SourcePath = $ParameterDict['SourcePath']
     $Log = @{
         'Cache'        = $Cache
-        'ExpansionMap' = $PermissionCache['LogEmptyMap'].Value
+        'ExpansionMap' = $Cache.Value['LogEmptyMap'].Value
     }
     $Culture = $Cache.Value['Culture'].Value
     $AceByGUID = $Cache.Value['AceByGUID']
