@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.609
+.VERSION 0.0.610
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-remove unworkable func
+new permission module
 
 .PRIVATEDATA
 
@@ -5242,13 +5242,15 @@ function Expand-ItemPermissionAccountAccessReference {
         }
         if ($FirstACEGuid) {
             $ACEList = $AceByGUID.Value[$FirstACEGuid]
-        }
-        if ($ACEList -is [System.Collections.IEnumerable]) {
-            $FirstACE = $ACEList[0]
+            if ($ACEList -is [System.Collections.IEnumerable]) {
+                $FirstACE = $ACEList[0]
+            } else {
+                $FirstACE = $ACEList
+            }
+            $ACEProps = $FirstACE.PSObject.Properties.GetEnumerator().Name
         } else {
-            $FirstACE = $ACEList
+            $ACEProps = @()
         }
-        $ACEProps = $FirstACE.PSObject.Properties.GetEnumerator().Name
     }
     ForEach ($PermissionRef in $Reference) {
         $Account = $PrincipalByResolvedID.Value[$PermissionRef.Account]
