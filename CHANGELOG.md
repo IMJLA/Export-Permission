@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.606] - 2025-01-22
+### Changed
+- disable portable script publication
+
 ## [0.0.605] - 2025-01-22
 ### Changed
 - dsaf
