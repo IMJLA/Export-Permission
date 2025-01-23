@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.608
+.VERSION 0.0.609
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix var scope
+remove unworkable func
 
 .PRIVATEDATA
 
@@ -7412,21 +7412,6 @@ function Get-CachedCimSession {
         $Cache.Value['LogType'].Value = $StartingLogType
     }
 }
-function Get-PermissionParameter {
-    [CmdletBinding()]
-    param (
-        [System.Management.Automation.InvocationInfo]$Invocation,
-        [System.Collections.Generic.Dictionary`2[System.String, System.Object]]$BoundParameter
-    )
-    foreach ($ParamName in $Invocation.MyCommand.Parameters.Keys) {
-        if (-not $BoundParameter.ContainsKey($ParamName)) {
-            try {
-                $BoundParameter.Add($ParamName, (Get-Variable -Name $ParamName -Scope Script -ValueOnly))
-            } catch {}
-        }
-    }
-    return $BoundParameter
-}
 function Get-PermissionPrincipal {
     param (
         [switch]$NoGroupMembers,
@@ -10741,8 +10726,13 @@ function Send-PrtgXmlSensorOutput {
     $null = ConvertTo-PermissionFqdn -ThisFqdn @Cmd @Cached
     Write-LogMsg -Text 'Get-PermissionTrustedDomain' -Expand $Cached @Cached @CacheMap
     Get-PermissionTrustedDomain @Cached
-    Write-LogMsg -Text 'Get-PermissionParameter -Invocation $MyInvocation -BoundParameter $PSBoundParameters' @Cached @CacheMap
-    $OriginalParameters = Get-PermissionParameter -Invocation $MyInvocation -BoundParameter $PSBoundParameters
+    foreach ($ParamName in $MyInvocation.MyCommand.Parameters.Keys) {
+        if (-not $PSBoundParameters.ContainsKey($ParamName)) {
+            try {
+                $PSBoundParameters.Add($ParamName, (Get-Variable -Name $ParamName -ValueOnly))
+            } catch {}
+        }
+    }
 }
 process {
     $ProgressUpdate = @{
@@ -10906,7 +10896,7 @@ end {
     Write-Progress @Progress @ProgressUpdate
     $Cmd = @{
         'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ;
-        'ParameterDict' = $OriginalParameters ;
+        'ParameterDict' = $PSBoundParameters ;
         'LogFileList' = $TranscriptFile, $LogFile ; 'OutputDir' = $ReportDir ; 'ReportInstanceId' = $ReportInstanceId ; 'StopWatch' = $StopWatch ;
         'SourceCount' = $SourceCount ; 'ParentCount' = $ParentCount ; 'ChildCount' = $ChildCount ; 'FqdnCount' = $FqdnCount ;
         'AclCount' = $AclCount ; 'AceCount' = $AceCount ; 'IdCount' = $IdCount ; 'PrincipalCount' = $PrincipalCount ; 'ItemCount' = $ItemCount

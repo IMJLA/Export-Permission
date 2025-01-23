@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.609] - 2025-01-22
+### Removed
+- remove unworkable func
+
 ## [0.0.608] - 2025-01-22
 ### Fixed
 - bugfix var scope
