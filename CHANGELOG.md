@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.608] - 2025-01-22
+### Fixed
+- bugfix var scope
+
 ## [0.0.607] - 2025-01-22
 ### Fixed
 - bugfix replace old var name for cache

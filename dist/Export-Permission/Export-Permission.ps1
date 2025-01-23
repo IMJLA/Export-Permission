@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.607
+.VERSION 0.0.608
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix replace old var name for cache
+bugfix var scope
 
 .PRIVATEDATA
 
