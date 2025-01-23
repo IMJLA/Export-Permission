@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.604
+.VERSION 0.0.605
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix remove rogue code
+dsaf
 
 .PRIVATEDATA
 
@@ -33,9 +33,9 @@ bugfix remove rogue code
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1204' }
-#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.64' }
-#Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.119' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1212' }
+#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.72' }
+#Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.121' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }
 #Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }
 #Requires -Module @{ ModuleName = 'SimplePrtg' ; RequiredVersion = '1.0.13' }
@@ -549,14 +549,9 @@ begin {
     Write-LogMsg -Text 'Get-PermissionTrustedDomain' -Expand $Cached @Cached @CacheMap
     Get-PermissionTrustedDomain @Cached
 
-    # Add all parameters (including unbound parameters) to the PSBoundParameters collection.
-    foreach ($ParamName in $MyInvocation.MyCommand.Parameters.Keys) {
-        if (-not $PSBoundParameters.ContainsKey($ParamName)) {
-            try {
-                $PSBoundParameters.Add($ParamName, (Get-Variable -Name $ParamName -ValueOnly))
-            } catch {}
-        }
-    }
+    # Add all parameters and their values (including unbound parameters) to a single dictionary.
+    Write-LogMsg -Text 'Get-PermissionParameter -Invocation $MyInvocation -BoundParameter $PSBoundParameters' @Cached @CacheMap
+    $OriginalParameters = Get-PermissionParameter -Invocation $MyInvocation -BoundParameter $PSBoundParameters
 
 }
 
@@ -743,7 +738,7 @@ end {
         'Analysis' = $PermissionAnalysis; 'FormattedPermission' = $FormattedPermissions ; 'Permission' = $Permissions ;
 
         # Parameters
-        'ParameterDict' = $PSBoundParameters ;
+        'ParameterDict' = $OriginalParameters ;
 
         # Cached variables in memory
         'LogFileList' = $TranscriptFile, $LogFile ; 'OutputDir' = $ReportDir ; 'ReportInstanceId' = $ReportInstanceId ; 'StopWatch' = $StopWatch ;

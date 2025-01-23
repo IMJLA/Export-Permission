@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.605] - 2025-01-22
+### Changed
+- dsaf
+
 ## [0.0.604] - 2025-01-21
 ### Fixed
 - bugfix remove rogue code
