@@ -7,23 +7,23 @@
   <rect clip-path="url(#foldedPageCorner)" x="13" y="37" rx="2" ry="2" width="46" height="46" stroke="black" stroke-width="1" fill="white" />
   <rect clip-path="url(#foldedPageCorner)" id="flap" x="11" y="35" rx="2" ry="2" width="8" height="8" stroke="black" stroke-width="1" fill="white" />
   <path d="M 13 44 l 0 -1 6 -6 38 0" fill="none" stroke="black" stroke-width="1" />
-  <path d="M 41 54 l -15 0 0 -15 5 0 1 2 10 0 0 2" stroke-width="1" stroke-linecap="round" stroke="black" fill="none" />
-  <path d="M 26 54 l 4-9 10 0 1.77777777777778 -2 5 0 -4.88888888888889 11" stroke-width="1" stroke-linecap="round" stroke="black" fill="none" />
-  <path d="M 42 50 l 0 -1 C 42 44 46 44 46 49 l 0 1" stroke-width="1" stroke-linecap="round" stroke="black" fill="white" />
-  <path d="M 41 56 l 0 -6 l 6 0 0 6 C 47 57 41 57 41 56" stroke-width="1" stroke-linecap="round" stroke="black" fill="white" />
-  <circle cx="44" cy="52.5" r="1" stroke-width="1" stroke-linecap="round" stroke="black" fill="none" />
-  <path d="M 44 53.5 l 0 1.5" stroke-width="1" stroke-linecap="round" stroke="black" fill="none" />
+  <path d="M 41 54 l -15 0 0 -15 5 0 1 2 10 0 0 2" stroke-linecap="round" stroke-width="1" stroke="black" fill="none" />
+  <path d="M 26 54 l 4-9 10 0 1.77777777777778 -2 5 0 -4.88888888888889 11" stroke-linecap="round" stroke-width="1" stroke="black" fill="none" />
+  <path d="M 42 50 l 0 -1 C 42 44 46 44 46 49 l 0 1" stroke-linecap="round" stroke-width="1" stroke="black" fill="white" />
+  <path d="M 41 56 l 0 -6 l 6 0 0 6 C 47 57 41 57 41 56" stroke-linecap="round" stroke-width="1" stroke="black" fill="white" />
+  <circle cx="44" cy="52.5" r="1" stroke-linecap="round" stroke-width="1" stroke="black" fill="none" />
+  <path d="M 44 53.5 l 0 1.5" stroke-linecap="round" stroke-width="1" stroke="black" fill="none" />
   <circle cx="24" cy="64" r="4" fill="none" stroke="black" stroke-width="1" />
-  <clipPath id="b4eab959-875c-44e0-9b49-db89f2018410">
+  <clipPath id="904129c5-89ad-450f-bba7-9f6533ec8ef2">
     <path d="M 24 76 l 9 -9 0 -1 -18 0 0 10 z" />
   </clipPath>
-  <circle cx="24" cy="76" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#b4eab959-875c-44e0-9b49-db89f2018410)" />
+  <circle cx="24" cy="76" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#904129c5-89ad-450f-bba7-9f6533ec8ef2)" />
   <path d="M23 75l3 3 7.5-7.5" fill="none" stroke="green" stroke-width="2" stroke-linecap="round" />
   <circle cx="49" cy="64" r="4" fill="none" stroke="black" stroke-width="1" />
-  <clipPath id="170cb1a5-7f85-4a29-8ef2-4b26c0a1b1a1">
+  <clipPath id="7f284653-b39c-42cb-bc39-4f42cf72c994">
     <path d="M 49 76 l 9 -9 0 -1 -18 0 0 10 z" />
   </clipPath>
-  <circle cx="49" cy="76" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#170cb1a5-7f85-4a29-8ef2-4b26c0a1b1a1)" />
+  <circle cx="49" cy="76" r="8" fill="none" stroke="black" stroke-width="1" clip-path="url(#7f284653-b39c-42cb-bc39-4f42cf72c994)" />
   <circle cx="52" cy="75.2" r="4" fill="red" stroke="red" />
   <rect x="49" y="74.2" width="6.4" height="1.6" fill="white" />
   <text x="50%" y="25%" font-size="12" dominant-baseline="middle" text-anchor="middle" fill="black">Export-Permission</text>

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.611
+.VERSION 0.0.612
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix missing sourcepath
+update file list
 
 .PRIVATEDATA
 
@@ -46,9 +46,9 @@ Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor r
 
 Supports:
 - Active Directory domain trusts
-- Unresolved SIDs for deleted accounts
+- Unresolved SIDs for deleted or otherwise unresolvable accounts
 - Service SID resolution
-- Group memberships via an account's Primary Group as well as its memberOf property
+- Recursive group memberships via an account's Primary Group as well as its memberOf property
 - ACL Owners (shown in the report as having Full Control originating from Ownership)
 
 Does not support these scenarios:
@@ -4412,9 +4412,10 @@ function ConvertTo-FileList {
         $OutputDir,
         [cultureinfo]$Culture = (Get-Culture),
         [int[]]$Detail = @(0..10),
-        [String]$FileName
+        [String]$FileName,
+        [string[]]$FileList
     )
-    $FileList = @{}
+    $FileDict = @{}
     ForEach ($ThisFormat in $Format) {
         $DetailStrings = @(
             'Source paths',
@@ -4429,7 +4430,7 @@ function ConvertTo-FileList {
             'Custom sensor output for Paessler PRTG Network Monitor'
             'Permission report'
         )
-        $FileList[$ThisFormat] = switch ($ThisFormat) {
+        $FileDict[$ThisFormat] = switch ($ThisFormat) {
             'csv' {
                 $Suffix = '.csv'
                 ForEach ($Level in $Detail) {
@@ -4443,25 +4444,29 @@ function ConvertTo-FileList {
                 break
             }
             'html' {
-                $Suffix = "_$FileName.htm"
-                ForEach ($Level in $Detail) {
-                    if ($Level -notin 8, 9) {
-                        $ShortDetail = $DetailStrings[$Level] -replace '\([^\)]*\)', ''
-                        $TitleCaseDetail = $Culture.TextInfo.ToTitleCase($ShortDetail)
-                        $SpacelessDetail = $TitleCaseDetail -replace '\s', ''
-                        "$OutputDir\$Level`_$SpacelessDetail$Suffix"
+                ForEach ($ThisFileName in $FileList) {
+                    $Suffix = "_$ThisFileName.htm"
+                    ForEach ($Level in $Detail) {
+                        if ($Level -notin 8, 9) {
+                            $ShortDetail = $DetailStrings[$Level] -replace '\([^\)]*\)', ''
+                            $TitleCaseDetail = $Culture.TextInfo.ToTitleCase($ShortDetail)
+                            $SpacelessDetail = $TitleCaseDetail -replace '\s', ''
+                            "$OutputDir\$Level`_$SpacelessDetail$Suffix"
+                        }
                     }
+                    break
                 }
-                break
             }
             'js' {
-                $Suffix = "_js_$FileName.htm"
-                ForEach ($Level in $Detail) {
-                    if ($Level -notin 8, 9) {
-                        $ShortDetail = $DetailStrings[$Level] -replace '\([^\)]*\)', ''
-                        $TitleCaseDetail = $Culture.TextInfo.ToTitleCase($ShortDetail)
-                        $SpacelessDetail = $TitleCaseDetail -replace '\s', ''
-                        "$OutputDir\$Level`_$SpacelessDetail$Suffix"
+                ForEach ($ThisFileName in $FileList) {
+                    $Suffix = "_js_$ThisFileName.htm"
+                    ForEach ($Level in $Detail) {
+                        if ($Level -notin 8, 9) {
+                            $ShortDetail = $DetailStrings[$Level] -replace '\([^\)]*\)', ''
+                            $TitleCaseDetail = $Culture.TextInfo.ToTitleCase($ShortDetail)
+                            $SpacelessDetail = $TitleCaseDetail -replace '\s', ''
+                            "$OutputDir\$Level`_$SpacelessDetail$Suffix"
+                        }
                     }
                 }
                 break
@@ -4487,7 +4492,7 @@ function ConvertTo-FileList {
             }
         }
     }
-    return $FileList
+    return $FileDict
 }
 function ConvertTo-FileListDiv {
     param (
@@ -5517,6 +5522,7 @@ function Get-HtmlReportElements {
         [uint64]$IdCount,
         [UInt64]$PrincipalCount,
         [pscustomobject[]]$Account,
+        [string[]]$FileList,
         [Parameter(Mandatory)]
         [ref]$Cache,
         [hashtable]$ParameterDict
@@ -5557,7 +5563,7 @@ function Get-HtmlReportElements {
         $AccountTable = Select-AccountTableProperty -InputObject $AccountObj -Culture $Culture -ShortNameByID $Cache.Value['ShortNameById'].Value -AccountProperty $AccountProperty |
         ConvertTo-Html -Fragment |
         New-BootstrapTable
-        $AccountDivHeader = 'The report only includes permissions for this account (option was used to generate a report per account)'
+        $AccountDivHeader = 'The report only includes permissions for this account (option was used to generate a file per account)'
         Write-LogMsg @Log -Text "New-BootstrapDivWithHeading -HeadingText '$AccountDivHeader' -Content `$AccountTable"
         $AccountDiv = New-BootstrapDivWithHeading -HeadingText $AccountDivHeader -Content $AccountTable -Class 'h-100 p-1 bg-light border rounded-3 table-responsive' -HeadingLevel 6
     }
@@ -5583,7 +5589,7 @@ function Get-HtmlReportElements {
     $HtmlReportsHeading = New-HtmlHeading -Text 'Reports' -Level 6
     $HtmlLogsHeading = New-HtmlHeading -Text 'Logs' -Level 6
     $HtmlOutputDir = New-BootstrapAlert -Text $OutputDir -Class 'secondary' -AdditionalClasses ' small'
-    $ReportFileList = ConvertTo-FileList -Detail $Detail -Format $Formats -FileName $FileName
+    $ReportFileList = ConvertTo-FileList -Detail $Detail -Format $Formats -FileName $FileName -FileList $FileList
     $HtmlReportsDiv = (ConvertTo-FileListDiv -FileList $ReportFileList) -join "`r`n"
     Write-LogMsg @Log -Text "New-BootstrapColumn -Html '`$HtmlReportsHeading`$HtmlReportsDiv',`$HtmlLogsHeading`$HtmlListOfLogs"
     $HtmlDivOfFileColumns = New-BootstrapColumn -Html "$HtmlReportsHeading$HtmlReportsDiv", "$HtmlLogsHeading$HtmlListOfLogs" -Width 6
@@ -5809,6 +5815,31 @@ function Get-ReportErrorDiv {
         New-BootstrapTable -Class ' table-danger'
         $null = $StringBuilder.AppendLine($ErrorTable)
         New-BootstrapDiv -Text ($StringBuilder.ToString())
+    }
+}
+function Get-ReportFileNameList {
+    param (
+        [Parameter(Mandatory = $true)]
+        $ReportFiles,
+        [Parameter(Mandatory = $true)]
+        [string]$Subproperty,
+        [Parameter(Mandatory = $true)]
+        [string]$FileNameProperty,
+        [Parameter(Mandatory = $true)]
+        [string]$FileNameSubproperty
+    )
+    ForEach ($File in $ReportFiles) {
+        if ($Subproperty -eq '') {
+            $Subfile = $File
+        } else {
+            $Subfile = $File.$Subproperty
+        }
+        if ($FileNameProperty -eq '') {
+            $FileName = $File.$FileNameSubproperty
+        } else {
+            $FileName = $File.$FileNameProperty.$FileNameSubproperty
+        }
+        $FileName -replace '\\\\', '' -replace '\\', '_' -replace '\:', ''
     }
 }
 function Get-SummaryDivHeader {
@@ -7957,6 +7988,7 @@ function Out-PermissionFile {
                 $ReportObjects[$Level] = Invoke-Command -ScriptBlock $DetailScripts[$Level]
                 Out-PermissionDetailReport -Detail $Level -ReportObject $ReportObjects -DetailExport $DetailExports -Format $Format -OutputDir $FormatDir -Culture $Culture -DetailString $DetailStrings
             }
+            $FileList = Get-ReportFileNameList -ReportFiles $ReportFiles -Subproperty $Subproperty -FileNameProperty $FileNameProperty -FileNameSubproperty $FileNameSubproperty
             ForEach ($File in $ReportFiles) {
                 if ($Subproperty -eq '') {
                     $Subfile = $File
@@ -7983,6 +8015,7 @@ function Out-PermissionFile {
                 $Params['Split'] = $Split
                 $Params['FileName'] = $FileName
                 $Params['Account'] = $File.Account
+                $Params['FileList'] = $FileList
                 $HtmlElements = Get-HtmlReportElements @Params
                 $BodyParams = @{
                     'HtmlFolderPermissions' = $Permissions.Div
@@ -8310,7 +8343,8 @@ function ConvertTo-HtmlList {
             ValueFromPipeline = $true
         )]
         [string[]]$InputObject,
-        [switch]$Ordered
+        [switch]$Ordered,
+        [string]$Class
     )
     begin {
         if ($Ordered) {
@@ -8318,7 +8352,11 @@ function ConvertTo-HtmlList {
         } else {
             $ListType = 'ul'
         }
-        $StringBuilder = [System.Text.StringBuilder]::new("<$ListType>")
+        if ($Class) {
+            $StringBuilder = [System.Text.StringBuilder]::new("<$ListType class=`"$Class`">")
+        } else {
+            $StringBuilder = [System.Text.StringBuilder]::new("<$ListType>")
+        }
     }
     process {
         ForEach ($ThisObject in $InputObject) {

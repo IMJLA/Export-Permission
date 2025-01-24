@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.612] - 2025-01-23
+### Changed
+- update file list
+
 ## [0.0.611] - 2025-01-22
 ### Fixed
 - bugfix missing sourcepath

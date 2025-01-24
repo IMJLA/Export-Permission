@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.611
+.VERSION 0.0.612
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix missing sourcepath
+update file list
 
 .PRIVATEDATA
 
@@ -33,8 +33,8 @@ bugfix missing sourcepath
 
 #Requires -Module @{ ModuleName = 'PsDfs' ; RequiredVersion = '1.0.18' }
 #Requires -Module @{ ModuleName = 'Adsi' ; RequiredVersion = '4.0.523' }
-#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1217' }
-#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.72' }
+#Requires -Module @{ ModuleName = 'Permission' ; RequiredVersion = '0.0.1228' }
+#Requires -Module @{ ModuleName = 'PsBootstrapCss' ; RequiredVersion = '1.0.77' }
 #Requires -Module @{ ModuleName = 'PsLogMessage' ; RequiredVersion = '1.0.121' }
 #Requires -Module @{ ModuleName = 'PsNtfs' ; RequiredVersion = '2.0.230' }
 #Requires -Module @{ ModuleName = 'PsRunspace' ; RequiredVersion = '1.0.124' }
@@ -56,9 +56,9 @@ bugfix missing sourcepath
 
     Supports:
     - Active Directory domain trusts
-    - Unresolved SIDs for deleted accounts
+    - Unresolved SIDs for deleted or otherwise unresolvable accounts
     - Service SID resolution
-    - Group memberships via an account's Primary Group as well as its memberOf property
+    - Recursive group memberships via an account's Primary Group as well as its memberOf property
     - ACL Owners (shown in the report as having Full Control originating from Ownership)
 
     Does not support these scenarios:

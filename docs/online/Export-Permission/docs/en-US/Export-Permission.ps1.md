@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.611
+help version: 0.0.612
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -39,9 +39,9 @@ Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor r
 
 Supports:
 - Active Directory domain trusts
-- Unresolved SIDs for deleted accounts
+- Unresolved SIDs for deleted or otherwise unresolvable accounts
 - Service SID resolution
-- Group memberships via an account's Primary Group as well as its memberOf property
+- Recursive group memberships via an account's Primary Group as well as its memberOf property
 - ACL Owners (shown in the report as having Full Control originating from Ownership)
 
 Does not support these scenarios:

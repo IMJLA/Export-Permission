@@ -16,9 +16,9 @@
       <maml:para>Works as a scheduled task</maml:para>
       <maml:para>Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>
       <maml:para>Supports: - Active Directory domain trusts</maml:para>
-      <maml:para>- Unresolved SIDs for deleted accounts</maml:para>
+      <maml:para>- Unresolved SIDs for deleted or otherwise unresolvable accounts</maml:para>
       <maml:para>- Service SID resolution</maml:para>
-      <maml:para>- Group memberships via an account's Primary Group as well as its memberOf property</maml:para>
+      <maml:para>- Recursive group memberships via an account's Primary Group as well as its memberOf property</maml:para>
       <maml:para>- ACL Owners (shown in the report as having Full Control originating from Ownership)</maml:para>
       <maml:para></maml:para>
       <maml:para>Does not support these scenarios: - Unsupported SDDL Components:     - The System Access Control List (SACL) containing ACL Auditors is not reported.     - The Primary Group is not reported. - File permissions (ToDo enhancement; for now only folder permissions are reported)</maml:para>
