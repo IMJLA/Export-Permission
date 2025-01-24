@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.613
+.VERSION 0.0.614
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-bugfix permission module
+rename typename
 
 .PRIVATEDATA
 
@@ -4935,7 +4935,7 @@ function ConvertTo-PermissionList {
                             $Table = ConvertTo-BootstrapJavaScriptTable -Id $TableId -InputObject $StartingPermissions -DataFilterControl -AllColumnsSearchable -PageSize 25
                             [string[]]$PropNames = @('Path', 'Account', 'Access', 'Due to Membership In', 'Source of Access', 'Name') + $AccountProperty
                             [PSCustomObject]@{
-                                PSTypeName = 'Permission.TargetPermissionList'
+                                PSTypeName = 'Permission.SourcePermissionList'
                                 Columns    = Get-ColumnJson -InputObject $StartingPermissions -PropNames $PropNames
                                 Data       = ConvertTo-Json -Compress -InputObject @($ObjectsForJsonData)
                                 Div        = New-BootstrapDiv -Id $DivId -Text ($Heading + $Table) -Class 'h-100 p-1 bg-light border rounded-3 table-responsive'
@@ -4995,7 +4995,7 @@ function ConvertTo-PermissionList {
                     'source' {
                         ForEach ($Group in $PermissionGrouping) {
                             [PSCustomObject]@{
-                                PSTypeName = 'Permission.TargetPermissionList'
+                                PSTypeName = 'Permission.SourcePermissionList'
                                 Data       = ($Permission[$Group.Path] | ConvertTo-Xml).InnerXml
                                 PassThru   = $Permission[$Group.Path]
                                 Grouping   = $Group.Path
@@ -5308,7 +5308,7 @@ function Expand-SourcePermissionReference {
         'account' {
             ForEach ($Source in $Reference) {
                 $SourceProperties = @{
-                    PSTypeName = 'Permission.TargetPermission'
+                    PSTypeName = 'Permission.SourcePermission'
                     Path       = $Source.Path
                 }
                 $SourceProperties['NetworkPaths'] = ForEach ($NetworkPath in $Source.NetworkPaths) {
@@ -5355,7 +5355,7 @@ function Expand-SourcePermissionReference {
             }
             ForEach ($Source in $Reference) {
                 $SourceProperties = @{
-                    PSTypeName = 'Permission.TargetPermission'
+                    PSTypeName = 'Permission.SourcePermission'
                     Path       = $Source.Path
                 }
                 $SourceProperties['NetworkPaths'] = ForEach ($NetworkPath in $Source.NetworkPaths) {
@@ -6831,7 +6831,7 @@ function Expand-Permission {
             'GroupBy'        = $GroupBy
             'AceGuidByID'    = $AceGuidByID
         }
-        Write-LogMsg @Log -Text '$TargetPermissionReferences = Group-SourcePermissionReference' -Expand $GroupSplat, $CommonParams
+        Write-LogMsg @Log -Text '$SourcePermissionReferences = Group-SourcePermissionReference' -Expand $GroupSplat, $CommonParams
         $SourcePermissionReferences = Group-SourcePermissionReference @GroupSplat @CommonParams
         Write-Progress @Progress -Status '88% : Expand source permissions into objects' -CurrentOperation 'Expand-SourcePermissionReference' -PercentComplete 88
         $ExpandSplat = @{
@@ -7108,7 +7108,7 @@ function Format-Permission {
             $i++ 
             Write-Progress -Status "$Percent% (Account $i of $Count)" -CurrentOperation $Target.Path -PercentComplete $Percent @Progress
             [PSCustomObject]@{
-                PSTypeName   = 'Permission.TargetPermission'
+                PSTypeName   = 'Permission.SourcePermission'
                 Path         = $Target.Path
                 NetworkPaths = ForEach ($NetworkPath in $Target.NetworkPaths) {
                     $Prop = $Grouping['Property']

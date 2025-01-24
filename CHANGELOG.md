@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.614] - 2025-01-23
+### Changed
+- rename typename
+
 ## [0.0.613] - 2025-01-23
 ### Fixed
 - bugfix permission module
