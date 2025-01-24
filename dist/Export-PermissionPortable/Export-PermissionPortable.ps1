@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.612
+.VERSION 0.0.613
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-update file list
+bugfix permission module
 
 .PRIVATEDATA
 
@@ -5823,7 +5823,6 @@ function Get-ReportFileNameList {
         $ReportFiles,
         [Parameter(Mandatory = $true)]
         [string]$Subproperty,
-        [Parameter(Mandatory = $true)]
         [string]$FileNameProperty,
         [Parameter(Mandatory = $true)]
         [string]$FileNameSubproperty
