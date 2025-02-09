@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.616] - 2025-02-09
+### Changed
+- update docs with future plans
+
+## [0.0.615] - 2025-02-09
+### Changed
+- update docs with future plans
+
 ## [0.0.614] - 2025-01-23
 ### Changed
 - rename typename

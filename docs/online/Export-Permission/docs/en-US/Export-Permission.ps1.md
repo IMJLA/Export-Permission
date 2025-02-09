@@ -1,7 +1,7 @@
 ---
 download help link: https://imjla.github.io/Export-PermissionHelp
 external help file: Export-Permission-help.xml
-help version: 0.0.614
+help version: 0.0.616
 locale: en-US
 online version: https://imjla.github.io/Export-Permission
 schema: 2.0.0
@@ -29,7 +29,7 @@ Export-Permission.ps1 [-SourcePath] <DirectoryInfo[]> [[-RecurseDepth] <Int32>] 
 ## DESCRIPTION
 Present complex nested permissions and group memberships in a report that is easy to read
 
-Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
+Report additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
 
 Multithreaded with in-process caching for fast results
 

@@ -11,7 +11,7 @@
     </command:details>
     <maml:description>
       <maml:para>Present complex nested permissions and group memberships in a report that is easy to read</maml:para>
-      <maml:para>Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property</maml:para>
+      <maml:para>Report additional properties of each account such as Name, Description, Title, Department, Company, or any specified property</maml:para>
       <maml:para>Multithreaded with in-process caching for fast results</maml:para>
       <maml:para>Works as a scheduled task</maml:para>
       <maml:para>Works as a custom sensor script for Paessler PRTG Network Monitor (Push sensor recommended due to execution time)</maml:para>

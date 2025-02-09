@@ -3,7 +3,7 @@
 ## Run the script and save the permissions in a variable
 
 ```powershell
-$Perms = Export-Permission -SourcePath 'C:\' -Interactive -GroupBy 'Account' -RecurseDepth 0
+$Perms = Export-Permission -SourcePath 'C:\' -GroupBy 'Account' -RecurseDepth 0
 ```
 
 ## Output the permissions

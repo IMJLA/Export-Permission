@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.614
+.VERSION 0.0.616
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-rename typename
+update docs with future plans
 
 .PRIVATEDATA
 
@@ -36,7 +36,7 @@ rename typename
 .DESCRIPTION 
  Present complex nested permissions and group memberships in a report that is easy to read
 
-Provide additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
+Report additional properties of each account such as Name, Description, Title, Department, Company, or any specified property
 
 Multithreaded with in-process caching for fast results
 

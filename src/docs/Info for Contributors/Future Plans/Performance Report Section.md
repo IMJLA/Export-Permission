@@ -1,4 +1,4 @@
-# Planned Performance Report Section
+# Performance Report Section
 
 ## Performance of this Report
 

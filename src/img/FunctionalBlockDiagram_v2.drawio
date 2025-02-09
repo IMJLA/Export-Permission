@@ -1,0 +1,136 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0" version="26.0.11">
+  <diagram name="Page-1" id="bfe91b75-5d2c-26a0-9c1d-138518896778">
+    <mxGraphModel dx="1426" dy="755" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-60" value="Agent" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="320" y="30" width="430" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="AjgEdxr6FU-6ofKO_puN-23" value="Service Back End" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="110" y="30" width="200" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="AjgEdxr6FU-6ofKO_puN-31" value="Formatter" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="220" y="260" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-1" value="API Logger" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="220" y="140" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-2" value="Data Hoarder" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="220" y="170" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-3" value="Handler" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="220" y="200" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-31" value="Manager" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="330" y="60" width="210" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-32" value="Network Worker" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="550" y="60" width="190" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-34" value="PnP Core SDK&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Client&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="250" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-35" value="CIM&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Client&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="160" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-36" value="ADSI&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Client&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="190" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-37" value="ActiveDirectorySecurity Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontStyle=0;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="220" width="170" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-39" value="Agent Logger" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="410" y="100" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-41" value="DNS Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="130" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-42" value="Permission Retriever" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="410" y="190" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-43" value="Account Retriever" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="410" y="220" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-44" value="Item Discoverer" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="410" y="160" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-45" value="Local Worker" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="330" y="310" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-46" value="File System Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="340" y="320" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-47" value="Windows Registry Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontStyle=0;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="340" y="350" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-48" value="In-Process Cache" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="410" y="130" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-50" value="Translator" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="410" y="250" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-51" value="Controller" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="340" y="70" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-52" value="Listener" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="70" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-53" value="Transmitter" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="100" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-54" value="Web Front End" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="10" y="30" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-58" value="Registrar" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="220" y="230" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-61" value="Node.js" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+          <mxGeometry x="70" y="350" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-62" value="Go" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="20" y="350" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-63" value="C#" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="20" y="320" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-64" value="N/A" style="rounded=0;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="100" y="380" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-66" value="LANGUAGE LEGEND" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontStyle=5;strokeColor=none;" parent="1" vertex="1">
+          <mxGeometry x="10" y="300" width="130" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-70" value="TypeScript" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="50" y="320" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-71" value="React" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="20" y="40" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-76" value="API Gateway" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;" parent="1" vertex="1">
+          <mxGeometry x="120" y="60" width="90" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-77" value="Transmitter" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" parent="1" vertex="1">
+          <mxGeometry x="130" y="100" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-78" value="Listener" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" parent="1" vertex="1">
+          <mxGeometry x="130" y="70" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-73" value="File Share Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="560" y="300" width="100" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-33" value="CIFS Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="570" y="340" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-74" value="DFS Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="570" y="310" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="qUr2L0oiyh-3UfnmQNyu-1" value="PowerShell" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="20" y="380" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Bb1RNmVAspJEbEjhx5MH-1" value="JavaScript" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="130" y="320" width="60" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
