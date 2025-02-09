@@ -77,7 +77,7 @@ External Cache, distributed
 
 Export-Permission > EFPosh > Entity Framework Core > EntityFrameworkCore.Cacheable > Memcached
 
-<https://github.com/SteffenMangold/EntityFrameworkCore.Cacheable>
+[EntityFrameworkCore.Cacheable](https://github.com/SteffenMangold/EntityFrameworkCore.Cacheable)
 
 ### $PSCache: PowerShell-Only In-Process Caches
 

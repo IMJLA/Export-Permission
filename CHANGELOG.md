@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.618] - 2025-02-09
+### Fixed
+- fix hyperlink syntax
+
 ## [0.0.617] - 2025-02-09
 ### Changed
 - correct typo and hyperlink syntax and remove parens from filenames

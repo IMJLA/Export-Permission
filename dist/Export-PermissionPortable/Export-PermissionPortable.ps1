@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.617
+.VERSION 0.0.618
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-correct typo and hyperlink syntax and remove parens from filenames
+fix hyperlink syntax
 
 .PRIVATEDATA
 
