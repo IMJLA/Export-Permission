@@ -63,9 +63,9 @@ ToDo: Explain its structure
 
 Export-Permission > EFPosh > Entity Framework Core > Database Provider
 
-<https://learn.microsoft.com/en-us/ef/core/providers/?tabs=dotnet-core-cli>
+[DotNet Core CLI](https://learn.microsoft.com/en-us/ef/core/providers/?tabs=dotnet-core-cli)
 
-<https://github.com/Ryan2065/EFPosh>
+[EFPosh](https://github.com/Ryan2065/EFPosh)
 
 #### First Level Cache
 

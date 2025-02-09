@@ -1,4 +1,4 @@
-# v2 Scalable Release (future)
+# v2 Future Plans for Scalability
 
 ## Overview
 

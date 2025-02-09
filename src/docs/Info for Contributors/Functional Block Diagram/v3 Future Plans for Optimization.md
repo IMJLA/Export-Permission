@@ -1,4 +1,4 @@
-# v3 Optimized Release (future)
+# v3 Future Plans for Optimization
 
 ## Overview
 

@@ -36,4 +36,4 @@ This page contains functional block diagrams representing the script and the fun
 
 ## Draw.IO XML Rendered as SVG
 
-![As-Built](/img/FunctionalBlockDiagram_V1.svg)
+![As-Built](/img/FunctionalBlockDiagram_v1.svg)
