@@ -4,11 +4,11 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-1" value="Front End" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-1" value="Front End" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="80" y="30" width="110" height="170" as="geometry" />
         </mxCell>
         <mxCell id="AjgEdxr6FU-6ofKO_puN-23" value="Back End" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="200" y="30" width="730" height="400" as="geometry" />
+          <mxGeometry x="200" y="30" width="710" height="400" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-54" value="Web GUI" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=1;fontStyle=0;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="90" y="60" width="60" height="40" as="geometry" />
@@ -49,32 +49,32 @@
         <mxCell id="Bb1RNmVAspJEbEjhx5MH-1" value="JavaScript" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="130" y="320" width="60" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-2" value="iOS App" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-2" value="iOS App" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="1" vertex="1">
           <mxGeometry x="90" y="110" width="50" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-3" value="Swift" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-3" value="Swift" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="1" vertex="1">
           <mxGeometry x="130" y="350" width="30" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-4" value="Java" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#bac8d3;strokeColor=#23445d;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-4" value="Java" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#bac8d3;strokeColor=#23445d;" parent="1" vertex="1">
           <mxGeometry x="140" y="380" width="30" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-5" value="Android App" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#bac8d3;strokeColor=#23445d;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-5" value="Android App" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#bac8d3;strokeColor=#23445d;" parent="1" vertex="1">
           <mxGeometry x="90" y="140" width="70" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-6" value="Desktop Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-6" value="Desktop Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
           <mxGeometry x="90" y="170" width="90" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-8" value="Identity Provider" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-8" value="Identity Provider" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" parent="1" vertex="1">
           <mxGeometry x="220" y="200" width="90" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-9" value="Response Caching" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-9" value="Response Caching" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" parent="1" vertex="1">
           <mxGeometry x="220" y="130" width="110" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-10" value="TLS Offloading" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" vertex="1" parent="1">
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-10" value="TLS Offloading" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" parent="1" vertex="1">
           <mxGeometry x="220" y="160" width="90" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kKeuek6A7nBEJlROy1Lq-11" value="Stateless Functions" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;" vertex="1" parent="1">
-          <mxGeometry x="350" y="60" width="130" height="160" as="geometry" />
+        <mxCell id="kKeuek6A7nBEJlROy1Lq-11" value="Stateless Functions" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;" parent="1" vertex="1">
+          <mxGeometry x="350" y="60" width="110" height="160" as="geometry" />
         </mxCell>
         <mxCell id="AjgEdxr6FU-6ofKO_puN-31" value="Formatter" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
           <mxGeometry x="360" y="190" width="60" height="20" as="geometry" />
@@ -92,73 +92,79 @@
           <mxGeometry x="360" y="160" width="60" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-60" value="Agent" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=2;fontStyle=0;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="490" y="60" width="430" height="360" as="geometry" />
+          <mxGeometry x="470" y="60" width="430" height="360" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-31" value="Manager" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="500" y="90" width="210" height="220" as="geometry" />
+          <mxGeometry x="480" y="90" width="210" height="220" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-32" value="Network Worker" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="720" y="90" width="190" height="320" as="geometry" />
+          <mxGeometry x="700" y="90" width="190" height="320" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-34" value="PnP Core SDK&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Client&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="280" width="120" height="20" as="geometry" />
+          <mxGeometry x="710" y="280" width="120" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-35" value="CIM&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Client&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="190" width="60" height="20" as="geometry" />
+          <mxGeometry x="710" y="190" width="60" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-36" value="ADSI&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Client&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="220" width="70" height="20" as="geometry" />
+          <mxGeometry x="710" y="220" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-37" value="ActiveDirectorySecurity Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontStyle=0;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="250" width="170" height="20" as="geometry" />
+          <mxGeometry x="710" y="250" width="170" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-39" value="Agent Logger" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="580" y="130" width="80" height="20" as="geometry" />
+          <mxGeometry x="560" y="130" width="80" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-41" value="DNS Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="160" width="70" height="20" as="geometry" />
+          <mxGeometry x="710" y="160" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-42" value="Permission Retriever" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="580" y="220" width="120" height="20" as="geometry" />
+          <mxGeometry x="560" y="220" width="120" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-43" value="Account Retriever" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="580" y="250" width="100" height="20" as="geometry" />
+          <mxGeometry x="560" y="250" width="100" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-44" value="Item Discoverer" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="580" y="190" width="90" height="20" as="geometry" />
+          <mxGeometry x="560" y="190" width="90" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-45" value="Local Worker" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="500" y="340" width="160" height="70" as="geometry" />
+          <mxGeometry x="480" y="340" width="160" height="70" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-46" value="File System Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="510" y="350" width="100" height="20" as="geometry" />
+          <mxGeometry x="490" y="350" width="100" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-47" value="Windows Registry Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontStyle=0;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="510" y="380" width="140" height="20" as="geometry" />
+          <mxGeometry x="490" y="380" width="140" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-48" value="In-Process Cache" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="580" y="160" width="100" height="20" as="geometry" />
+          <mxGeometry x="560" y="160" width="100" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-50" value="Translator" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="580" y="280" width="60" height="20" as="geometry" />
+          <mxGeometry x="560" y="280" width="60" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-51" value="Controller" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="510" y="100" width="60" height="20" as="geometry" />
+          <mxGeometry x="490" y="100" width="60" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-52" value="Listener" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="100" width="50" height="20" as="geometry" />
+          <mxGeometry x="710" y="100" width="50" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-53" value="Transmitter" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="130" width="70" height="20" as="geometry" />
+          <mxGeometry x="710" y="130" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-73" value="File Share Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="730" y="330" width="100" height="70" as="geometry" />
+          <mxGeometry x="710" y="330" width="100" height="70" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-33" value="CIFS Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="740" y="370" width="70" height="20" as="geometry" />
+          <mxGeometry x="720" y="370" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-74" value="DFS Client" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="740" y="340" width="70" height="20" as="geometry" />
+          <mxGeometry x="720" y="340" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="IekYCCfaB53eS3U7VzqH-1" value="Load Balancer" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="230" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="IekYCCfaB53eS3U7VzqH-2" value="Web Application Firewall" style="rounded=0;whiteSpace=wrap;html=1;align=left;dashed=1;dashPattern=1 1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="260" width="140" height="20" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
