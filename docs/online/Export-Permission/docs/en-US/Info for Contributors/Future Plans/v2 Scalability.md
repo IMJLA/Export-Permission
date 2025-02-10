@@ -1,8 +1,8 @@
-# v2 Future Plans for Scalability
+# v2 Scalability
 
 ## Overview
 
-First release which is horizontally scalable.  Introduces a TypeScript front end using React.  Uses an existing API Gateway and stateless function service.
+Implement horizontally scalability.  Introduces a TypeScript front end using React.  Uses an existing API Gateway and stateless function service.
 
 ## Draw.IO XML Rendered as SVG
 

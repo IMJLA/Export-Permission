@@ -1,4 +1,4 @@
-# v3 Future Plans for Optimization
+# v3 Optimization
 
 ## Overview
 
