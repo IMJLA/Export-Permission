@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.619
+.VERSION 0.0.620
 
 .GUID fd2d03cf-4d29-4843-bb1c-0fba86b0220a
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-organize docs
+update docs on future plans
 
 .PRIVATEDATA
 
