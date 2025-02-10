@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.623] - 2025-02-09
+### Removed
+- remove unused languages from legend of v2 diagram
+
 ## [0.0.622] - 2025-02-09
 ### Changed
 - minor doc updates

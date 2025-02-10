@@ -13,12 +13,6 @@
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-54" value="Web GUI" style="rounded=0;whiteSpace=wrap;html=1;align=left;labelPosition=center;verticalLabelPosition=top;verticalAlign=bottom;strokeWidth=1;fontStyle=0;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="90" y="60" width="60" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-61" value="Node.js" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
-          <mxGeometry x="70" y="350" width="50" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="TeKHzLBr8SLi8PSO3Rqj-62" value="Go" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
-          <mxGeometry x="20" y="350" width="20" height="20" as="geometry" />
-        </mxCell>
         <mxCell id="TeKHzLBr8SLi8PSO3Rqj-63" value="C#" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
           <mxGeometry x="20" y="320" width="20" height="20" as="geometry" />
         </mxCell>

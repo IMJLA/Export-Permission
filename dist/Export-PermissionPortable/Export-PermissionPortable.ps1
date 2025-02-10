@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.0.622
+.VERSION 0.0.623
 
 .GUID c7308309-badf-44ea-8717-28e5f5beffd5
 
@@ -25,7 +25,7 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-minor doc updates
+remove unused languages from legend of v2 diagram
 
 .PRIVATEDATA
 
